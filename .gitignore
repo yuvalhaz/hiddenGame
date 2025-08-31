@@ -1,0 +1,15 @@
+# התעלם מהכל
+*
+
+# אל תתעלם מקובץ ה־gitignore עצמו
+!.gitignore
+
+# אל תתעלם מתיקיית Assets
+!Assets/
+
+# אל תתעלם מתיקיית Scripts שבתוך Assets
+!Assets/Scripts/
+!Assets/Scripts/**
+
+# התעלם מקבצי meta
+*.meta
