@@ -1,36 +1,61 @@
-using System;                     // חשוב בשביל Action<>
-using GoogleMobileAds.Api;
 using UnityEngine;
 
+[DisallowMultipleComponent]
 public class AdInit : MonoBehaviour
 {
-    private BannerView banner;
+    [Header("References")]
+    [SerializeField] private RewardedAdsManager rewardedAds;
+
+    [Header("Config")]
+    [Tooltip("לטעון מודעת Rewarded מראש עם התחלת הסצנה.")]
+    [SerializeField] private bool preloadOnStart = true;
+
+    [Tooltip("להשאיר את אובייקט האתחול חי בין סצנות.")]
+    [SerializeField] private bool dontDestroyOnLoad = true;
+
+    void Awake()
+    {
+        if (dontDestroyOnLoad)
+            DontDestroyOnLoad(gameObject);
+
+        if (!rewardedAds)
+            rewardedAds = FindObjectOfType<RewardedAdsManager>(true);
+    }
 
     void Start()
     {
-        // אתחול עם callback נדרש
-        MobileAds.Initialize((InitializationStatus initStatus) =>
+        if (!rewardedAds)
         {
-            // אחרי שה-SDK מאותחל — טען מודעה
-            LoadBanner();
-        });
-    }
-
-    private void LoadBanner()
-    {
-        // Test Ad Unit ID (להחליף לשלך בפרודקשן)
-        string testId = "ca-app-pub-3940256099942544/6300978111";
-
-        // אם היה באנר קודם, ננקה
-        if (banner != null)
-        {
-            banner.Destroy();
-            banner = null;
+            Debug.LogWarning("[AdInit] RewardedAdsManager not found in scene.");
+            return;
         }
 
-        // צור באנר וטעינה
-        banner = new BannerView(testId, AdSize.Banner, AdPosition.Bottom);
-        AdRequest request = new AdRequest();   // ב-v10+ אין Builder
-        banner.LoadAd(request);
+        if (preloadOnStart)
+            rewardedAds.Preload(); // ← תואם לממשק שלך; אין LoadRewarded
+    }
+
+    /// <summary>
+    /// ניתן לקרוא מפאנל/כפתור כדי לטעון מראש בכל רגע.
+    /// </summary>
+    public void PreloadRewardedNow()
+    {
+        if (!rewardedAds)
+        {
+            rewardedAds = FindObjectOfType<RewardedAdsManager>(true);
+            if (!rewardedAds)
+            {
+                Debug.LogWarning("[AdInit] Cannot preload – RewardedAdsManager missing.");
+                return;
+            }
+        }
+        rewardedAds.Preload();
+    }
+
+    /// <summary>
+    /// בדיקת מוכנות – שימושי לפני הצגה.
+    /// </summary>
+    public bool IsRewardedReady()
+    {
+        return rewardedAds != null && rewardedAds.IsReady();
     }
 }

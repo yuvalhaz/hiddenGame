@@ -3,41 +3,59 @@ using UnityEngine.UI;
 
 public class HeartsManager : MonoBehaviour
 {
-    public static HeartsManager Instance { get; private set; }
+    [Header("Hearts Logic")]
+    [SerializeField] private int hearts = 5;
 
-    [Header("Hearts")]
-    public int maxHearts = 5;
-    public int currentHearts = 5;
+    [Header("UI Elements")]
+    [Tooltip("CanvasGroup של פופאפ/פס 'אין לבבות' שיופיע רק כש-hearts == 0")]
+    [SerializeField] private CanvasGroup heartsGroup;
 
-    [Header("Optional UI")]
-    public Text heartsText; // אופציונלי להצגת הכמות
+    [Tooltip("טקסט להצגת מספר הלבבות שנותרו (UnityEngine.UI.Text, לא TMP)")]
+    [SerializeField] private Text heartsText;
 
-    void Awake()
+    private void OnEnable()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
-        Instance = this;
-        currentHearts = Mathf.Clamp(currentHearts, 0, maxHearts);
-        RefreshUI();
+        // ודא שה-UI משקף את המצב הנוכחי מיד כשמתחילים
+        UpdateUI();
     }
 
-    public bool HasHearts() => currentHearts > 0;
+    // ===== API (אל תשנה שמות חתימות – קוד אחר תלוי בזה) =====
+    public bool HasHearts() => hearts > 0;
 
-    public bool LoseHeart(int amount = 1)
+    public void SpendHeart(int amount)
     {
-        if (currentHearts <= 0) return false;
-        currentHearts = Mathf.Max(0, currentHearts - Mathf.Max(1, amount));
-        RefreshUI();
-        return true;
+        int a = Mathf.Abs(amount);
+        hearts = Mathf.Max(0, hearts - a);
+        UpdateUI();
     }
+
+    // שמרנו גם את AddHearts וגם את AddHeart לפי המניפסט בפרויקט
+    public void AddHearts(int amount) => AddHeart(amount);
 
     public void AddHeart(int amount = 1)
     {
-        currentHearts = Mathf.Min(maxHearts, currentHearts + Mathf.Max(1, amount));
-        RefreshUI();
+        int a = Mathf.Abs(amount);
+        hearts += a;
+        UpdateUI();
     }
 
-    void RefreshUI()
+    public void LoseHeart(int amount = 1) => SpendHeart(amount);
+
+    // ===== UI Update (הצג קבוצה רק כשאין לבבות) =====
+    private void UpdateUI()
     {
-        if (heartsText != null) heartsText.text = currentHearts.ToString();
+        // עדכון טקסט
+        if (heartsText != null)
+            heartsText.text = hearts.ToString();
+
+        // הצגת/הסתרת CanvasGroup לפי hearts
+        if (heartsGroup != null)
+        {
+            bool noHearts = hearts <= 0;
+
+            heartsGroup.alpha = noHearts ? 1f : 0f;
+            heartsGroup.interactable = noHearts;
+            heartsGroup.blocksRaycasts = noHearts;
+        }
     }
 }

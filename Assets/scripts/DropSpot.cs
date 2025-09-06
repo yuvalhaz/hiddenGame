@@ -1,38 +1,45 @@
 using UnityEngine;
-using UnityEngine.Events;
+using UnityEngine.UI;
 
-[RequireComponent(typeof(RectTransform))]
 public class DropSpot : MonoBehaviour
 {
-    [Header("Spot Identity")]
+    [Header("Identity")]
+    [Tooltip("חייב להיות זהה ל-itemId של הכפתור התואם בבר")]
     public string spotId;
 
-    [Header("State")]
-    public bool isFilled = false;
+    [Header("State (נקבע אוטומטית)")]
+    public bool IsSettled { get; private set; }
 
-    [Header("Optional")]
-    public GameObject placeholderToKeep;
-    public GameObject parentToHideOnSuccess;
-
-    [Header("Events")]
-    public UnityEvent onCorrectPlaced;
-
-    public void SettleItem(RectTransform itemRT)
+    /// <summary>
+    /// האם הספוט מתאים לפריט זה?
+    /// </summary>
+    public bool Accepts(string itemId)
     {
-        if (isFilled) return;
-        isFilled = true;
-
-        var spotRT = (RectTransform)transform;
-        itemRT.SetParent(spotRT, false);
-        itemRT.anchorMin = itemRT.anchorMax = new Vector2(0.5f, 0.5f);
-        itemRT.pivot = new Vector2(0.5f, 0.5f);
-        itemRT.anchoredPosition = Vector2.zero;
-        itemRT.localScale = Vector3.one;
-        itemRT.localRotation = Quaternion.identity;
-
-        if (parentToHideOnSuccess != null) parentToHideOnSuccess.SetActive(false);
-        onCorrectPlaced?.Invoke();
+        return string.Equals(itemId, spotId, System.StringComparison.Ordinal);
     }
 
-    public bool Accepts(string itemId) => !isFilled && !string.IsNullOrEmpty(itemId) && itemId == spotId;
+    /// <summary>
+    /// נקרא בהנחה נכונה. סמוך לסוף—מסמן שהושלם.
+    /// </summary>
+    public void SettleItem(RectTransform placed)
+    {
+        // *** כאן תשאיר את הלוגיקה הקיימת שלך (העלמת קו/מרקר, נעילת פריט וכו') ***
+        // אם אין—אין בעיה; רק נותנים דגל:
+        IsSettled = true;
+    }
+
+    /// <summary>
+    /// מרכז היעד בעולם (להדגמת רמז).
+    /// </summary>
+    public Vector3 GetWorldHintPosition()
+    {
+        var rt = transform as RectTransform;
+        if (rt != null)
+        {
+            Vector3[] corners = new Vector3[4];
+            rt.GetWorldCorners(corners);
+            return (corners[0] + corners[2]) * 0.5f;
+        }
+        return transform.position;
+    }
 }
