@@ -7,30 +7,57 @@ public class DropSpot : MonoBehaviour
     [Tooltip("חייב להיות זהה ל-itemId של הכפתור התואם בבר")]
     public string spotId;
 
-    [Header("State (נקבע אוטומטית)")]
-    public bool IsSettled { get; private set; }
+    [Header("Reveal System")]
+    [SerializeField] private ImageRevealController revealController;
 
-    /// <summary>
-    /// האם הספוט מתאים לפריט זה?
-    /// </summary>
+    [Header("State (נקבע אוטומטית)")]
+    public bool IsSettled { get; set; }
+
+    private RectTransform settledItem;
+
+    private void Awake()
+    {
+        if (revealController == null)
+        {
+            revealController = GetComponent<ImageRevealController>();
+        }
+    }
+
     public bool Accepts(string itemId)
     {
         return string.Equals(itemId, spotId, System.StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// נקרא בהנחה נכונה. סמוך לסוף—מסמן שהושלם.
-    /// </summary>
     public void SettleItem(RectTransform placed)
     {
-        // *** כאן תשאיר את הלוגיקה הקיימת שלך (העלמת קו/מרקר, נעילת פריט וכו') ***
-        // אם אין—אין בעיה; רק נותנים דגל:
+        settledItem = null;
+        Destroy(placed.gameObject);
         IsSettled = true;
+
+        // הפעל reveal של התמונה האמיתית
+        if (revealController != null)
+        {
+            revealController.Reveal();
+
+            // ✅ כבה את ה-raycast של התמונה שנחשפה!
+            var backgroundImage = revealController.GetBackgroundImage();
+            if (backgroundImage != null)
+            {
+                backgroundImage.raycastTarget = false;
+                Debug.Log($"[DropSpot] Disabled raycast on {spotId}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[DropSpot] No RevealController on {spotId}!");
+        }
+
+        Debug.Log($"DropSpot {spotId} - Ghost destroyed, revealing background");
     }
 
-    /// <summary>
-    /// מרכז היעד בעולם (להדגמת רמז).
-    /// </summary>
+
+
+
     public Vector3 GetWorldHintPosition()
     {
         var rt = transform as RectTransform;
@@ -41,5 +68,22 @@ public class DropSpot : MonoBehaviour
             return (corners[0] + corners[2]) * 0.5f;
         }
         return transform.position;
+    }
+
+    public void ResetSpot()
+    {
+        if (settledItem != null)
+        {
+            Destroy(settledItem.gameObject);
+            settledItem = null;
+        }
+        
+        IsSettled = false;
+
+        // 🎯 החדש - אפס את ה-reveal
+        if (revealController != null)
+        {
+            revealController.ResetReveal();
+        }
     }
 }

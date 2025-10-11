@@ -68,9 +68,9 @@ public class HintDialog : MonoBehaviour
         HideImmediate();
         onHintGranted?.Invoke();
         
-        // Find and call SimpleDragFromBar.RunHintOnce()
-        bool result = SimpleDragFromBar.RunHintOnce();
-        Debug.Log($"Hint executed: {result}");
+        // ✅ REMOVED: SimpleDragFromBar.RunHintOnce() - not compatible with DraggableButton
+        // If you want hints with DraggableButton, you'll need to implement a new hint system
+        Debug.Log("Hint reward granted! (Hint animation not implemented for DraggableButton yet)");
     }
 
     private void ShowImmediate()

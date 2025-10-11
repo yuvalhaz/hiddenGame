@@ -10,7 +10,11 @@ public class RewardedAdsManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
@@ -30,122 +34,72 @@ public class RewardedAdsManager : MonoBehaviour
     public void Preload(Action<bool> onLoaded = null)
     {
 #if UNITY_EDITOR
-        try { onLoaded?.Invoke(true); } catch (Exception e) { Debug.LogException(e); }
+        SafeInvoke(onLoaded, true);
 #else
         // TODO: טען מודעת Rewarded אמיתית ואז קרא onLoaded(true/false)
-        try { onLoaded?.Invoke(true); } catch (Exception e) { Debug.LogException(e); }
+        SafeInvoke(onLoaded, true);
 #endif
     }
 
-    // ===================== PUBLIC API =====================
+    // ===================== MAIN API - Single method with optional parameters =====================
 
-    // 0 args – בטוח, נשענים על OnRewardGranted
-    public void ShowRewarded()
-        => ShowRewarded(onReward: null, onClosed: (Action<bool>)null, onFailed: (Action<string>)null, onOpened: null);
-
-    // ----- 3 args (תאימות לקריאות קיימות) -----
-    public void ShowRewarded(Action onReward, Action onClosed, Action onFailed)
-        => ShowRewarded(onReward,
-                        onClosed: completed => { SafeInvoke(onClosed); },
-                        onFailed: err => { SafeInvoke(onFailed); },
-                        onOpened: null);
-
-    public void ShowRewarded(Action onReward, Action<bool> onClosed, Action<string> onFailed)
-        => ShowRewarded(onReward, onClosed, onFailed, onOpened: null);
-
-    public void ShowRewarded(Action onReward, Action<bool> onClosed, Action onFailed)
-        => ShowRewarded(onReward,
-                        onClosed: onClosed,
-                        onFailed: err => { SafeInvoke(onFailed); },
-                        onOpened: null);
-
-    public void ShowRewarded(Action onReward, Action onClosed, Action<string> onFailed)
-        => ShowRewarded(onReward,
-                        onClosed: completed => { SafeInvoke(onClosed); },
-                        onFailed: onFailed,
-                        onOpened: null);
-
-    // ----- 4 args (מלא) – כל הקומבינציות מכוונות לכאן -----
-    public void ShowRewarded(Action onReward, Action onClosed, Action onFailed, Action onOpened)
-        => ShowRewarded(onReward,
-                        onClosed: completed => { SafeInvoke(onClosed); },
-                        onFailed: err => { SafeInvoke(onFailed); },
-                        onOpened: onOpened);
-
-    public void ShowRewarded(Action onReward, Action<bool> onClosed, Action<string> onFailed, Action onOpened)
-        => ShowRewardedInternal(
-            onEarned: () => { SafeInvoke(OnRewardGranted); SafeInvoke(onReward); },
-            onClosed: onClosed,
-            onFailed: onFailed,
-            onOpened: onOpened
-        );
-
-    public void ShowRewarded(Action onReward, Action<bool> onClosed, Action onFailed, Action onOpened)
-        => ShowRewarded(onReward,
-                        onClosed: onClosed,
-                        onFailed: err => { SafeInvoke(onFailed); },
-                        onOpened: onOpened);
-
-    public void ShowRewarded(Action onReward, Action onClosed, Action<string> onFailed, Action onOpened)
-        => ShowRewarded(onReward,
-                        onClosed: completed => { SafeInvoke(onClosed); },
-                        onFailed: onFailed,
-                        onOpened: onOpened);
-
-    // ===== Aliases (ShowHintAd) =====
-    public void ShowHintAd()                                                     => ShowRewarded();
-    public void ShowHintAd(Action onReward, Action onClosed, Action onFailed)    => ShowRewarded(onReward, onClosed, onFailed);
-    public void ShowHintAd(Action onReward, Action<bool> onClosed, Action<string> onFailed) => ShowRewarded(onReward, onClosed, onFailed);
-    public void ShowHintAd(Action onReward, Action<bool> onClosed, Action onFailed)        => ShowRewarded(onReward, onClosed, onFailed);
-    public void ShowHintAd(Action onReward, Action onClosed, Action<string> onFailed)      => ShowRewarded(onReward, onClosed, onFailed);
-    public void ShowHintAd(Action onReward, Action onClosed, Action onFailed, Action onOpened)
-        => ShowRewarded(onReward, onClosed, onFailed, onOpened);
-    public void ShowHintAd(Action onReward, Action<bool> onClosed, Action<string> onFailed, Action onOpened)
-        => ShowRewarded(onReward, onClosed, onFailed, onOpened);
-    public void ShowHintAd(Action onReward, Action<bool> onClosed, Action onFailed, Action onOpened)
-        => ShowRewarded(onReward, onClosed, onFailed, onOpened);
-    public void ShowHintAd(Action onReward, Action onClosed, Action<string> onFailed, Action onOpened)
-        => ShowRewarded(onReward, onClosed, onFailed, onOpened);
-
-    // ===================== INTERNAL =====================
-
-    private void ShowRewardedInternal(
-        Action onEarned,
-        Action<bool> onClosed,
-        Action<string> onFailed,
-        Action onOpened)
+    /// <summary>
+    /// Show rewarded ad with optional callbacks
+    /// </summary>
+    /// <param name="onReward">Called when user earns reward</param>
+    /// <param name="onClosed">Called when ad is closed - receives bool indicating if completed</param>
+    /// <param name="onFailed">Called if ad fails to show - receives error message</param>
+    /// <param name="onOpened">Called when ad opens</param>
+    public void ShowRewarded(
+        Action onReward = null,
+        Action<bool> onClosed = null,
+        Action<string> onFailed = null,
+        Action onOpened = null)
     {
 #if UNITY_EDITOR
         Debug.Log("[RewardedAdsManager] Editor simulate: opened -> reward -> closed(true).");
         SafeInvoke(onOpened);
-        SafeInvoke(onEarned);
+        SafeInvoke(OnRewardGranted);
+        SafeInvoke(onReward);
         SafeInvoke(onClosed, true);
 #else
         // TODO: חבר Google Mobile Ads:
         // rewardedAd.OnAdFullScreenContentOpened += () => SafeInvoke(onOpened);
-        // rewardedAd.OnAdFullScreenContentClosed += () => SafeInvoke(onClosed, /*completed:*/ true);
+        // rewardedAd.OnAdFullScreenContentClosed += () => SafeInvoke(onClosed, true);
         // rewardedAd.OnAdFailedToPresentFullScreenContent += err => SafeInvoke(onFailed, err.ToString());
-        // rewardedAd.Show(reward => SafeInvoke(onEarned));
+        // rewardedAd.Show(reward => { SafeInvoke(OnRewardGranted); SafeInvoke(onReward); });
 
         // סימולציה זמנית:
         SafeInvoke(onOpened);
-        SafeInvoke(onEarned);
+        SafeInvoke(OnRewardGranted);
+        SafeInvoke(onReward);
         SafeInvoke(onClosed, true);
 #endif
     }
 
+    /// <summary>
+    /// Alias for ShowRewarded - same functionality
+    /// </summary>
+    public void ShowHintAd(
+        Action onReward = null,
+        Action<bool> onClosed = null,
+        Action<string> onFailed = null,
+        Action onOpened = null)
+    {
+        ShowRewarded(onReward, onClosed, onFailed, onOpened);
+    }
+
     // ===================== Utils =====================
 
-    private static void SafeInvoke(Action a)
+    private static void SafeInvoke(Action action)
     {
-        try { a?.Invoke(); } catch (Exception e) { Debug.LogException(e); }
+        try { action?.Invoke(); }
+        catch (Exception e) { Debug.LogException(e); }
     }
-    private static void SafeInvoke(Action<bool> a, bool v)
+
+    private static void SafeInvoke<T>(Action<T> action, T value)
     {
-        try { a?.Invoke(v); } catch (Exception e) { Debug.LogException(e); }
-    }
-    private static void SafeInvoke(Action<string> a, string v)
-    {
-        try { a?.Invoke(v); } catch (Exception e) { Debug.LogException(e); }
+        try { action?.Invoke(value); }
+        catch (Exception e) { Debug.LogException(e); }
     }
 }
