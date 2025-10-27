@@ -9,6 +9,9 @@ public class HintDialog : MonoBehaviour
     [SerializeField] private Button closeButton;
     [SerializeField] private CanvasGroup dialogGroup;
 
+    [Header("🎯 Hint System")]
+    [SerializeField] private VisualHintSystem hintSystem; // ← חיבור למערכת הרמזים החדשה!
+
     [Header("Events")]
     public UnityEvent onHintGranted;
     public UnityEvent onClosed;
@@ -18,6 +21,20 @@ public class HintDialog : MonoBehaviour
         if (dialogGroup == null) dialogGroup = GetComponent<CanvasGroup>();
         if (watchAdButton != null) watchAdButton.onClick.AddListener(OnWatchAd);
         if (closeButton != null)   closeButton.onClick.AddListener(Close);
+        
+        // ✅ אם לא מחובר ידנית, נסה למצוא אוטומטית
+        if (hintSystem == null)
+        {
+            hintSystem = FindObjectOfType<VisualHintSystem>();
+            if (hintSystem != null)
+            {
+                Debug.Log("[HintDialog] מצא VisualHintSystem אוטומטית!");
+            }
+            else
+            {
+                Debug.LogWarning("[HintDialog] לא נמצא VisualHintSystem בסצנה!");
+            }
+        }
     }
 
     private void OnEnable()
@@ -36,6 +53,14 @@ public class HintDialog : MonoBehaviour
 
     public void Open()
     {
+        // ✅ בדיקה: האם יש כפתורים זמינים לרמז?
+        if (hintSystem != null && !hintSystem.HasAvailableButtons())
+        {
+            Debug.Log("[HintDialog] אין כפתורים זמינים לרמז - כל הכפתורים כבר הוצבו!");
+            // אופציה: להציג הודעה למשתמש או לא לפתוח את הדיאלוג
+            return;
+        }
+        
         ShowImmediate();
         transform.SetAsLastSibling();
     }
@@ -50,7 +75,7 @@ public class HintDialog : MonoBehaviour
     {
         if (RewardedAdsManager.Instance == null)
         {
-            Debug.LogWarning("RewardedAdsManager missing in scene.");
+            Debug.LogWarning("[HintDialog] RewardedAdsManager missing in scene.");
             return;
         }
 
@@ -62,15 +87,24 @@ public class HintDialog : MonoBehaviour
 
     private void HandleReward()
     {
+        Debug.Log("[HintDialog] ✅ הפרסומת הסתיימה - מעניק רמז!");
+        
         if (RewardedAdsManager.Instance != null)
             RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
 
         HideImmediate();
         onHintGranted?.Invoke();
         
-        // ✅ REMOVED: SimpleDragFromBar.RunHintOnce() - not compatible with DraggableButton
-        // If you want hints with DraggableButton, you'll need to implement a new hint system
-        Debug.Log("Hint reward granted! (Hint animation not implemented for DraggableButton yet)");
+        // ✅ מפעיל את מערכת הרמזים החדשה!
+        if (hintSystem != null)
+        {
+            Debug.Log("[HintDialog] מפעיל VisualHintSystem...");
+            hintSystem.TriggerHint();
+        }
+        else
+        {
+            Debug.LogError("[HintDialog] ❌ VisualHintSystem לא מחובר!");
+        }
     }
 
     private void ShowImmediate()

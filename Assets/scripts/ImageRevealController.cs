@@ -20,60 +20,50 @@ public class ImageRevealController : MonoBehaviour
 
     // ✅ תיקון: הסתר הכל מיד ב-Awake!
     // ✅ אל תסתיר ב-Awake - תן ל-Start להחליט!
+    // ✅ הסתר הכל מיד ב-Awake לפני שמישהו רואה!
     private void Awake()
     {
-        // ✅ לא עושים כלום כאן!
+        // ✅ הסתר את הכל כברירת מחדל
+        if (backgroundImage != null)
+        {
+            backgroundImage.color = new Color(1f, 1f, 1f, 0f);
+        }
+
+        if (placeholderImage != null)
+        {
+            placeholderImage.color = Color.white;
+        }
     }
 
 
     private void Start()
     {
         var dropSpot = GetComponent<DropSpot>();
-        string spotId = dropSpot != null ? dropSpot.spotId : "UNKNOWN";
 
-        // ✅ דיבאג מפורט!
-        Debug.Log($"🔍 [{spotId}] ImageRevealController.Start() - BEGIN");
-
+        // ✅ רק עכשיו בדוק אם צריך לגלות
         if (dropSpot != null &&
             GameProgressManager.Instance != null &&
             GameProgressManager.Instance.IsItemPlaced(dropSpot.spotId))
         {
-            Debug.Log($"✅ [{spotId}] Item is PLACED - revealing instantly!");
-
             dropSpot.IsSettled = true;
 
+            // ✅ גלה מיד ללא אנימציה
             if (placeholderImage != null)
             {
                 placeholderImage.color = new Color(1, 1, 1, 0);
-                Debug.Log($"✅ [{spotId}] Placeholder hidden");
             }
 
             if (backgroundImage != null)
             {
                 backgroundImage.color = Color.white;
                 backgroundImage.raycastTarget = false;
-                Debug.Log($"✅ [{spotId}] Background revealed!");
             }
 
             isRevealed = true;
         }
-        else
-        {
-            Debug.Log($"❌ [{spotId}] Item NOT placed - hiding");
-
-            if (backgroundImage != null)
-            {
-                backgroundImage.color = new Color(1f, 1f, 1f, 0f);
-            }
-
-            if (placeholderImage != null)
-            {
-                placeholderImage.color = Color.white;
-            }
-        }
-
-        Debug.Log($"🔍 [{spotId}] ImageRevealController.Start() - END");
+        // ✅ אם לא שמור - כבר מוסתר מ-Awake!
     }
+
 
 
 

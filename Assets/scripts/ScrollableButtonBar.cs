@@ -17,13 +17,13 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private int numberOfButtons = 20;
     [SerializeField] private float buttonSpacing = 40f;
     [SerializeField] private float buttonWidth = 100f;
-    
+
     [Header("Button Data")]
     [SerializeField] private List<ButtonData> buttonDataList = new List<ButtonData>();
-    
+
     [Header("Animation Settings")]
     [SerializeField] private float animationSpeed = 10f;
-    
+
     [Header("References")]
     [SerializeField] private RectTransform contentPanel;
     [SerializeField] private ScrollRect scrollRect;
@@ -48,15 +48,19 @@ public class ScrollableButtonBar : MonoBehaviour
                 });
             }
         }
-        
+
+        // ✅ ערבב את הכפתורים לפני יצירתם!
+        ShuffleButtonData();
+
         CreateButtons();
     }
+
 
     void Update()
     {
         // ✅ אנימציה חלקה ורציפה בלי קפיצות!
         List<RectTransform> toRemove = new List<RectTransform>();
-        
+
         foreach (var kvp in buttonsAnimating)
         {
             RectTransform rect = kvp.Key;
@@ -65,7 +69,7 @@ public class ScrollableButtonBar : MonoBehaviour
                 toRemove.Add(rect);
                 continue;
             }
-            
+
             // מצא את האינדקס של הכפתור
             int index = -1;
             for (int i = 0; i < buttons.Count; i++)
@@ -76,26 +80,26 @@ public class ScrollableButtonBar : MonoBehaviour
                     break;
                 }
             }
-            
+
             if (index == -1 || index >= targetPositions.Count)
             {
                 toRemove.Add(rect);
                 continue;
             }
-            
+
             // בדוק אם הכפתור בגרירה
             if (buttons[index] != null && buttons[index].IsDragging())
             {
                 toRemove.Add(rect);
                 continue;
             }
-            
+
             // ✅ תנועה חלקה עם MoveTowards - אין קפיצות!
             Vector2 currentPos = rect.anchoredPosition;
             Vector2 targetPos = targetPositions[index];
-            
+
             float distance = Vector2.Distance(currentPos, targetPos);
-            
+
             if (distance < 0.5f)
             {
                 rect.anchoredPosition = targetPos;
@@ -109,7 +113,7 @@ public class ScrollableButtonBar : MonoBehaviour
                 rect.anchoredPosition = newPos;
             }
         }
-        
+
         foreach (var rect in toRemove)
         {
             buttonsAnimating.Remove(rect);
@@ -152,25 +156,43 @@ public class ScrollableButtonBar : MonoBehaviour
 
         for (int i = 0; i < numberOfButtons; i++)
         {
+            // ✅ בדוק אם הכפתור כבר הושם לפני שיוצרים אותו!
+            bool alreadyPlaced = false;
+            if (GameProgressManager.Instance != null)
+            {
+                alreadyPlaced = GameProgressManager.Instance.IsItemPlaced(buttonDataList[i].buttonID);
+            }
+
+            // ✅ אם הכפתור כבר הושם - אל תיצור אותו בכלל!
+            if (alreadyPlaced)
+            {
+                buttons.Add(null);
+                buttonStates.Add(false);
+                targetPositions.Add(Vector2.zero);
+                originalPositions.Add(Vector2.zero);
+                continue; // ✅ דלג על יצירת הכפתור!
+            }
+
+            // ✅ רק אם לא הושם - צור את הכפתור
             GameObject buttonObj = Instantiate(buttonPrefab, contentPanel);
             buttonObj.name = buttonDataList[i].buttonID;
-            
+
             RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
             buttonRect.sizeDelta = new Vector2(buttonWidth, buttonWidth);
-            
+
             buttonRect.anchorMin = new Vector2(0, 0.5f);
             buttonRect.anchorMax = new Vector2(0, 0.5f);
             buttonRect.pivot = new Vector2(0, 0.5f);
-            
+
             float xPos = buttonSpacing + (i * (buttonWidth + buttonSpacing));
             buttonRect.anchoredPosition = new Vector2(xPos, 0);
-            
+
             Image buttonImage = buttonObj.GetComponent<Image>();
             if (buttonImage != null && buttonDataList[i].buttonSprite != null)
             {
                 buttonImage.sprite = buttonDataList[i].buttonSprite;
             }
-            
+
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
             if (draggable == null)
             {
@@ -178,40 +200,43 @@ public class ScrollableButtonBar : MonoBehaviour
             }
             draggable.SetButtonBar(this, i);
             draggable.SetButtonID(buttonDataList[i].buttonID);
-            
+
             buttons.Add(draggable);
             buttonStates.Add(true);
             targetPositions.Add(buttonRect.anchoredPosition);
             originalPositions.Add(buttonRect.anchoredPosition);
-            
+
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
             if (buttonText != null)
             {
                 buttonText.text = buttonDataList[i].buttonID;
             }
         }
-        
+
+        // ✅ חשב מיד את המיקומים הנכונים
+        RecalculateAllPositions();
         UpdateContentSize();
     }
+
 
     public void OnButtonDragStarted(DraggableButton button, int index)
     {
         Debug.Log("OnButtonDragStarted נקרא לכפתור: " + index);
-        
+
         // ✅ רק עוצר אנימציות - לא משנה מצבים ולא מחשב מחדש!
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null && buttonsAnimating.ContainsKey(rect))
         {
             buttonsAnimating.Remove(rect);
         }
-        
+
         // ✅ זהו! לא עושים כלום אחר כאן
     }
 
     public void OnButtonDraggedOut(DraggableButton button, int index)
     {
         Debug.Log("OnButtonDraggedOut נקרא לכפתור: " + index);
-        
+
         // ✅ רק כאן משנים מצב וממקמים מחדש - פעם אחת בלבד!
         if (index >= 0 && index < buttonStates.Count)
         {
@@ -228,7 +253,7 @@ public class ScrollableButtonBar : MonoBehaviour
     {
         buttonStates[index] = true;
         RecalculateAllPositions();
-        
+
         // ✅ פשוט סמן שצריך להניע - Update יטפל בזה
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null)
@@ -240,38 +265,38 @@ public class ScrollableButtonBar : MonoBehaviour
     public void OnButtonSuccessfullyPlaced(DraggableButton button, int index)
     {
         Debug.Log($"OnButtonSuccessfullyPlaced נקרא לכפתור {index}");
-        
+
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null && buttonsAnimating.ContainsKey(rect))
         {
             buttonsAnimating.Remove(rect);
         }
-        
+
         if (index >= 0 && index < buttonStates.Count)
         {
             buttonStates[index] = false;
         }
-        
+
         RecalculateAllPositions();
     }
 
     void RecalculateAllPositions()
     {
         Debug.Log("RecalculateAllPositions נקרא");
-        
+
         int positionIndex = 0;
-        
+
         for (int i = 0; i < buttons.Count; i++)
         {
             if (buttonStates[i])
             {
                 float xPos = buttonSpacing + (positionIndex * (buttonWidth + buttonSpacing));
                 Vector2 newTarget = new Vector2(xPos, 0);
-                
+
                 targetPositions[i] = newTarget;
-                
+
                 Debug.Log($"כפתור {i}: מיקום יעד חדש = {xPos}");
-                
+
                 // ✅ פשוט עדכן את המיקום היעד - Update יטפל בשאר
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
@@ -281,11 +306,11 @@ public class ScrollableButtonBar : MonoBehaviour
                         buttonsAnimating[rect] = true;
                     }
                 }
-                
+
                 positionIndex++;
             }
         }
-        
+
         UpdateContentSize();
     }
 
@@ -296,7 +321,7 @@ public class ScrollableButtonBar : MonoBehaviour
         {
             if (state) buttonsInBar++;
         }
-        
+
         float totalWidth = buttonSpacing + (buttonsInBar * (buttonWidth + buttonSpacing));
         contentPanel.sizeDelta = new Vector2(totalWidth, contentPanel.sizeDelta.y);
     }
@@ -318,7 +343,7 @@ public class ScrollableButtonBar : MonoBehaviour
         if (index >= 0 && index < buttonDataList.Count && index < buttons.Count)
         {
             buttonDataList[index].buttonSprite = sprite;
-            
+
             GameObject buttonObj = buttons[index].gameObject;
             if (buttonObj != null)
             {
@@ -330,4 +355,90 @@ public class ScrollableButtonBar : MonoBehaviour
             }
         }
     }
+
+    // ✅ הוסף את זה בסוף הקובץ (לפני הסוגר האחרון של המחלקה)
+    private void ShuffleButtonData()
+    {
+        // Fisher-Yates shuffle algorithm
+        for (int i = buttonDataList.Count - 1; i > 0; i--)
+        {
+            int randomIndex = Random.Range(0, i + 1);
+
+            // Swap
+            ButtonData temp = buttonDataList[i];
+            buttonDataList[i] = buttonDataList[randomIndex];
+            buttonDataList[randomIndex] = temp;
+        }
+
+
+
+    }
+
+
+
+    // ✅ פונקציה זו רצה אוטומטית כשאתה משנה משהו ב-Inspector
+    // ✅ פונקציה זו רצה אוטומטית כשאתה משנה משהו ב-Inspector
+    private void OnValidate()
+    {
+        // 1️⃣ מצא את המספר הגבוה ביותר שכבר קיים
+        int maxNumber = -1;
+
+        foreach (var data in buttonDataList)
+        {
+            if (data != null && !string.IsNullOrEmpty(data.buttonID))
+            {
+                // חלץ מספר מה-buttonID (למשל "spot11" → 11)
+                string numPart = data.buttonID.Replace("spot", "").Replace("SPOT", "");
+                if (int.TryParse(numPart, out int num))
+                {
+                    if (num > maxNumber)
+                        maxNumber = num;
+                }
+            }
+        }
+
+        // 2️⃣ עבור על כל הכפתורים - תקן רק אלה שריקים!
+        for (int i = 0; i < buttonDataList.Count; i++)
+        {
+            // אם האלמנט null - צור אותו
+            if (buttonDataList[i] == null)
+            {
+                buttonDataList[i] = new ButtonData();
+            }
+
+            // ✅ רק אם ה-buttonID ריק - תן לו מספר חדש
+            // ✅ אם כבר יש לו buttonID - אל תשנה אותו! (כך אפשר להזיז במיקום)
+            if (string.IsNullOrEmpty(buttonDataList[i].buttonID))
+            {
+                maxNumber++; // הגדל את המספר
+                buttonDataList[i].buttonID = "spot" + maxNumber.ToString("D2");
+                Debug.Log($"[ScrollableButtonBar] Created new button: {buttonDataList[i].buttonID}");
+            }
+        }
+
+        // 3️⃣ בדוק כפילויות (למקרה שמישהו העתיק ידנית)
+        HashSet<string> seenIDs = new HashSet<string>();
+
+        for (int i = 0; i < buttonDataList.Count; i++)
+        {
+            if (buttonDataList[i] != null && !string.IsNullOrEmpty(buttonDataList[i].buttonID))
+            {
+                // אם כבר ראינו את ה-ID הזה - זו כפילות!
+                if (seenIDs.Contains(buttonDataList[i].buttonID))
+                {
+                    maxNumber++;
+                    string oldID = buttonDataList[i].buttonID;
+                    buttonDataList[i].buttonID = "spot" + maxNumber.ToString("D2");
+                    Debug.LogWarning($"[ScrollableButtonBar] Fixed duplicate: {oldID} → {buttonDataList[i].buttonID}");
+                }
+                else
+                {
+                    seenIDs.Add(buttonDataList[i].buttonID);
+                }
+            }
+        }
+    }
+
+
+
 }

@@ -85,6 +85,12 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         return isDragging;
     }
 
+    // ✅ הוסף: בדיקה האם הכפתור כבר הוצב בהצלחה
+    public bool HasBeenPlaced()
+    {
+        return wasSuccessfullyPlaced;
+    }
+
     public void OnBeginDrag(PointerEventData eventData)
     {
         originalPosition = rectTransform.anchoredPosition;
