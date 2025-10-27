@@ -16,6 +16,8 @@ public class HintButton : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
 
+    private CanvasGroup buttonOwnCanvasGroup; // CanvasGroup ייעודי לכפתור
+
     private void Reset()
     {
         button = GetComponent<Button>();
@@ -26,6 +28,9 @@ public class HintButton : MonoBehaviour
         if (button == null) button = GetComponent<Button>();
         if (button != null) button.onClick.AddListener(OnClick);
 
+        // ✅ צור/מצא CanvasGroup ייעודי לכפתור
+        EnsureButtonCanvasGroup();
+
         // ✅ תקן את השקיפות של הכפתור עצמו
         FixButtonTransparency();
     }
@@ -34,6 +39,44 @@ public class HintButton : MonoBehaviour
     {
         // ✅ ודא שהכפתור נשאר גלוי
         FixButtonTransparency();
+    }
+
+    private void Update()
+    {
+        // ✅ תקן שקיפות כל frame (למקרה שה-targetGroup משפיע)
+        // זה יבטיח שהכפתור תמיד גלוי
+        if (Time.frameCount % 10 == 0) // בדוק כל 10 frames
+        {
+            if (buttonOwnCanvasGroup != null)
+            {
+                buttonOwnCanvasGroup.alpha = 1f;
+                buttonOwnCanvasGroup.ignoreParentGroups = true; // ✅ התעלם מ-CanvasGroups הורים!
+            }
+        }
+    }
+
+    /// <summary>
+    /// מוודא שיש CanvasGroup ייעודי על הכפתור שמתעלם מההורים
+    /// </summary>
+    private void EnsureButtonCanvasGroup()
+    {
+        buttonOwnCanvasGroup = GetComponent<CanvasGroup>();
+        if (buttonOwnCanvasGroup == null)
+        {
+            buttonOwnCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+            if (debugMode)
+                Debug.Log("[HintButton] יצר CanvasGroup חדש על הכפתור");
+        }
+
+        // ✅ מפתח: ignoreParentGroups = true!
+        // זה אומר שה-CanvasGroup הזה לא יושפע מ-CanvasGroups הורים
+        buttonOwnCanvasGroup.ignoreParentGroups = true;
+        buttonOwnCanvasGroup.alpha = 1f;
+        buttonOwnCanvasGroup.interactable = true;
+        buttonOwnCanvasGroup.blocksRaycasts = true;
+
+        if (debugMode)
+            Debug.Log("[HintButton] CanvasGroup מוגדר ל-ignoreParentGroups=true");
     }
 
     /// <summary>
