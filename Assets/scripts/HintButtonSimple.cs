@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 /// <summary>
-/// כפתור הינט - גרסה עובדת ופשוטה
+/// כפתור הינט - עובד בלי Button component, רק עם Image
 /// </summary>
-public class HintButtonSimple : MonoBehaviour
+public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
 {
     private CanvasGroup myCanvasGroup;
     private Image myImage;
@@ -15,17 +16,6 @@ public class HintButtonSimple : MonoBehaviour
         Debug.Log("HintButtonSimple - Awake!");
         Debug.Log("██████████████████████████████████████████");
 
-        Button btn = GetComponent<Button>();
-        if (btn != null)
-        {
-            btn.onClick.AddListener(OnButtonClick);
-            Debug.Log("✅ Button נמצא ומאזין נוסף!");
-        }
-        else
-        {
-            Debug.LogError("❌ לא נמצא Button component!");
-        }
-
         // ✅ תקן שקיפות
         myCanvasGroup = GetComponent<CanvasGroup>();
         if (myCanvasGroup == null)
@@ -35,6 +25,14 @@ public class HintButtonSimple : MonoBehaviour
         }
 
         myImage = GetComponent<Image>();
+        if (myImage != null)
+        {
+            Debug.Log("✅ Image נמצא");
+        }
+        else
+        {
+            Debug.LogError("❌ לא נמצא Image component!");
+        }
 
         FixVisibility();
     }
@@ -47,7 +45,7 @@ public class HintButtonSimple : MonoBehaviour
 
     private void LateUpdate()
     {
-        // תקן שקיפות בכל frame
+        // שמור על הכפתור גלוי בכל frame
         if (myCanvasGroup != null)
         {
             myCanvasGroup.alpha = 1f;
@@ -66,13 +64,14 @@ public class HintButtonSimple : MonoBehaviour
             myCanvasGroup.blocksRaycasts = true;
         }
 
-        // Image
+        // Image - חובה ללחיצות!
         if (myImage != null)
         {
             Color c = myImage.color;
             c.a = 1f;
             myImage.color = c;
-            myImage.raycastTarget = true;
+            myImage.raycastTarget = true; // ✅✅✅ זה המפתח ללחיצות בלי Button!
+            Debug.Log("✅ Image.raycastTarget = true");
         }
 
         Debug.Log("✅ שקיפות תוקנה!");
@@ -87,7 +86,8 @@ public class HintButtonSimple : MonoBehaviour
         }
     }
 
-    private void OnButtonClick()
+    // ✅ זה נקרא כש לוחצים על ה-Image!
+    public void OnPointerClick(PointerEventData eventData)
     {
         Debug.Log("╔════════════════════════════════════════╗");
         Debug.Log("║   הכפתור נלחץ! זה עובד!                ║");
