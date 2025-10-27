@@ -29,26 +29,72 @@ public class HintButton : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Log("═══════════════════════════════════════");
+        Debug.Log("🔷 [HintButton] Awake מתחיל");
+        Debug.Log("═══════════════════════════════════════");
+
+        // ✅ בדוק EventSystem
+        UnityEngine.EventSystems.EventSystem eventSystem = FindObjectOfType<UnityEngine.EventSystems.EventSystem>();
+        if (eventSystem == null)
+        {
+            Debug.LogError("❌ [HintButton] אין EventSystem בסצנה! הכפתור לא יעבוד!");
+        }
+        else
+        {
+            Debug.Log("✅ [HintButton] EventSystem נמצא");
+        }
+
+        // ✅ מצא Button
         if (button == null)
             button = GetComponent<Button>();
 
         if (button != null)
+        {
             button.onClick.AddListener(OnClick);
+            Debug.Log($"✅ [HintButton] Button מחובר ול-onClick נוסף מאזין");
+        }
+        else
+        {
+            Debug.LogError("❌ [HintButton] אין Button component על האובייקט הזה!");
+        }
 
         // ✅ מצא/צור CanvasGroup
         myCanvasGroup = GetComponent<CanvasGroup>();
         if (myCanvasGroup == null)
         {
             myCanvasGroup = gameObject.AddComponent<CanvasGroup>();
-            if (debugMode)
-                Debug.Log("[HintButton] יצר CanvasGroup חדש");
+            Debug.Log("[HintButton] ✅ יצר CanvasGroup חדש");
+        }
+        else
+        {
+            Debug.Log("[HintButton] ✅ מצא CanvasGroup קיים");
         }
 
         // ✅ מצא Image
         myImage = GetComponent<Image>();
+        if (myImage != null)
+        {
+            Debug.Log($"✅ [HintButton] Image נמצא: {myImage.sprite?.name ?? "NULL sprite"}");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ [HintButton] אין Image component");
+        }
+
+        // ✅ בדוק targetGroup
+        if (targetGroup != null)
+        {
+            Debug.Log($"✅ [HintButton] targetGroup מחובר: {targetGroup.name}");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ [HintButton] targetGroup לא מחובר ב-Inspector!");
+        }
 
         // ✅ כפה גלוי מיד
         ForceVisible();
+
+        Debug.Log("═══════════════════════════════════════\n");
     }
 
     private void Start()
@@ -73,10 +119,10 @@ public class HintButton : MonoBehaviour
             myCanvasGroup.alpha = 1f;
             myCanvasGroup.interactable = true;
             myCanvasGroup.blocksRaycasts = true;
-            myCanvasGroup.ignoreParentGroups = true; // ✅ המפתח!
+            myCanvasGroup.ignoreParentGroups = true; // שומר על הגלוי גם אם ההורה שקוף
         }
 
-        // ✅ 2. Image - תמיד alpha=1
+        // ✅ 2. Image - תמיד alpha=1 ו-raycastTarget=true
         if (myImage != null)
         {
             Color c = myImage.color;
@@ -87,6 +133,14 @@ public class HintButton : MonoBehaviour
 
                 if (debugMode)
                     Debug.Log($"[HintButton] תיקון Image alpha → 1");
+            }
+
+            // ✅ וודא שה-Image יכול לקבל לחיצות!
+            if (!myImage.raycastTarget)
+            {
+                myImage.raycastTarget = true;
+                if (debugMode)
+                    Debug.Log("[HintButton] הפעלתי raycastTarget על Image");
             }
         }
 
@@ -138,15 +192,26 @@ public class HintButton : MonoBehaviour
 
     private void OnClick()
     {
+        Debug.Log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        Debug.Log("🎯 [HintButton] OnClick נקרא! הכפתור נלחץ!");
+        Debug.Log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
         // מראה את UI ההינט מיד דרך CanvasGroup
         if (targetGroup != null)
         {
+            Debug.Log($"[HintButton] מציג את targetGroup: {targetGroup.name}");
             targetGroup.alpha = 1f;
             targetGroup.interactable = true;
             targetGroup.blocksRaycasts = true;
         }
+        else
+        {
+            Debug.LogError("[HintButton] ❌ targetGroup הוא NULL! חבר אותו ב-Inspector!");
+        }
 
         onPressed?.Invoke();
+
+        Debug.Log("[HintButton] ✅ OnClick הסתיים");
     }
 
     // ניתן לקרוא מבחוץ כדי להסתיר את ה-dialog
