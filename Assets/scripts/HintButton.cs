@@ -37,25 +37,42 @@ public class HintButton : MonoBehaviour
     }
 
     /// <summary>
-    /// מוודא שהכפתור עצמו לא שקוף
+    /// מוודא שהכפתור והכל ההורים שלו לא שקופים
     /// </summary>
     private void FixButtonTransparency()
     {
-        // בדיקה 1: CanvasGroup על הכפתור
-        CanvasGroup buttonCanvasGroup = GetComponent<CanvasGroup>();
-        if (buttonCanvasGroup != null)
+        if (debugMode)
+            Debug.Log("[HintButton] 🔍 בודק שקיפות של הכפתור וההורים...");
+
+        // ✅ תיקון 1: כל ה-CanvasGroups בהיררכיה (כולל הורים)
+        Transform current = transform;
+        int level = 0;
+
+        while (current != null)
         {
-            if (buttonCanvasGroup.alpha < 1f)
+            CanvasGroup cg = current.GetComponent<CanvasGroup>();
+            if (cg != null)
             {
-                if (debugMode)
-                    Debug.Log($"[HintButton] תיקון CanvasGroup alpha: {buttonCanvasGroup.alpha} → 1");
-                buttonCanvasGroup.alpha = 1f;
+                if (cg.alpha < 1f)
+                {
+                    if (debugMode)
+                        Debug.Log($"[HintButton] תיקון CanvasGroup ברמה {level} ({current.name}): {cg.alpha} → 1");
+                    cg.alpha = 1f;
+                }
+                cg.interactable = true;
+                cg.blocksRaycasts = true;
             }
-            buttonCanvasGroup.interactable = true;
-            buttonCanvasGroup.blocksRaycasts = true;
+
+            // עבור לאובייקט הבא בהיררכיה
+            current = current.parent;
+            level++;
+
+            // הגבלה: לא ללכת יותר מ-10 רמות למעלה
+            if (level > 10)
+                break;
         }
 
-        // בדיקה 2: Image component על הכפתור
+        // ✅ תיקון 2: Image component על הכפתור עצמו
         Image buttonImage = GetComponent<Image>();
         if (buttonImage != null)
         {
@@ -66,6 +83,24 @@ public class HintButton : MonoBehaviour
                     Debug.Log($"[HintButton] תיקון Image alpha: {c.a} → 1");
                 c.a = 1f;
                 buttonImage.color = c;
+            }
+        }
+
+        // ✅ תיקון 3: בדוק אם יש Button transition שמוריד את ה-alpha
+        if (button != null)
+        {
+            // אם Button מוגדר ל-Color transition עם alpha נמוך, תקן את זה
+            var colors = button.colors;
+            if (colors.normalColor.a < 1f)
+            {
+                if (debugMode)
+                    Debug.Log($"[HintButton] תיקון Button normal color alpha: {colors.normalColor.a} → 1");
+
+                Color normal = colors.normalColor;
+                normal.a = 1f;
+                colors.normalColor = normal;
+
+                button.colors = colors;
             }
         }
 
