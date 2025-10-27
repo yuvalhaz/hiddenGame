@@ -777,7 +777,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     }
     
     // ===== אפשור/כיבוי Raycast על DropSpot =====
-    
+
     private void EnableMatchingDropSpot(bool enable)
     {
         if (dropSpotCache == null || dropSpotCache.Count == 0)
@@ -821,5 +821,196 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         {
             Debug.LogWarning($"[EnableMatchingDropSpot] No DropSpot found with buttonID: {buttonID}");
         }
+    }
+
+    // ===== Hint System =====
+
+    /// <summary>
+    /// Shows a hint animation - the item flies to its correct spot and shows the full-size photo
+    /// </summary>
+    public void ShowHint(float duration = 2f)
+    {
+        if (isDragging)
+        {
+            Debug.LogWarning($"[DraggableButton] Cannot show hint while dragging");
+            return;
+        }
+
+        StartCoroutine(ShowHintCoroutine(duration));
+    }
+
+    private IEnumerator ShowHintCoroutine(float duration)
+    {
+        Debug.Log($"[DraggableButton] 💡 Showing hint for {buttonID}");
+
+        // Refresh cache if needed
+        if (dropSpotCache == null || dropSpotCache.Count == 0)
+        {
+            RefreshDropSpotCache();
+        }
+
+        // Find the matching drop spot
+        if (!dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
+        {
+            Debug.LogWarning($"[DraggableButton] Cannot show hint - no drop spot found for {buttonID}");
+            yield break;
+        }
+
+        if (spot.IsSettled)
+        {
+            Debug.Log($"[DraggableButton] Item already placed, no hint needed");
+            yield break;
+        }
+
+        // Find the top canvas
+        Canvas host = topCanvas;
+        if (host == null)
+        {
+            Canvas[] canvases = FindObjectsOfType<Canvas>();
+            foreach (var c in canvases)
+            {
+                if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
+                {
+                    host = c;
+                    break;
+                }
+            }
+        }
+
+        if (host == null)
+        {
+            Debug.LogError("[DraggableButton] No canvas found for hint!");
+            yield break;
+        }
+
+        // Create hint visual (same as drag visual)
+        GameObject hintGO = new GameObject("Hint_" + buttonID);
+        hintGO.AddComponent<RectTransform>();
+        hintGO.AddComponent<CanvasGroup>();
+        hintGO.AddComponent<Image>();
+
+        RectTransform hintRT = hintGO.GetComponent<RectTransform>();
+        hintRT.SetParent(host.transform, false);
+
+        Image hintImage = hintGO.GetComponent<Image>();
+        CanvasGroup hintCG = hintGO.GetComponent<CanvasGroup>();
+
+        // Get the real photo sprite (same as when dragging)
+        Sprite realPhoto = GetRealPhotoFromDropSpot();
+        if (realPhoto != null)
+        {
+            hintImage.sprite = realPhoto;
+        }
+        else
+        {
+            Image myImage = GetComponent<Image>();
+            if (myImage != null)
+            {
+                hintImage.sprite = myImage.sprite;
+            }
+        }
+
+        hintImage.color = Color.white;
+        hintImage.raycastTarget = false;
+        hintImage.preserveAspect = true;
+
+        hintCG.interactable = false;
+        hintCG.blocksRaycasts = false;
+        hintCG.alpha = 0f;
+
+        // Start at button position
+        hintRT.position = rectTransform.position;
+
+        // Get target size (full photo size - same as drag)
+        Vector2 targetSize = GetRealPhotoSizeFromDropSpot();
+        Vector2 startSize = targetSize * 0.3f;
+
+        hintRT.sizeDelta = startSize;
+        hintRT.SetAsLastSibling();
+
+        // Get drop spot position
+        RectTransform spotRT = spot.GetComponent<RectTransform>();
+        Vector3 targetPosition = spotRT.position;
+        Vector3 startPosition = hintRT.position;
+
+        // Animate: fly to spot + grow to full size
+        float flyDuration = 0.8f;
+        float elapsed = 0f;
+
+        while (elapsed < flyDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / flyDuration;
+            float easedT = EaseOutQuad(t);
+
+            // Grow size
+            hintRT.sizeDelta = Vector2.Lerp(startSize, targetSize, easedT);
+
+            // Move to spot
+            hintRT.position = Vector3.Lerp(startPosition, targetPosition, easedT);
+
+            // Fade in
+            hintCG.alpha = Mathf.Lerp(0f, 0.9f, easedT);
+
+            yield return null;
+        }
+
+        hintRT.sizeDelta = targetSize;
+        hintRT.position = targetPosition;
+        hintCG.alpha = 0.9f;
+
+        // Pulse effect to draw attention
+        float pulseDuration = duration - flyDuration - 0.5f;
+        if (pulseDuration > 0)
+        {
+            float pulseElapsed = 0f;
+            while (pulseElapsed < pulseDuration)
+            {
+                pulseElapsed += Time.deltaTime;
+                float pulseT = Mathf.PingPong(pulseElapsed * 2f, 1f);
+                float scale = Mathf.Lerp(1f, 1.05f, pulseT);
+                hintRT.localScale = Vector3.one * scale;
+                yield return null;
+            }
+        }
+
+        hintRT.localScale = Vector3.one;
+
+        // Fade out
+        float fadeDuration = 0.5f;
+        elapsed = 0f;
+
+        while (elapsed < fadeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / fadeDuration;
+
+            hintCG.alpha = Mathf.Lerp(0.9f, 0f, t);
+
+            yield return null;
+        }
+
+        // Clean up
+        Destroy(hintGO);
+
+        Debug.Log($"[DraggableButton] ✅ Hint animation complete");
+    }
+
+    /// <summary>
+    /// Static method to show hint for a specific button ID
+    /// </summary>
+    public static void ShowHintForButton(string buttonID, float duration = 2f)
+    {
+        DraggableButton[] allButtons = FindObjectsOfType<DraggableButton>();
+        foreach (var button in allButtons)
+        {
+            if (button.GetButtonID() == buttonID)
+            {
+                button.ShowHint(duration);
+                return;
+            }
+        }
+
+        Debug.LogWarning($"[DraggableButton] No button found with ID: {buttonID}");
     }
 }

@@ -67,10 +67,45 @@ public class HintDialog : MonoBehaviour
 
         HideImmediate();
         onHintGranted?.Invoke();
-        
-        // ✅ REMOVED: SimpleDragFromBar.RunHintOnce() - not compatible with DraggableButton
-        // If you want hints with DraggableButton, you'll need to implement a new hint system
-        Debug.Log("Hint reward granted! (Hint animation not implemented for DraggableButton yet)");
+
+        // ✅ Show hint for a random available button
+        ShowHintForRandomButton();
+    }
+
+    private void ShowHintForRandomButton()
+    {
+        // Find all active DraggableButtons
+        DraggableButton[] allButtons = FindObjectsOfType<DraggableButton>();
+
+        if (allButtons.Length == 0)
+        {
+            Debug.LogWarning("[HintDialog] No DraggableButtons found in scene!");
+            return;
+        }
+
+        // Filter to only active and visible buttons
+        System.Collections.Generic.List<DraggableButton> availableButtons = new System.Collections.Generic.List<DraggableButton>();
+
+        foreach (var button in allButtons)
+        {
+            if (button.gameObject.activeInHierarchy && button.isActiveAndEnabled)
+            {
+                availableButtons.Add(button);
+            }
+        }
+
+        if (availableButtons.Count == 0)
+        {
+            Debug.LogWarning("[HintDialog] No active buttons available for hint!");
+            return;
+        }
+
+        // Pick a random button and show hint
+        int randomIndex = Random.Range(0, availableButtons.Count);
+        DraggableButton selectedButton = availableButtons[randomIndex];
+
+        Debug.Log($"[HintDialog] Showing hint for button: {selectedButton.GetButtonID()}");
+        selectedButton.ShowHint(2f);
     }
 
     private void ShowImmediate()
