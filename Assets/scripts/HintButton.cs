@@ -2,6 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 
+/// <summary>
+/// כפתור רמז שתמיד נשאר גלוי (alpha=1) ללא קשר להורים
+/// </summary>
 public class HintButton : MonoBehaviour
 {
     [Header("Button")]
@@ -16,7 +19,8 @@ public class HintButton : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
 
-    private CanvasGroup buttonOwnCanvasGroup; // CanvasGroup ייעודי לכפתור
+    private CanvasGroup myCanvasGroup;
+    private Image myImage;
 
     private void Reset()
     {
@@ -25,135 +29,111 @@ public class HintButton : MonoBehaviour
 
     private void Awake()
     {
-        if (button == null) button = GetComponent<Button>();
-        if (button != null) button.onClick.AddListener(OnClick);
+        if (button == null)
+            button = GetComponent<Button>();
 
-        // ✅ צור/מצא CanvasGroup ייעודי לכפתור
-        EnsureButtonCanvasGroup();
+        if (button != null)
+            button.onClick.AddListener(OnClick);
 
-        // ✅ תקן את השקיפות של הכפתור עצמו
-        FixButtonTransparency();
+        // ✅ מצא/צור CanvasGroup
+        myCanvasGroup = GetComponent<CanvasGroup>();
+        if (myCanvasGroup == null)
+        {
+            myCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+            if (debugMode)
+                Debug.Log("[HintButton] יצר CanvasGroup חדש");
+        }
+
+        // ✅ מצא Image
+        myImage = GetComponent<Image>();
+
+        // ✅ כפה גלוי מיד
+        ForceVisible();
     }
 
     private void Start()
     {
-        // ✅ ודא שהכפתור נשאר גלוי
-        FixButtonTransparency();
+        ForceVisible();
     }
 
-    private void Update()
+    private void LateUpdate()
     {
-        // ✅ תקן שקיפות כל frame (למקרה שה-targetGroup משפיע)
-        // זה יבטיח שהכפתור תמיד גלוי
-        if (Time.frameCount % 10 == 0) // בדוק כל 10 frames
-        {
-            if (buttonOwnCanvasGroup != null)
-            {
-                buttonOwnCanvasGroup.alpha = 1f;
-                buttonOwnCanvasGroup.ignoreParentGroups = true; // ✅ התעלם מ-CanvasGroups הורים!
-            }
-        }
+        // ✅ כפה גלוי בכל frame - אחרי כל העדכונים האחרים
+        ForceVisible();
     }
 
     /// <summary>
-    /// מוודא שיש CanvasGroup ייעודי על הכפתור שמתעלם מההורים
+    /// כופה על הכפתור להיות גלוי לחלוטין
     /// </summary>
-    private void EnsureButtonCanvasGroup()
+    private void ForceVisible()
     {
-        buttonOwnCanvasGroup = GetComponent<CanvasGroup>();
-        if (buttonOwnCanvasGroup == null)
+        // ✅ 1. CanvasGroup - תמיד alpha=1 ומתעלם מהורים
+        if (myCanvasGroup != null)
         {
-            buttonOwnCanvasGroup = gameObject.AddComponent<CanvasGroup>();
-            if (debugMode)
-                Debug.Log("[HintButton] יצר CanvasGroup חדש על הכפתור");
+            myCanvasGroup.alpha = 1f;
+            myCanvasGroup.interactable = true;
+            myCanvasGroup.blocksRaycasts = true;
+            myCanvasGroup.ignoreParentGroups = true; // ✅ המפתח!
         }
 
-        // ✅ מפתח: ignoreParentGroups = true!
-        // זה אומר שה-CanvasGroup הזה לא יושפע מ-CanvasGroups הורים
-        buttonOwnCanvasGroup.ignoreParentGroups = true;
-        buttonOwnCanvasGroup.alpha = 1f;
-        buttonOwnCanvasGroup.interactable = true;
-        buttonOwnCanvasGroup.blocksRaycasts = true;
-
-        if (debugMode)
-            Debug.Log("[HintButton] CanvasGroup מוגדר ל-ignoreParentGroups=true");
-    }
-
-    /// <summary>
-    /// מוודא שהכפתור והכל ההורים שלו לא שקופים
-    /// </summary>
-    private void FixButtonTransparency()
-    {
-        if (debugMode)
-            Debug.Log("[HintButton] 🔍 בודק שקיפות של הכפתור וההורים...");
-
-        // ✅ תיקון 1: כל ה-CanvasGroups בהיררכיה (כולל הורים)
-        Transform current = transform;
-        int level = 0;
-
-        while (current != null)
+        // ✅ 2. Image - תמיד alpha=1
+        if (myImage != null)
         {
-            CanvasGroup cg = current.GetComponent<CanvasGroup>();
-            if (cg != null)
+            Color c = myImage.color;
+            if (c.a != 1f)
             {
-                if (cg.alpha < 1f)
-                {
-                    if (debugMode)
-                        Debug.Log($"[HintButton] תיקון CanvasGroup ברמה {level} ({current.name}): {cg.alpha} → 1");
-                    cg.alpha = 1f;
-                }
-                cg.interactable = true;
-                cg.blocksRaycasts = true;
-            }
-
-            // עבור לאובייקט הבא בהיררכיה
-            current = current.parent;
-            level++;
-
-            // הגבלה: לא ללכת יותר מ-10 רמות למעלה
-            if (level > 10)
-                break;
-        }
-
-        // ✅ תיקון 2: Image component על הכפתור עצמו
-        Image buttonImage = GetComponent<Image>();
-        if (buttonImage != null)
-        {
-            Color c = buttonImage.color;
-            if (c.a < 1f)
-            {
-                if (debugMode)
-                    Debug.Log($"[HintButton] תיקון Image alpha: {c.a} → 1");
                 c.a = 1f;
-                buttonImage.color = c;
+                myImage.color = c;
+
+                if (debugMode)
+                    Debug.Log($"[HintButton] תיקון Image alpha → 1");
             }
         }
 
-        // ✅ תיקון 3: בדוק אם יש Button transition שמוריד את ה-alpha
+        // ✅ 3. Button colors - תמיד alpha=1
         if (button != null)
         {
-            // אם Button מוגדר ל-Color transition עם alpha נמוך, תקן את זה
             var colors = button.colors;
-            if (colors.normalColor.a < 1f)
-            {
-                if (debugMode)
-                    Debug.Log($"[HintButton] תיקון Button normal color alpha: {colors.normalColor.a} → 1");
+            bool needsUpdate = false;
 
+            if (colors.normalColor.a != 1f)
+            {
                 Color normal = colors.normalColor;
                 normal.a = 1f;
                 colors.normalColor = normal;
+                needsUpdate = true;
+            }
 
+            if (colors.highlightedColor.a != 1f)
+            {
+                Color highlighted = colors.highlightedColor;
+                highlighted.a = 1f;
+                colors.highlightedColor = highlighted;
+                needsUpdate = true;
+            }
+
+            if (colors.pressedColor.a != 1f)
+            {
+                Color pressed = colors.pressedColor;
+                pressed.a = 1f;
+                colors.pressedColor = pressed;
+                needsUpdate = true;
+            }
+
+            if (needsUpdate)
+            {
                 button.colors = colors;
+
+                if (debugMode)
+                    Debug.Log("[HintButton] תיקון Button colors → alpha=1");
             }
         }
-
-        if (debugMode)
-            Debug.Log("[HintButton] ✅ כפתור הרמז אמור להיות גלוי לחלוטין");
     }
 
     private void OnDestroy()
     {
-        if (button != null) button.onClick.RemoveListener(OnClick);
+        if (button != null)
+            button.onClick.RemoveListener(OnClick);
     }
 
     private void OnClick()
@@ -167,12 +147,9 @@ public class HintButton : MonoBehaviour
         }
 
         onPressed?.Invoke();
-
-        // אם בעתיד תרצה שמכאן תתחיל גם מודעת Rewarded – תעדכן, כרגע השארתי מכובה.
-        // RewardedAdsManager.Instance?.ShowRewarded();
     }
 
-    // ניתן לקרוא מבחוץ כדי להסתיר מיד
+    // ניתן לקרוא מבחוץ כדי להסתיר את ה-dialog
     public void HideImmediate()
     {
         if (targetGroup == null) return;
