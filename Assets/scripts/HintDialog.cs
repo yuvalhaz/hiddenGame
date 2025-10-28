@@ -93,9 +93,17 @@ public class HintDialog : MonoBehaviour
         }
 
         HideImmediate();
+
+#if UNITY_EDITOR
+        // ✅ במצב עריכה (Unity Editor) - דלג על הפרסומת ותן רמז מיד!
+        Debug.Log("[HintDialog] 🧪 Unity Editor mode - skipping ad, triggering hint immediately");
+        HandleReward();
+#else
+        // ✅ במכשיר אמיתי - הצג פרסומת
         RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
         RewardedAdsManager.Instance.OnRewardGranted += HandleReward;
         RewardedAdsManager.Instance.ShowRewarded();
+#endif
     }
 
     private void HandleReward()
@@ -124,9 +132,14 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
+        Debug.Log($"[HintDialog] 🟢 ShowImmediate - dialogPanel={(dialogPanel != null ? dialogPanel.name : "null")}");
+
         // ✅ הפעל את ה-panel לפני שמשנים את ה-alpha (רק אם זה לא ה-GameObject הזה!)
         if (dialogPanel != null && dialogPanel != this.gameObject)
+        {
             dialogPanel.SetActive(true);
+            Debug.Log($"[HintDialog] ✅ Activated panel: {dialogPanel.name}");
+        }
 
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
@@ -137,12 +150,21 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
+        Debug.Log($"[HintDialog] 🔴 HideImmediate - dialogPanel={(dialogPanel != null ? dialogPanel.name : "null")}");
+
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
         // ✅ כבה את ה-panel לחלוטין כדי שלא יסתיר את אנימציית הרמז! (רק אם זה לא ה-GameObject הזה!)
         if (dialogPanel != null && dialogPanel != this.gameObject)
+        {
             dialogPanel.SetActive(false);
+            Debug.Log($"[HintDialog] ✅ Deactivated panel: {dialogPanel.name}");
+        }
+        else
+        {
+            Debug.LogWarning($"[HintDialog] ⚠️ Cannot deactivate panel - is null or same as this GameObject");
+        }
     }
 }
