@@ -22,7 +22,19 @@ public class HintDialog : MonoBehaviour
         if (dialogGroup == null) dialogGroup = GetComponent<CanvasGroup>();
         if (watchAdButton != null) watchAdButton.onClick.AddListener(OnWatchAd);
         if (closeButton != null)   closeButton.onClick.AddListener(Close);
-        
+
+        // ✅ אם dialogPanel לא מחובר, נסה למצוא child panel
+        if (dialogPanel == null && transform.childCount > 0)
+        {
+            // חפש child שנקרא "Panel" או קח את הראשון
+            Transform panelTransform = transform.Find("Panel");
+            if (panelTransform == null)
+                panelTransform = transform.GetChild(0);
+
+            dialogPanel = panelTransform.gameObject;
+            Debug.Log($"[HintDialog] מצא panel אוטומטית: {dialogPanel.name}");
+        }
+
         // ✅ אם לא מחובר ידנית, נסה למצוא אוטומטית
         if (hintSystem == null)
         {
@@ -112,8 +124,8 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
-        // ✅ הפעל את ה-panel לפני שמשנים את ה-alpha
-        if (dialogPanel != null)
+        // ✅ הפעל את ה-panel לפני שמשנים את ה-alpha (רק אם זה לא ה-GameObject הזה!)
+        if (dialogPanel != null && dialogPanel != this.gameObject)
             dialogPanel.SetActive(true);
 
         dialogGroup.alpha = 1f;
@@ -129,8 +141,8 @@ public class HintDialog : MonoBehaviour
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
-        // ✅ כבה את ה-panel לחלוטין כדי שלא יסתיר את אנימציית הרמז!
-        if (dialogPanel != null)
+        // ✅ כבה את ה-panel לחלוטין כדי שלא יסתיר את אנימציית הרמז! (רק אם זה לא ה-GameObject הזה!)
+        if (dialogPanel != null && dialogPanel != this.gameObject)
             dialogPanel.SetActive(false);
     }
 }
