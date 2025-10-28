@@ -16,11 +16,17 @@ public class HintDialog : MonoBehaviour
     public UnityEvent onHintGranted;
     public UnityEvent onClosed;
 
+    private Vector3 originalPosition;
+    private bool isHidden = false;
+
     private void Awake()
     {
         if (dialogGroup == null) dialogGroup = GetComponent<CanvasGroup>();
         if (watchAdButton != null) watchAdButton.onClick.AddListener(OnWatchAd);
         if (closeButton != null)   closeButton.onClick.AddListener(Close);
+
+        // ✅ שמור את המיקום המקורי
+        originalPosition = transform.position;
 
         // ✅ אם לא מחובר ידנית, נסה למצוא אוטומטית
         if (hintSystem == null)
@@ -121,8 +127,9 @@ public class HintDialog : MonoBehaviour
 
         Debug.Log($"[HintDialog] 🟢 ShowImmediate");
 
-        // ✅ הצג את החלון
-        transform.localScale = Vector3.one;
+        // ✅ החזר את החלון למיקום המקורי
+        transform.position = originalPosition;
+        isHidden = false;
 
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
@@ -133,15 +140,16 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🔴 HideImmediate - hiding dialog completely");
+        Debug.Log($"[HintDialog] 🔴 HideImmediate - moving dialog off-screen");
 
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
-        // ✅ הסתר את החלון לגמרי (scale=0) כדי שלא יסתיר את הרמז!
-        transform.localScale = Vector3.zero;
+        // ✅ הזז את החלון הרחק מחוץ למסך!
+        transform.position = new Vector3(-10000f, -10000f, 0f);
+        isHidden = true;
 
-        Debug.Log($"[HintDialog] ✅ Dialog hidden with scale=0");
+        Debug.Log($"[HintDialog] ✅ Dialog moved off-screen to {transform.position}");
     }
 }
