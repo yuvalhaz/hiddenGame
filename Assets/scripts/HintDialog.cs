@@ -8,7 +8,6 @@ public class HintDialog : MonoBehaviour
     [SerializeField] private Button watchAdButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private CanvasGroup dialogGroup;
-    [SerializeField] private GameObject dialogPanel; // ✅ ה-Panel child שנכבה לחלוטין כדי שלא יסתיר רמז
 
     [Header("🎯 Hint System")]
     [SerializeField] private VisualHintSystem hintSystem; // ← חיבור למערכת הרמזים החדשה!
@@ -22,18 +21,6 @@ public class HintDialog : MonoBehaviour
         if (dialogGroup == null) dialogGroup = GetComponent<CanvasGroup>();
         if (watchAdButton != null) watchAdButton.onClick.AddListener(OnWatchAd);
         if (closeButton != null)   closeButton.onClick.AddListener(Close);
-
-        // ✅ אם dialogPanel לא מחובר, נסה למצוא child panel
-        if (dialogPanel == null && transform.childCount > 0)
-        {
-            // חפש child שנקרא "Panel" או קח את הראשון
-            Transform panelTransform = transform.Find("Panel");
-            if (panelTransform == null)
-                panelTransform = transform.GetChild(0);
-
-            dialogPanel = panelTransform.gameObject;
-            Debug.Log($"[HintDialog] מצא panel אוטומטית: {dialogPanel.name}");
-        }
 
         // ✅ אם לא מחובר ידנית, נסה למצוא אוטומטית
         if (hintSystem == null)
@@ -132,14 +119,10 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🟢 ShowImmediate - dialogPanel={(dialogPanel != null ? dialogPanel.name : "null")}");
+        Debug.Log($"[HintDialog] 🟢 ShowImmediate");
 
-        // ✅ הפעל את ה-panel לפני שמשנים את ה-alpha (רק אם זה לא ה-GameObject הזה!)
-        if (dialogPanel != null && dialogPanel != this.gameObject)
-        {
-            dialogPanel.SetActive(true);
-            Debug.Log($"[HintDialog] ✅ Activated panel: {dialogPanel.name}");
-        }
+        // ✅ הצג את החלון
+        transform.localScale = Vector3.one;
 
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
@@ -150,21 +133,15 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🔴 HideImmediate - dialogPanel={(dialogPanel != null ? dialogPanel.name : "null")}");
+        Debug.Log($"[HintDialog] 🔴 HideImmediate - hiding dialog completely");
 
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
-        // ✅ כבה את ה-panel לחלוטין כדי שלא יסתיר את אנימציית הרמז! (רק אם זה לא ה-GameObject הזה!)
-        if (dialogPanel != null && dialogPanel != this.gameObject)
-        {
-            dialogPanel.SetActive(false);
-            Debug.Log($"[HintDialog] ✅ Deactivated panel: {dialogPanel.name}");
-        }
-        else
-        {
-            Debug.LogWarning($"[HintDialog] ⚠️ Cannot deactivate panel - is null or same as this GameObject");
-        }
+        // ✅ הסתר את החלון לגמרי (scale=0) כדי שלא יסתיר את הרמז!
+        transform.localScale = Vector3.zero;
+
+        Debug.Log($"[HintDialog] ✅ Dialog hidden with scale=0");
     }
 }
