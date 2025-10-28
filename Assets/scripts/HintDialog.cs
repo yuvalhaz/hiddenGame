@@ -54,7 +54,8 @@ public class HintDialog : MonoBehaviour
 
     private void OnEnable()
     {
-        HideImmediate();
+        // ✅ אל תעשה כלום ב-OnEnable - זה גורם לבעיות!
+        // HideImmediate() ייקרא רק כאשר Close() או OnWatchAd() נקראים
     }
 
     private void OnDestroy()
