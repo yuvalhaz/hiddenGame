@@ -156,11 +156,11 @@ public class DropSpotBatchManager : MonoBehaviour
             completionPanel.transform.localScale = Vector3.one;
             completionPanel.transform.localRotation = Quaternion.identity;
         }
-        
+
         isShowingMessage = false;
         hideMessageCoroutine = null;
         batchesCompleted = 0;
-        
+
         if (audioSource == null && playSound)
         {
             audioSource = GetComponent<AudioSource>();
@@ -172,7 +172,7 @@ public class DropSpotBatchManager : MonoBehaviour
                     Debug.Log("[DropSpotBatchManager] ✅ Created AudioSource component");
             }
         }
-        
+
         if (allDropSpots.Count == 0)
         {
             allDropSpots.AddRange(FindObjectsOfType<DropSpot>(true));
@@ -191,8 +191,12 @@ public class DropSpotBatchManager : MonoBehaviour
             Debug.LogWarning($"[DropSpotBatchManager] ⚠️ TOO MANY SPOTS! Required: {required}, Found: {allDropSpots.Count} (extras will be ignored)");
         }
 
+        // ✅ הוסף את זה!
+        HideAllDropSpots();
+
         PrintBatchConfiguration();
     }
+
 
     private void Start()
     {
