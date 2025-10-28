@@ -13,6 +13,7 @@ public class VisualHintSystem : MonoBehaviour
     [SerializeField] private ScrollableButtonBar buttonBar;
     [SerializeField] private Canvas mainCanvas;
     [SerializeField] private GameObject dropSpotsContainer;
+    [SerializeField] private DropSpotBatchManager batchManager;
     
     [Header("⌨️ הגדרות מקש (אופציונלי)")]
     [SerializeField] private bool enableKeyboardHint = false;
@@ -55,11 +56,25 @@ public class VisualHintSystem : MonoBehaviour
             Debug.LogError("❌ [VisualHintSystem] Button Bar לא מחובר!");
         else
             Debug.Log($"✅ [VisualHintSystem] Button Bar מחובר: {buttonBar.name}");
-            
+
         if (mainCanvas == null)
             Debug.LogError("❌ [VisualHintSystem] Main Canvas לא מחובר!");
         else
             Debug.Log($"✅ [VisualHintSystem] Main Canvas מחובר: {mainCanvas.name}");
+
+        // ✅ אם לא מחובר ידנית, חפש אוטומטית
+        if (batchManager == null)
+        {
+            batchManager = FindObjectOfType<DropSpotBatchManager>();
+            if (batchManager != null)
+                Debug.Log($"✅ [VisualHintSystem] DropSpotBatchManager נמצא אוטומטית!");
+            else
+                Debug.LogWarning("⚠️ [VisualHintSystem] DropSpotBatchManager לא נמצא!");
+        }
+        else
+        {
+            Debug.Log($"✅ [VisualHintSystem] DropSpotBatchManager מחובר: {batchManager.name}");
+        }
         
         // AudioSource (אופציונלי)
         audioSource = GetComponent<AudioSource>();
@@ -206,6 +221,18 @@ public class VisualHintSystem : MonoBehaviour
     /// </summary>
     public bool HasAvailableButtons()
     {
+        // ✅ אם יש BatchManager, בדוק לפי batch נוכחי
+        if (batchManager != null)
+        {
+            List<DropSpot> spots = batchManager.GetCurrentBatchAvailableSpots();
+            if (spots.Count == 0)
+                return false;
+
+            List<DraggableButton> buttons = FindButtonsForSpots(spots);
+            return buttons.Count > 0;
+        }
+
+        // fallback - שיטה ישנה
         List<DraggableButton> available = FindAvailableButtons();
         return available.Count > 0;
     }
@@ -245,28 +272,55 @@ public class VisualHintSystem : MonoBehaviour
         }
         
         Debug.Log("✅ [VisualHintSystem] כל הבדיקות עברו - מחפש כפתורים זמינים...");
-        
+
         // ✅ רענן cache
         RefreshDropSpotCache();
-        
-        // מציאת כפתורים זמינים
-        List<DraggableButton> availableButtons = FindAvailableButtons();
-        
+
+        // ✅ מציאת כפתורים זמינים לפי ה-Batch הנוכחי!
+        List<DraggableButton> availableButtons;
+        List<DropSpot> targetSpots;
+
+        if (batchManager != null)
+        {
+            Debug.Log("🎯 [VisualHintSystem] משתמש ב-DropSpotBatchManager!");
+
+            // קבל את ה-DropSpots הזמינים מה-batch הנוכחי
+            targetSpots = batchManager.GetCurrentBatchAvailableSpots();
+
+            if (targetSpots.Count == 0)
+            {
+                Debug.LogWarning("❌ [VisualHintSystem] אין spots זמינים ב-batch הנוכחי");
+                Debug.Log("───────────────────────────────────────────\n");
+                return;
+            }
+
+            Debug.Log($"✅ [VisualHintSystem] נמצאו {targetSpots.Count} spots זמינים ב-batch {batchManager.GetCurrentBatchIndex()}");
+
+            // מצא כפתורים שתואמים ל-spots האלה
+            availableButtons = FindButtonsForSpots(targetSpots);
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ [VisualHintSystem] BatchManager לא זמין - משתמש בשיטה ישנה");
+            availableButtons = FindAvailableButtons();
+            targetSpots = null;
+        }
+
         if (availableButtons.Count == 0)
         {
             Debug.LogWarning("❌ [VisualHintSystem] אין כפתורים זמינים להצגת רמז");
             Debug.Log("───────────────────────────────────────────\n");
             return;
         }
-        
+
         Debug.Log($"✅ [VisualHintSystem] נמצאו {availableButtons.Count} כפתורים זמינים");
-        
-        // בחירת כפתור אקראי
+
+        // בחירת כפתור אקראי מהכפתורים הזמינים
         DraggableButton selectedButton = availableButtons[Random.Range(0, availableButtons.Count)];
         string buttonID = selectedButton.GetButtonID();
-        
+
         Debug.Log($"🎲 [VisualHintSystem] נבחר כפתור: {buttonID}");
-        
+
         // מציאת ה-DropSpot המתאים
         DropSpot targetSpot = FindMatchingDropSpot(buttonID);
         
@@ -293,14 +347,59 @@ public class VisualHintSystem : MonoBehaviour
         StartCoroutine(ShowHintAnimation(selectedButton, targetSpot));
     }
     
+    /// <summary>
+    /// מוצא כפתורים שתואמים לרשימת DropSpots נתונה (לפי batch)
+    /// </summary>
+    private List<DraggableButton> FindButtonsForSpots(List<DropSpot> spots)
+    {
+        List<DraggableButton> matchingButtons = new List<DraggableButton>();
+
+        if (buttonBar == null || spots == null || spots.Count == 0)
+            return matchingButtons;
+
+        // צור HashSet של spotIDs לחיפוש מהיר
+        HashSet<string> spotIds = new HashSet<string>();
+        foreach (var spot in spots)
+        {
+            if (spot != null && !string.IsNullOrEmpty(spot.spotId))
+            {
+                spotIds.Add(spot.spotId);
+            }
+        }
+
+        Debug.Log($"[VisualHintSystem] מחפש כפתורים עבור {spotIds.Count} spots");
+
+        // חפש כפתורים שתואמים
+        DraggableButton[] allButtons = buttonBar.GetComponentsInChildren<DraggableButton>(includeInactive: false);
+
+        foreach (var btn in allButtons)
+        {
+            if (btn == null) continue;
+            if (btn.HasBeenPlaced()) continue;
+
+            string buttonID = btn.GetButtonID();
+            if (spotIds.Contains(buttonID))
+            {
+                matchingButtons.Add(btn);
+                Debug.Log($"[VisualHintSystem]   ✅ מצא כפתור תואם: {buttonID}");
+            }
+        }
+
+        Debug.Log($"[VisualHintSystem] נמצאו {matchingButtons.Count} כפתורים תואמים");
+        return matchingButtons;
+    }
+
+    /// <summary>
+    /// מוצא כפתורים זמינים (שיטה ישנה - fallback)
+    /// </summary>
     private List<DraggableButton> FindAvailableButtons()
     {
         List<DraggableButton> available = new List<DraggableButton>();
-        
+
         if (buttonBar == null) return available;
-        
+
         DraggableButton[] allButtons = buttonBar.GetComponentsInChildren<DraggableButton>(includeInactive: false);
-        
+
         foreach (var btn in allButtons)
         {
             if (btn == null) continue;
@@ -309,7 +408,7 @@ public class VisualHintSystem : MonoBehaviour
                 available.Add(btn);
             }
         }
-        
+
         return available;
     }
     
