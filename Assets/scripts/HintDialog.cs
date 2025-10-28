@@ -134,35 +134,37 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🟢 ShowImmediate");
+        Debug.Log($"[HintDialog] 🟢 ShowImmediate - enabling all children");
 
-        // ✅ החזר את החלון למיקום המקורי (RectTransform!)
-        if (rectTransform != null)
+        // ✅ הפעל את כל ה-children
+        for (int i = 0; i < transform.childCount; i++)
         {
-            rectTransform.anchoredPosition = originalAnchoredPosition;
-            Debug.Log($"[HintDialog] ✅ Restored anchoredPosition to {originalAnchoredPosition}");
+            transform.GetChild(i).gameObject.SetActive(true);
         }
 
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
         dialogGroup.blocksRaycasts = true;
+
+        Debug.Log($"[HintDialog] ✅ All children enabled");
     }
 
     private void HideImmediate()
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🔴 HideImmediate - moving dialog off-screen");
+        Debug.Log($"[HintDialog] 🔴 HideImmediate - disabling all children");
 
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
-        // ✅ הזז את החלון הרחק מחוץ למסך! (RectTransform anchoredPosition)
-        if (rectTransform != null)
+        // ✅ כבה את כל ה-children - החלון יעלם לגמרי!
+        for (int i = 0; i < transform.childCount; i++)
         {
-            rectTransform.anchoredPosition = new Vector2(50000f, 50000f);
-            Debug.Log($"[HintDialog] ✅ Moved off-screen: anchoredPosition = {rectTransform.anchoredPosition}");
+            transform.GetChild(i).gameObject.SetActive(false);
         }
+
+        Debug.Log($"[HintDialog] ✅ All {transform.childCount} children disabled");
     }
 }
