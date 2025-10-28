@@ -16,8 +16,8 @@ public class HintDialog : MonoBehaviour
     public UnityEvent onHintGranted;
     public UnityEvent onClosed;
 
-    private Vector3 originalPosition;
-    private bool isHidden = false;
+    private Vector2 originalAnchoredPosition;
+    private RectTransform rectTransform;
 
     private void Awake()
     {
@@ -25,8 +25,17 @@ public class HintDialog : MonoBehaviour
         if (watchAdButton != null) watchAdButton.onClick.AddListener(OnWatchAd);
         if (closeButton != null)   closeButton.onClick.AddListener(Close);
 
-        // ✅ שמור את המיקום המקורי
-        originalPosition = transform.position;
+        // ✅ שמור את ה-RectTransform וה-anchoredPosition המקורי
+        rectTransform = GetComponent<RectTransform>();
+        if (rectTransform != null)
+        {
+            originalAnchoredPosition = rectTransform.anchoredPosition;
+            Debug.Log($"[HintDialog] Saved original anchoredPosition: {originalAnchoredPosition}");
+        }
+        else
+        {
+            Debug.LogError("[HintDialog] ❌ RectTransform not found!");
+        }
 
         // ✅ אם לא מחובר ידנית, נסה למצוא אוטומטית
         if (hintSystem == null)
@@ -127,9 +136,12 @@ public class HintDialog : MonoBehaviour
 
         Debug.Log($"[HintDialog] 🟢 ShowImmediate");
 
-        // ✅ החזר את החלון למיקום המקורי
-        transform.position = originalPosition;
-        isHidden = false;
+        // ✅ החזר את החלון למיקום המקורי (RectTransform!)
+        if (rectTransform != null)
+        {
+            rectTransform.anchoredPosition = originalAnchoredPosition;
+            Debug.Log($"[HintDialog] ✅ Restored anchoredPosition to {originalAnchoredPosition}");
+        }
 
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
@@ -146,10 +158,11 @@ public class HintDialog : MonoBehaviour
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
-        // ✅ הזז את החלון הרחק מחוץ למסך!
-        transform.position = new Vector3(-10000f, -10000f, 0f);
-        isHidden = true;
-
-        Debug.Log($"[HintDialog] ✅ Dialog moved off-screen to {transform.position}");
+        // ✅ הזז את החלון הרחק מחוץ למסך! (RectTransform anchoredPosition)
+        if (rectTransform != null)
+        {
+            rectTransform.anchoredPosition = new Vector2(50000f, 50000f);
+            Debug.Log($"[HintDialog] ✅ Moved off-screen: anchoredPosition = {rectTransform.anchoredPosition}");
+        }
     }
 }
