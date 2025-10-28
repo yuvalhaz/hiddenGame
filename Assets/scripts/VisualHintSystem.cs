@@ -336,16 +336,24 @@ public class VisualHintSystem : MonoBehaviour
     {
         isHintActive = true;
         lastHintTime = Time.time;
-        
+
         Debug.Log("┌─────────────────────────────────────────┐");
         Debug.Log("│  🎬 אנימציית רמז - התחלה                │");
         Debug.Log("└─────────────────────────────────────────┘");
-        
+
         string buttonID = button.GetButtonID();
-        
+
+        // ✅ שלב 0: גלול לכפתור לפני ההינט!
+        if (buttonBar != null)
+        {
+            Debug.Log("📜 שלב 0/4: גולל לכפתור...");
+            yield return buttonBar.StartCoroutine(buttonBar.ScrollToButton(button, 0.5f));
+            Debug.Log("✅ הגלילה הסתיימה!");
+        }
+
         // אפקט זוהר על הכפתור המקורי
         AddGlowEffect(button.gameObject);
-        
+
         // ✅ יצירת Ghost עם תמונה אמיתית!
         currentGhostImage = CreateGhostImage(button, buttonID);
         
