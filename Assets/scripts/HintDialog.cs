@@ -8,6 +8,7 @@ public class HintDialog : MonoBehaviour
     [SerializeField] private Button watchAdButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private CanvasGroup dialogGroup;
+    [SerializeField] private GameObject dialogPanel; // ✅ ה-Panel child שנכבה לחלוטין כדי שלא יסתיר רמז
 
     [Header("🎯 Hint System")]
     [SerializeField] private VisualHintSystem hintSystem; // ← חיבור למערכת הרמזים החדשה!
@@ -110,6 +111,11 @@ public class HintDialog : MonoBehaviour
     private void ShowImmediate()
     {
         if (dialogGroup == null) return;
+
+        // ✅ הפעל את ה-panel לפני שמשנים את ה-alpha
+        if (dialogPanel != null)
+            dialogPanel.SetActive(true);
+
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
         dialogGroup.blocksRaycasts = true;
@@ -118,8 +124,13 @@ public class HintDialog : MonoBehaviour
     private void HideImmediate()
     {
         if (dialogGroup == null) return;
+
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
+
+        // ✅ כבה את ה-panel לחלוטין כדי שלא יסתיר את אנימציית הרמז!
+        if (dialogPanel != null)
+            dialogPanel.SetActive(false);
     }
 }
