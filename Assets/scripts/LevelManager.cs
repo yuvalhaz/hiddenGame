@@ -334,7 +334,7 @@ public class LevelManager : MonoBehaviour
 
     private void OnValidate()
     {
-        if (showCurrentLevelInfo && Application.isPlaying)
+        if (showCurrentLevelInfo && Application.isPlaying && GameProgressManager.Instance != null)
         {
             // Show current level info in inspector during play
             name = $"LevelManager - Level {currentLevelIndex + 1} ({GetLevelProgress()})";
