@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using System.Collections;
 
 public class HintDialog : MonoBehaviour
 {
@@ -18,6 +19,7 @@ public class HintDialog : MonoBehaviour
 
     private Vector2 originalAnchoredPosition;
     private RectTransform rectTransform;
+    private bool isShowingHint = false; // ✅ דגל שמונע פתיחה בזמן רמז
 
     private void Awake()
     {
@@ -69,6 +71,13 @@ public class HintDialog : MonoBehaviour
 
     public void Open()
     {
+        // ✅ אם הרמז פועל - אל תפתח!
+        if (isShowingHint)
+        {
+            Debug.Log("[HintDialog] 🚫 Cannot open - hint is currently showing!");
+            return;
+        }
+
         // ✅ בדיקה: האם יש כפתורים זמינים לרמז?
         if (hintSystem != null && !hintSystem.HasAvailableButtons())
         {
@@ -76,7 +85,7 @@ public class HintDialog : MonoBehaviour
             // אופציה: להציג הודעה למשתמש או לא לפתוח את הדיאלוג
             return;
         }
-        
+
         ShowImmediate();
         transform.SetAsLastSibling();
     }
@@ -95,6 +104,10 @@ public class HintDialog : MonoBehaviour
             return;
         }
 
+        // ✅ סמן שהרמז מתחיל - זה ימנע מ-Open() לפתוח מחדש!
+        isShowingHint = true;
+        Debug.Log("[HintDialog] 🎯 Hint starting - dialog locked");
+
         HideImmediate();
 
 #if UNITY_EDITOR
@@ -112,23 +125,36 @@ public class HintDialog : MonoBehaviour
     private void HandleReward()
     {
         Debug.Log("[HintDialog] ✅ הפרסומת הסתיימה - מעניק רמז!");
-        
+
         if (RewardedAdsManager.Instance != null)
             RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
 
         HideImmediate();
         onHintGranted?.Invoke();
-        
+
         // ✅ מפעיל את מערכת הרמזים החדשה!
         if (hintSystem != null)
         {
             Debug.Log("[HintDialog] מפעיל VisualHintSystem...");
             hintSystem.TriggerHint();
+
+            // ✅ אחרי 5 שניות (זמן שהרמז מסתיים), נבטל את הנעילה
+            StartCoroutine(UnlockDialogAfterHint());
         }
         else
         {
             Debug.LogError("[HintDialog] ❌ VisualHintSystem לא מחובר!");
+            isShowingHint = false; // בטל נעילה אם אין רמז
         }
+    }
+
+    private IEnumerator UnlockDialogAfterHint()
+    {
+        // ✅ חכה 5 שניות (זמן שהרמז רץ)
+        yield return new WaitForSeconds(5f);
+
+        isShowingHint = false;
+        Debug.Log("[HintDialog] 🔓 Hint finished - dialog unlocked");
     }
 
     private void ShowImmediate()
