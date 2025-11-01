@@ -2,9 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
-/// מערכת רמזים ויזואלית - עם אנימציית גדילה ביעד!
+/// מערכת רמזים ויזואלית - עם אנימציית גדילה ביעד + תמונה אמיתית בגודל מלא!
 /// </summary>
 public class VisualHintSystem : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class VisualHintSystem : MonoBehaviour
     [SerializeField] private ScrollableButtonBar buttonBar;
     [SerializeField] private Canvas mainCanvas;
     [SerializeField] private GameObject dropSpotsContainer;
+    [SerializeField] private DropSpotBatchManager batchManager;
     
     [Header("⌨️ הגדרות מקש (אופציונלי)")]
     [SerializeField] private bool enableKeyboardHint = false;
@@ -19,15 +21,12 @@ public class VisualHintSystem : MonoBehaviour
     
     [Header("🎨 הגדרות אנימציה")]
     [SerializeField] private float ghostStartScale = 0.3f;
-    [SerializeField] private float ghostMidScale = 1.0f;
-    [Tooltip("גודל בזמן הטיסה")]
-    [SerializeField] private float ghostTargetScale = 1.5f;
-    [Tooltip("גודל סופי ביעד - כמו הכפתור האמיתי!")]
+    [Tooltip("גודל התחלתי - 30% מהגודל האמיתי")]
     [SerializeField] private float flyDuration = 1.5f;
     [SerializeField] private float growDuration = 0.5f;
     [Tooltip("משך אנימציית הגדילה ביעד")]
     [SerializeField] private float arcHeight = 100f;
-    [SerializeField] private float ghostImageAlpha = 0.7f;
+    [SerializeField] private float ghostImageAlpha = 0.9f;
     
     [Header("⏱️ Cooldown")]
     [SerializeField] private float hintCooldown = 3f;
@@ -43,6 +42,9 @@ public class VisualHintSystem : MonoBehaviour
     private GameObject currentGhostImage;
     private AudioSource audioSource;
     
+    // ✅ Cache של DropSpots
+    private static Dictionary<string, DropSpot> dropSpotCache;
+    
     void Awake()
     {
         Debug.Log("═══════════════════════════════════════════");
@@ -54,16 +56,25 @@ public class VisualHintSystem : MonoBehaviour
             Debug.LogError("❌ [VisualHintSystem] Button Bar לא מחובר!");
         else
             Debug.Log($"✅ [VisualHintSystem] Button Bar מחובר: {buttonBar.name}");
-            
+
         if (mainCanvas == null)
             Debug.LogError("❌ [VisualHintSystem] Main Canvas לא מחובר!");
         else
             Debug.Log($"✅ [VisualHintSystem] Main Canvas מחובר: {mainCanvas.name}");
-            
-        if (dropSpotsContainer == null)
-            Debug.LogError("❌ [VisualHintSystem] Drop Spots Container לא מחובר!");
+
+        // ✅ אם לא מחובר ידנית, חפש אוטומטית
+        if (batchManager == null)
+        {
+            batchManager = FindObjectOfType<DropSpotBatchManager>();
+            if (batchManager != null)
+                Debug.Log($"✅ [VisualHintSystem] DropSpotBatchManager נמצא אוטומטית!");
+            else
+                Debug.LogWarning("⚠️ [VisualHintSystem] DropSpotBatchManager לא נמצא!");
+        }
         else
-            Debug.Log($"✅ [VisualHintSystem] Drop Spots Container מחובר: {dropSpotsContainer.name}");
+        {
+            Debug.Log($"✅ [VisualHintSystem] DropSpotBatchManager מחובר: {batchManager.name}");
+        }
         
         // AudioSource (אופציונלי)
         audioSource = GetComponent<AudioSource>();
@@ -72,6 +83,9 @@ public class VisualHintSystem : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
             Debug.Log("✅ [VisualHintSystem] AudioSource נוסף אוטומטית");
         }
+        
+        // ✅ רענן את ה-cache
+        RefreshDropSpotCache();
         
         Debug.Log("═══════════════════════════════════════════\n");
     }
@@ -102,11 +116,123 @@ public class VisualHintSystem : MonoBehaviour
         }
     }
     
+    // ✅ רענון Cache של DropSpots
+    private void RefreshDropSpotCache()
+    {
+        Debug.Log($"[VisualHintSystem] === REFRESH CACHE START ===");
+
+        if (dropSpotCache == null)
+        {
+            dropSpotCache = new Dictionary<string, DropSpot>();
+        }
+
+        dropSpotCache.Clear();
+
+        // ✅ מצא את כל ה-DropSpots (כולל לא פעילים)
+        var allDropSpots = FindObjectsOfType<DropSpot>(true);
+
+        Debug.Log($"[VisualHintSystem] Found {allDropSpots.Length} DropSpots in scene");
+
+        foreach (var spot in allDropSpots)
+        {
+            if (!string.IsNullOrEmpty(spot.spotId))
+            {
+                if (!dropSpotCache.ContainsKey(spot.spotId))
+                {
+                    dropSpotCache[spot.spotId] = spot;
+                    Debug.Log($"[VisualHintSystem] ✅ Cached: '{spot.spotId}'");
+                }
+                else
+                {
+                    Debug.LogWarning($"[VisualHintSystem] ⚠️ Duplicate spotId: '{spot.spotId}'");
+                }
+            }
+        }
+
+        Debug.Log($"[VisualHintSystem] === CACHE END === Total: {dropSpotCache.Count}");
+    }
+    
+    // ✅ קבלת תמונה אמיתית מה-DropSpot
+    private Sprite GetRealPhotoFromDropSpot(string buttonID)
+    {
+        if (dropSpotCache == null || dropSpotCache.Count == 0)
+        {
+            RefreshDropSpotCache();
+        }
+
+        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
+        {
+            var revealController = spot.GetComponent<ImageRevealController>();
+            if (revealController != null)
+            {
+                var backgroundImage = revealController.GetBackgroundImage();
+                
+                if (backgroundImage != null && backgroundImage.sprite != null)
+                {
+                    Debug.Log($"[VisualHintSystem] ✅ Real photo found: {backgroundImage.sprite.name}");
+                    return backgroundImage.sprite;
+                }
+            }
+        }
+
+        Debug.LogWarning($"[VisualHintSystem] ⚠️ No real photo for {buttonID}");
+        return null;
+    }
+    
+    // ✅ קבלת גודל התמונה האמיתית
+    private Vector2 GetRealPhotoSizeFromDropSpot(string buttonID)
+    {
+        if (dropSpotCache == null || dropSpotCache.Count == 0)
+        {
+            RefreshDropSpotCache();
+        }
+
+        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
+        {
+            var revealController = spot.GetComponent<ImageRevealController>();
+            if (revealController != null)
+            {
+                var backgroundImage = revealController.GetBackgroundImage();
+                if (backgroundImage != null)
+                {
+                    var bgRT = backgroundImage.GetComponent<RectTransform>();
+                    if (bgRT != null)
+                    {
+                        Vector2 size = bgRT.rect.size;
+                        Debug.Log($"[VisualHintSystem] ✅ Real size: {size}");
+                        return size;
+                    }
+                }
+            }
+            
+            // fallback - גודל ה-DropSpot
+            var spotRT = spot.GetComponent<RectTransform>();
+            if (spotRT != null)
+            {
+                return spotRT.rect.size;
+            }
+        }
+
+        return new Vector2(350f, 350f);
+    }
+    
     /// <summary>
     /// בדיקה האם יש כפתורים זמינים לרמז
     /// </summary>
     public bool HasAvailableButtons()
     {
+        // ✅ אם יש BatchManager, בדוק לפי batch נוכחי
+        if (batchManager != null)
+        {
+            List<DropSpot> spots = batchManager.GetCurrentBatchAvailableSpots();
+            if (spots.Count == 0)
+                return false;
+
+            List<DraggableButton> buttons = FindButtonsForSpots(spots);
+            return buttons.Count > 0;
+        }
+
+        // fallback - שיטה ישנה
         List<DraggableButton> available = FindAvailableButtons();
         return available.Count > 0;
     }
@@ -138,7 +264,7 @@ public class VisualHintSystem : MonoBehaviour
         }
         
         // בדיקה 3: חיבורים
-        if (buttonBar == null || mainCanvas == null || dropSpotsContainer == null)
+        if (buttonBar == null || mainCanvas == null)
         {
             Debug.LogError("❌ [VisualHintSystem] חסרים חיבורים נדרשים!");
             Debug.Log("───────────────────────────────────────────\n");
@@ -146,31 +272,69 @@ public class VisualHintSystem : MonoBehaviour
         }
         
         Debug.Log("✅ [VisualHintSystem] כל הבדיקות עברו - מחפש כפתורים זמינים...");
-        
-        // מציאת כפתורים זמינים
-        List<DraggableButton> availableButtons = FindAvailableButtons();
-        
+
+        // ✅ רענן cache
+        RefreshDropSpotCache();
+
+        // ✅ מציאת כפתורים זמינים לפי ה-Batch הנוכחי!
+        List<DraggableButton> availableButtons;
+        List<DropSpot> targetSpots;
+
+        if (batchManager != null)
+        {
+            Debug.Log("🎯 [VisualHintSystem] משתמש ב-DropSpotBatchManager!");
+
+            // קבל את ה-DropSpots הזמינים מה-batch הנוכחי
+            targetSpots = batchManager.GetCurrentBatchAvailableSpots();
+
+            if (targetSpots.Count == 0)
+            {
+                Debug.LogWarning("❌ [VisualHintSystem] אין spots זמינים ב-batch הנוכחי");
+                Debug.Log("───────────────────────────────────────────\n");
+                return;
+            }
+
+            Debug.Log($"✅ [VisualHintSystem] נמצאו {targetSpots.Count} spots זמינים ב-batch {batchManager.GetCurrentBatchIndex()}");
+
+            // מצא כפתורים שתואמים ל-spots האלה
+            availableButtons = FindButtonsForSpots(targetSpots);
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ [VisualHintSystem] BatchManager לא זמין - משתמש בשיטה ישנה");
+            availableButtons = FindAvailableButtons();
+            targetSpots = null;
+        }
+
         if (availableButtons.Count == 0)
         {
             Debug.LogWarning("❌ [VisualHintSystem] אין כפתורים זמינים להצגת רמז");
             Debug.Log("───────────────────────────────────────────\n");
             return;
         }
-        
+
         Debug.Log($"✅ [VisualHintSystem] נמצאו {availableButtons.Count} כפתורים זמינים");
-        
-        // בחירת כפתור אקראי
+
+        // בחירת כפתור אקראי מהכפתורים הזמינים
         DraggableButton selectedButton = availableButtons[Random.Range(0, availableButtons.Count)];
         string buttonID = selectedButton.GetButtonID();
-        
+
         Debug.Log($"🎲 [VisualHintSystem] נבחר כפתור: {buttonID}");
-        
+
         // מציאת ה-DropSpot המתאים
         DropSpot targetSpot = FindMatchingDropSpot(buttonID);
         
         if (targetSpot == null)
         {
             Debug.LogError($"❌ [VisualHintSystem] לא נמצא DropSpot עבור {buttonID}");
+            
+            // ✅ הדפס מה יש ב-cache
+            Debug.Log($"[VisualHintSystem] Available spots in cache:");
+            foreach (var key in dropSpotCache.Keys)
+            {
+                Debug.Log($"  - '{key}'");
+            }
+            
             Debug.Log("───────────────────────────────────────────\n");
             return;
         }
@@ -183,14 +347,59 @@ public class VisualHintSystem : MonoBehaviour
         StartCoroutine(ShowHintAnimation(selectedButton, targetSpot));
     }
     
+    /// <summary>
+    /// מוצא כפתורים שתואמים לרשימת DropSpots נתונה (לפי batch)
+    /// </summary>
+    private List<DraggableButton> FindButtonsForSpots(List<DropSpot> spots)
+    {
+        List<DraggableButton> matchingButtons = new List<DraggableButton>();
+
+        if (buttonBar == null || spots == null || spots.Count == 0)
+            return matchingButtons;
+
+        // צור HashSet של spotIDs לחיפוש מהיר
+        HashSet<string> spotIds = new HashSet<string>();
+        foreach (var spot in spots)
+        {
+            if (spot != null && !string.IsNullOrEmpty(spot.spotId))
+            {
+                spotIds.Add(spot.spotId);
+            }
+        }
+
+        Debug.Log($"[VisualHintSystem] מחפש כפתורים עבור {spotIds.Count} spots");
+
+        // חפש כפתורים שתואמים
+        DraggableButton[] allButtons = buttonBar.GetComponentsInChildren<DraggableButton>(includeInactive: false);
+
+        foreach (var btn in allButtons)
+        {
+            if (btn == null) continue;
+            if (btn.HasBeenPlaced()) continue;
+
+            string buttonID = btn.GetButtonID();
+            if (spotIds.Contains(buttonID))
+            {
+                matchingButtons.Add(btn);
+                Debug.Log($"[VisualHintSystem]   ✅ מצא כפתור תואם: {buttonID}");
+            }
+        }
+
+        Debug.Log($"[VisualHintSystem] נמצאו {matchingButtons.Count} כפתורים תואמים");
+        return matchingButtons;
+    }
+
+    /// <summary>
+    /// מוצא כפתורים זמינים (שיטה ישנה - fallback)
+    /// </summary>
     private List<DraggableButton> FindAvailableButtons()
     {
         List<DraggableButton> available = new List<DraggableButton>();
-        
+
         if (buttonBar == null) return available;
-        
+
         DraggableButton[] allButtons = buttonBar.GetComponentsInChildren<DraggableButton>(includeInactive: false);
-        
+
         foreach (var btn in allButtons)
         {
             if (btn == null) continue;
@@ -199,20 +408,21 @@ public class VisualHintSystem : MonoBehaviour
                 available.Add(btn);
             }
         }
-        
+
         return available;
     }
     
+    // ✅ משתמש ב-cache
     private DropSpot FindMatchingDropSpot(string buttonID)
     {
-        if (dropSpotsContainer == null) return null;
-        
-        DropSpot[] allSpots = dropSpotsContainer.GetComponentsInChildren<DropSpot>(includeInactive: false);
-        
-        foreach (var spot in allSpots)
+        if (dropSpotCache == null || dropSpotCache.Count == 0)
         {
-            if (spot == null) continue;
-            if (spot.spotId == buttonID && !spot.IsSettled)
+            RefreshDropSpotCache();
+        }
+
+        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
+        {
+            if (spot.gameObject.activeInHierarchy && !spot.IsSettled)
             {
                 return spot;
             }
@@ -225,16 +435,26 @@ public class VisualHintSystem : MonoBehaviour
     {
         isHintActive = true;
         lastHintTime = Time.time;
-        
+
         Debug.Log("┌─────────────────────────────────────────┐");
         Debug.Log("│  🎬 אנימציית רמז - התחלה                │");
         Debug.Log("└─────────────────────────────────────────┘");
-        
+
+        string buttonID = button.GetButtonID();
+
+        // ✅ שלב 0: גלול לכפתור לפני ההינט!
+        if (buttonBar != null)
+        {
+            Debug.Log("📜 שלב 0/4: גולל לכפתור...");
+            yield return buttonBar.StartCoroutine(buttonBar.ScrollToButton(button, 0.5f));
+            Debug.Log("✅ הגלילה הסתיימה!");
+        }
+
         // אפקט זוהר על הכפתור המקורי
         AddGlowEffect(button.gameObject);
-        
-        // יצירת Ghost Image
-        currentGhostImage = CreateGhostImage(button);
+
+        // ✅ יצירת Ghost עם תמונה אמיתית!
+        currentGhostImage = CreateGhostImage(button, buttonID);
         
         if (currentGhostImage == null)
         {
@@ -243,7 +463,7 @@ public class VisualHintSystem : MonoBehaviour
             yield break;
         }
         
-        Debug.Log("✅ Ghost Image נוצר");
+        Debug.Log("✅ Ghost Image נוצר עם תמונה אמיתית!");
         
         if (hintStartSound != null && audioSource != null)
             audioSource.PlayOneShot(hintStartSound);
@@ -255,8 +475,11 @@ public class VisualHintSystem : MonoBehaviour
         Vector3 startPos = buttonRT.position;
         Vector3 endPos = targetRT.position;
         
-        // שלב 1: טיסה ליעד
-        Debug.Log("🚀 שלב 1/4: טיסה ליעד...");
+        // ✅ גודל אמיתי של התמונה
+        Vector2 realPhotoSize = GetRealPhotoSizeFromDropSpot(buttonID);
+        
+        // שלב 1: טיסה ליעד + גדילה לגודל מלא
+        Debug.Log("🚀 שלב 1/3: טיסה ליעד + גדילה לגודל מלא...");
         float elapsed = 0f;
         
         while (elapsed < flyDuration)
@@ -265,60 +488,54 @@ public class VisualHintSystem : MonoBehaviour
             
             elapsed += Time.deltaTime;
             float t = elapsed / flyDuration;
+            float easedT = EaseOutQuad(t);
             
             // תנועה בקשת
-            Vector3 currentPos = Vector3.Lerp(startPos, endPos, t);
-            currentPos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
+            Vector3 currentPos = Vector3.Lerp(startPos, endPos, easedT);
+            currentPos.y += Mathf.Sin(easedT * Mathf.PI) * arcHeight;
             ghostRT.position = currentPos;
             
-            // שינוי גודל - מגדיל עד ghostMidScale
-            float scale = Mathf.Lerp(ghostStartScale, ghostMidScale, t);
-            ghostRT.localScale = Vector3.one * scale;
+            // ✅ גדילה לגודל מלא של התמונה
+            Vector2 startSize = realPhotoSize * ghostStartScale;
+            ghostRT.sizeDelta = Vector2.Lerp(startSize, realPhotoSize, easedT);
             
             yield return null;
         }
         
         ghostRT.position = endPos;
-        ghostRT.localScale = Vector3.one * ghostMidScale;
-        Debug.Log("✅ הגיע ליעד!");
+        ghostRT.sizeDelta = realPhotoSize;
+        Debug.Log("✅ הגיע ליעד בגודל מלא!");
         
-        // שלב 2: אנימציית גדילה ביעד! 🎉
-        Debug.Log($"📈 שלב 2/4: גדילה ביעד ({ghostMidScale} → {ghostTargetScale})...");
+        // שלב 2: אפקט פעימה ביעד
+        Debug.Log("💓 שלב 2/3: אפקט פעימה...");
         
         if (hintArriveSound != null && audioSource != null)
             audioSource.PlayOneShot(hintArriveSound);
         
-        // אפקט פעימה על היעד
         AddPulseEffect(targetSpot.gameObject);
         
         elapsed = 0f;
-        while (elapsed < growDuration)
+        while (elapsed < 0.7f)
         {
             if (ghostRT == null) yield break;
             
             elapsed += Time.deltaTime;
-            float t = elapsed / growDuration;
-            
-            // EaseOutQuad - בדיוק כמו ב-DraggableButton!
-            float easedT = EaseOutQuad(t);
-            
-            float scale = Mathf.Lerp(ghostMidScale, ghostTargetScale, easedT);
+            float pulseT = Mathf.PingPong(elapsed * 3f, 1f);
+            float scale = Mathf.Lerp(1f, 1.05f, pulseT);
             ghostRT.localScale = Vector3.one * scale;
             
             yield return null;
         }
         
-        ghostRT.localScale = Vector3.one * ghostTargetScale;
-        Debug.Log("✅ גדל למקסימום!");
+        ghostRT.localScale = Vector3.one;
+        Debug.Log("✅ פעימה הושלמה!");
         
-        // שלב 3: המתנה ביעד
-        Debug.Log("⏸️ שלב 3/4: המתנה ביעד (0.5 שניות)...");
-        yield return new WaitForSeconds(0.5f);
-        
-        // שלב 4: חזרה לבר
-        Debug.Log("🔙 שלב 4/4: חזרה לבר...");
+        // שלב 3: חזרה לבר
+        Debug.Log("🔙 שלב 3/3: חזרה לבר...");
         elapsed = 0f;
         startPos = ghostRT.position;
+        Vector2 currentSize = ghostRT.sizeDelta;
+        Vector2 endSize = realPhotoSize * ghostStartScale;
         
         CanvasGroup ghostCG = currentGhostImage.GetComponent<CanvasGroup>();
         
@@ -330,10 +547,7 @@ public class VisualHintSystem : MonoBehaviour
             float t = elapsed / (flyDuration * 0.7f);
             
             ghostRT.position = Vector3.Lerp(startPos, buttonRT.position, t);
-            
-            // מקטין חזרה תוך כדי חזרה
-            float scale = Mathf.Lerp(ghostTargetScale, ghostStartScale, t);
-            ghostRT.localScale = Vector3.one * scale;
+            ghostRT.sizeDelta = Vector2.Lerp(currentSize, endSize, t);
             
             if (ghostCG != null)
                 ghostCG.alpha = Mathf.Lerp(ghostImageAlpha, 0f, t);
@@ -360,27 +574,45 @@ public class VisualHintSystem : MonoBehaviour
         isHintActive = false;
     }
     
-    private GameObject CreateGhostImage(DraggableButton button)
+    // ✅ יצירת Ghost עם תמונה אמיתית!
+    private GameObject CreateGhostImage(DraggableButton button, string buttonID)
     {
-        GameObject ghost = new GameObject("HintGhost");
+        GameObject ghost = new GameObject("HintGhost_" + buttonID);
         ghost.transform.SetParent(mainCanvas.transform, false);
         
         RectTransform ghostRT = ghost.AddComponent<RectTransform>();
         Image ghostImage = ghost.AddComponent<Image>();
         CanvasGroup ghostCG = ghost.AddComponent<CanvasGroup>();
         
-        // העתקת תמונה מהכפתור
-        Image buttonImage = button.GetComponent<Image>();
-        if (buttonImage != null && buttonImage.sprite != null)
+        // ✅ קבל תמונה אמיתית מה-DropSpot!
+        Sprite realPhoto = GetRealPhotoFromDropSpot(buttonID);
+        
+        if (realPhoto != null)
         {
-            ghostImage.sprite = buttonImage.sprite;
+            ghostImage.sprite = realPhoto;
+            Debug.Log($"[VisualHintSystem] ✅ Using real photo!");
+        }
+        else
+        {
+            // fallback - תמונה מהכפתור
+            Image buttonImage = button.GetComponent<Image>();
+            if (buttonImage != null && buttonImage.sprite != null)
+            {
+                ghostImage.sprite = buttonImage.sprite;
+                Debug.Log($"[VisualHintSystem] ⚠️ Fallback: button sprite");
+            }
         }
         
-        // הגדרות
+        ghostImage.preserveAspect = true;
+        ghostImage.raycastTarget = false;
+        
+        // ✅ גודל התחלתי קטן
+        Vector2 realSize = GetRealPhotoSizeFromDropSpot(buttonID);
+        ghostRT.sizeDelta = realSize * ghostStartScale;
+        
         RectTransform buttonRT = button.GetComponent<RectTransform>();
-        ghostRT.sizeDelta = buttonRT.sizeDelta;
         ghostRT.position = buttonRT.position;
-        ghostRT.localScale = Vector3.one * ghostStartScale;
+        ghostRT.localScale = Vector3.one;
         
         ghostCG.alpha = ghostImageAlpha;
         ghostCG.blocksRaycasts = false;

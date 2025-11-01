@@ -937,4 +937,58 @@ public class DropSpotBatchManager : MonoBehaviour
         Debug.Log($"Batches: {GetTotalBatches()}");
         Debug.Log($"Total spots: {GetTotalRequiredSpots()}");
     }
+
+    // ✅ Public API for VisualHintSystem
+    /// <summary>
+    /// מחזיר את רשימת ה-DropSpots של ה-Batch הנוכחי שעדיין לא מולאו
+    /// </summary>
+    public List<DropSpot> GetCurrentBatchAvailableSpots()
+    {
+        List<DropSpot> availableSpots = new List<DropSpot>();
+
+        if (currentBatch >= GetTotalBatches())
+        {
+            if (debugMode)
+                Debug.Log("[DropSpotBatchManager] כל ה-batches הושלמו!");
+            return availableSpots;
+        }
+
+        int startIdx = GetBatchStartIndex(currentBatch);
+        int batchSize = GetBatchSize(currentBatch);
+        int endIdx = startIdx + batchSize;
+
+        if (debugMode)
+            Debug.Log($"[DropSpotBatchManager] Getting spots from batch {currentBatch}: indices {startIdx}-{endIdx - 1}");
+
+        for (int i = startIdx; i < endIdx && i < allDropSpots.Count; i++)
+        {
+            DropSpot spot = allDropSpots[i];
+            if (spot == null) continue;
+
+            // בדוק אם ה-spot פעיל ועדיין לא מולא
+            if (spot.gameObject.activeInHierarchy && !spot.IsSettled)
+            {
+                // בדוק אם הפריט לא הושם עדיין
+                if (GameProgressManager.Instance == null || !GameProgressManager.Instance.IsItemPlaced(spot.spotId))
+                {
+                    availableSpots.Add(spot);
+                    if (debugMode)
+                        Debug.Log($"  ✅ Available: {spot.spotId}");
+                }
+            }
+        }
+
+        if (debugMode)
+            Debug.Log($"[DropSpotBatchManager] Found {availableSpots.Count} available spots in current batch");
+
+        return availableSpots;
+    }
+
+    /// <summary>
+    /// מחזיר את מספר ה-Batch הנוכחי
+    /// </summary>
+    public int GetCurrentBatchIndex()
+    {
+        return currentBatch;
+    }
 }
