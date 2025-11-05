@@ -71,9 +71,9 @@ public class DropSpot : MonoBehaviour
         RectTransform rectTransform = transform as RectTransform;
         if (rectTransform != null)
         {
-            // הפעל burst של נצנצים קטנים מהמיקום של ה-DropSpot
-            UISparkles.Burst(canvas, rectTransform, count: 20, duration: 0.8f);
-            Debug.Log($"[DropSpot] Sparkles triggered on {spotId}");
+            // הפעל burst של נצנצים מהבהבים (+ ו-*) במקום
+            UISparkles.Burst(canvas, rectTransform, count: 8, duration: 1.0f);
+            Debug.Log($"[DropSpot] Blinking sparkles triggered on {spotId}");
         }
     }
 

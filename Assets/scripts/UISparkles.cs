@@ -3,14 +3,14 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// אפקט נצנצים עדין (sparkles) - אפקט קטן וממוקד לפעולות בודדות
-/// שונה מ-UIConfetti - פחות חלקיקים, יותר מהיר, יותר עדין
+/// אפקט נצנצים מהבהבים (sparkles) - אפקט סטטי שמהבהב במקום
+/// מחליף בין + ל-* כמו אפקט חשיבה/נצנוץ
 /// קריאה מהירה: UISparkles.Burst(canvas, targetRect, count, duration);
 /// </summary>
 public class UISparkles : MonoBehaviour
 {
     // -------- API סטטי --------
-    public static void Burst(Canvas canvas, RectTransform target, int count = 20, float duration = 0.8f)
+    public static void Burst(Canvas canvas, RectTransform target, int count = 8, float duration = 1.0f)
     {
         if (canvas == null || target == null) return;
 
@@ -38,6 +38,7 @@ public class UISparkles : MonoBehaviour
         spawner.canvas = canvas;
         spawner.count = count;
         spawner.duration = duration;
+        spawner.targetSize = target.rect.size;
         spawner.Begin();
     }
 
@@ -45,80 +46,42 @@ public class UISparkles : MonoBehaviour
     [Header("Config")]
     public Canvas canvas;
     [Tooltip("כמה נצנצים ליצור")]
-    public int count = 20;
-    [Tooltip("משך חיים ממוצע (קצר יותר מקונפטי)")]
-    public float duration = 0.8f;
-    [Tooltip("טווח גדלים (פיקסלים) - קטנים יותר")]
-    public Vector2 sizePxRange = new Vector2(4f, 10f);
-    [Tooltip("טווח מהירויות התחלתיות (פיקסלים/שניה)")]
-    public Vector2 speedPxPerSec = new Vector2(150f, 350f);
-    [Tooltip("כבידה בפיקסלים/שניה^2")]
-    public float gravityPx = 400f;
-    [Tooltip("דראג אוויר")]
-    public float airDrag = 0.95f;
+    public int count = 8;
+    [Tooltip("משך חיים כולל")]
+    public float duration = 1.0f;
+    [Tooltip("גודל היעד - לפיזור הנצנצים")]
+    public Vector2 targetSize = new Vector2(100f, 100f);
+    [Tooltip("טווח גדלי פונט")]
+    public Vector2 fontSizeRange = new Vector2(20f, 40f);
+    [Tooltip("מהירות הבהוב (פעמים לשניה)")]
+    public float blinkSpeed = 8f;
 
-    [Header("Visuals")]
-    [Tooltip("ספרייט לנצנצים (לא חובה)")]
-    public Sprite sparkleSprite;
-
-    // פלטת זהב/כסף/כוכבים מנצנצים
+    // פלטת צבעים זהב/צהוב בהיר
     public Color32[] palette = new Color32[]
     {
-        new Color32(0xFF,0xF4,0x94,255), // Gold
+        new Color32(0xFF,0xD7,0x00,255), // Gold
         new Color32(0xFF,0xE5,0x6D,255), // Light Gold
-        new Color32(0xFF,0xD7,0x00,255), // Bright Gold
-        new Color32(0xFF,0xFF,0xFF,255), // White
-        new Color32(0xF0,0xF0,0xF0,255), // Silver
-        new Color32(0xFF,0xEC,0xB3,255), // Pale Gold
+        new Color32(0xFF,0xFF,0x00,255), // Yellow
+        new Color32(0xFF,0xF4,0x94,255), // Pale Gold
     };
 
     // -------- מימוש --------
     class Sparkle
     {
         public RectTransform rt;
-        public Image img;
-        public Vector2 vel;
-        public float angVel;
+        public Text text;
         public float life;
         public float age;
         public Color baseColor;
-        public float startAlpha;
+        public float blinkOffset; // קיזוז אקראי להבהוב
     }
 
     readonly List<Sparkle> sparkles = new List<Sparkle>();
-    static Sprite cachedStarSprite;
     float elapsed;
 
     public void Begin()
     {
-        if (sparkleSprite == null)
-            sparkleSprite = GetStarSprite();
-
         CreateSparkles();
-    }
-
-    static Sprite GetStarSprite()
-    {
-        if (cachedStarSprite != null) return cachedStarSprite;
-
-        // טקסטורה 4x4 בצורת יהלום/כוכב פשוט
-        var tex = new Texture2D(4, 4, TextureFormat.ARGB32, false);
-        var px = new Color32[16];
-
-        // יהלום פשוט
-        for (int i = 0; i < 16; i++) px[i] = new Color32(255, 255, 255, 0);
-
-        // מרכז
-        px[5] = px[6] = px[9] = px[10] = Color.white;
-        // קצוות
-        px[1] = px[2] = px[4] = px[7] = px[8] = px[11] = px[13] = px[14] = new Color32(255, 255, 255, 180);
-
-        tex.SetPixels32(px);
-        tex.Apply(false, false);
-
-        cachedStarSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
-        cachedStarSprite.name = "UISparkles_Star";
-        return cachedStarSprite;
     }
 
     void CreateSparkles()
@@ -127,41 +90,43 @@ public class UISparkles : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            var go = new GameObject("sparkle", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            var go = new GameObject("sparkle", typeof(RectTransform), typeof(Text));
             var rt = (RectTransform)go.transform;
             rt.SetParent(rtRoot, false);
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
 
-            var img = go.GetComponent<Image>();
-            img.sprite = sparkleSprite;
-            img.type = Image.Type.Simple;
+            // מקם את הנצנץ באופן אקראי סביב היעד
+            float radius = Mathf.Max(targetSize.x, targetSize.y) * 0.5f;
+            Vector2 randomPos = Random.insideUnitCircle * radius * 0.8f;
+            rt.anchoredPosition = randomPos;
 
-            // צבע מנצנץ מהפלטה
+            var text = go.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.text = "+"; // מתחיל עם +
+            text.fontSize = (int)Random.Range(fontSizeRange.x, fontSizeRange.y);
+            text.alignment = TextAnchor.MiddleCenter;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.raycastTarget = false;
+
+            // צבע אקראי מהפלטה
             var baseCol = (Color)palette[Random.Range(0, palette.Length)];
-            img.color = baseCol;
+            text.color = baseCol;
 
-            float size = Random.Range(sizePxRange.x, sizePxRange.y);
-            rt.sizeDelta = new Vector2(size, size); // ריבוע/יהלום
+            rt.sizeDelta = new Vector2(text.fontSize, text.fontSize);
 
-            // מהירות התחלתית - פיזור בכל הכיוונים
-            Vector2 dir = Random.insideUnitCircle.normalized;
-            float spd = Random.Range(speedPxPerSec.x, speedPxPerSec.y);
-
-            float angVel = Random.Range(-720f, 720f); // סיבוב מהיר יותר
-            float life = duration * Random.Range(0.8f, 1.2f);
+            float life = duration * Random.Range(0.9f, 1.1f);
+            float blinkOffset = Random.Range(0f, 1f); // כל נצנץ מתחיל בזמן שונה
 
             sparkles.Add(new Sparkle
             {
                 rt = rt,
-                img = img,
-                vel = dir * spd,
-                angVel = angVel,
+                text = text,
                 life = life,
                 age = 0f,
                 baseColor = baseCol,
-                startAlpha = 1f
+                blinkOffset = blinkOffset
             });
         }
     }
@@ -176,29 +141,32 @@ public class UISparkles : MonoBehaviour
             var s = sparkles[i];
             s.age += dt;
 
-            // פיזיקה קלה
-            s.vel += Vector2.down * gravityPx * dt;
-            s.vel *= Mathf.Pow(airDrag, dt);
-            s.rt.anchoredPosition += s.vel * dt;
+            // חישוב אם להציג + או *
+            float blinkTime = (s.age + s.blinkOffset) * blinkSpeed;
+            bool showPlus = (Mathf.FloorToInt(blinkTime) % 2) == 0;
+            s.text.text = showPlus ? "+" : "*";
 
-            // סיבוב מהיר
-            var e = s.rt.localEulerAngles;
-            e.z += s.angVel * dt;
-            s.rt.localEulerAngles = e;
-
-            // פייד אאוט חד + נצנוץ
+            // פייד אאוט בסוף
             float t = Mathf.Clamp01(s.age / s.life);
-            float alpha = Mathf.Lerp(s.startAlpha, 0f, t * t); // פייד מהיר
+            float alpha;
 
-            // אפקט נצנוץ עדין
-            float twinkle = 1f + Mathf.Sin(s.age * 15f) * 0.3f;
-            alpha *= twinkle;
+            if (t < 0.2f)
+            {
+                // fade in מהיר
+                alpha = t / 0.2f;
+            }
+            else if (t > 0.8f)
+            {
+                // fade out מהיר בסוף
+                alpha = (1f - t) / 0.2f;
+            }
+            else
+            {
+                // מלא באמצע
+                alpha = 1f;
+            }
 
-            s.img.color = new Color(s.baseColor.r, s.baseColor.g, s.baseColor.b, alpha);
-
-            // קנה מידה הולך וקטן
-            float scale = Mathf.Lerp(1f, 0.3f, t);
-            s.rt.localScale = new Vector3(scale, scale, 1f);
+            s.text.color = new Color(s.baseColor.r, s.baseColor.g, s.baseColor.b, alpha);
 
             if (s.age >= s.life)
             {
