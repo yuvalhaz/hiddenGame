@@ -85,6 +85,11 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         return isDragging;
     }
 
+    public bool HasBeenPlaced()
+    {
+        return wasSuccessfullyPlaced;
+    }
+
     public void OnBeginDrag(PointerEventData eventData)
     {
         originalPosition = rectTransform.anchoredPosition;
