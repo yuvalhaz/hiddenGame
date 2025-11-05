@@ -122,20 +122,21 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         float distanceFromOriginal = Vector2.Distance(localPoint, originalPosition);
         bool wasOut = isDraggingOut;
         isDraggingOut = distanceFromOriginal > dragThreshold;
-        
+
         // ✅ רק לפני שיוצרים drag visual - תזיז את הכפתור
         // אחרי שיצרנו drag visual - אל תזיז את הכפתור המקורי!
-        if (!wasOut && isDraggingOut)
+        // ✅ תיקון: בדוק גם ש-activeDragRT == null כדי למנוע יצירה כפולה
+        if (!wasOut && isDraggingOut && activeDragRT == null)
         {
             // כאן אנחנו עוברים את ה-threshold בפעם הראשונה
             if (debugMode)
                 Debug.Log($"[DraggableButton] Button crossed threshold! Creating drag visual for {buttonID}");
-            
+
             buttonBar.OnButtonDraggedOut(this, originalIndex);
-            
+
             CreateDragVisual();
             canvasGroup.alpha = 0f;
-            
+
             // ✅ החזר את הכפתור המקורי למיקום המקורי שלו!
             rectTransform.anchoredPosition = originalPosition;
         }
