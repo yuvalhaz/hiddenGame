@@ -52,7 +52,29 @@ public class DropSpot : MonoBehaviour
             Debug.LogWarning($"[DropSpot] No RevealController on {spotId}!");
         }
 
+        // ✨ הפעל אפקט קונפטי/נצנצים!
+        TriggerSparkles();
+
         Debug.Log($"DropSpot {spotId} - Ghost destroyed, revealing background");
+    }
+
+    private void TriggerSparkles()
+    {
+        // מצא את ה-Canvas
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+        {
+            Debug.LogWarning($"[DropSpot] No Canvas found for sparkles on {spotId}");
+            return;
+        }
+
+        RectTransform rectTransform = transform as RectTransform;
+        if (rectTransform != null)
+        {
+            // הפעל burst של קונפטי מהמיקום של ה-DropSpot
+            UIConfetti.Burst(canvas, rectTransform, count: 50, duration: 1.0f);
+            Debug.Log($"[DropSpot] Sparkles triggered on {spotId}");
+        }
     }
 
 
