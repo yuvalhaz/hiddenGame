@@ -857,6 +857,14 @@ public class DropSpotBatchManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Get the current batch index (0-based)
+    /// </summary>
+    public int GetCurrentBatchIndex()
+    {
+        return currentBatch;
+    }
+
+    /// <summary>
     /// Get all available (not yet placed) drop spots in the current batch
     /// </summary>
     public List<DropSpot> GetCurrentBatchAvailableSpots()
