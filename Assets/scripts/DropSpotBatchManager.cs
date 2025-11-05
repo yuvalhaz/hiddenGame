@@ -477,7 +477,7 @@ public class DropSpotBatchManager : MonoBehaviour
     {
         if (debugMode)
             Debug.Log($"💬 ShowCompletionMessage({batch})");
-        
+
         if (isShowingMessage)
         {
             if (hideMessageCoroutine != null)
@@ -485,39 +485,71 @@ public class DropSpotBatchManager : MonoBehaviour
             if (completionPanel != null)
                 completionPanel.SetActive(false);
         }
-        
+
         isShowingMessage = true;
-        
+
         string message = GetCompletionMessage(batch);
-        
+
         if (completionPanel == null || completionText == null)
         {
             Debug.LogError("❌ Panel or Text is NULL!");
             isShowingMessage = false;
             return;
         }
-        
+
         completionPanel.transform.localScale = Vector3.one;
         completionPanel.transform.localRotation = Quaternion.identity;
-        
+
         completionText.text = message;
-        
+
         if (useRandomColors && messageColors.Count > 0)
         {
             completionText.color = messageColors[Random.Range(0, messageColors.Count)];
         }
-        
+
         completionPanel.SetActive(true);
-        
+
         if (useAnimation)
             StartCoroutine(AnimateMessage());
-        
+
         if (playSound)
             PlayCompletionSound();
-        
+
+        // ✨ Add sparkles across the entire revealing area on batch completion!
+        StartCoroutine(ShowBatchCompletionSparkles());
+
         hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
-        
+
         Debug.Log($"<color=yellow>🎉 {message} 🎉</color>");
+    }
+
+    private IEnumerator ShowBatchCompletionSparkles()
+    {
+        // Small delay before showing sparkles
+        yield return new WaitForSeconds(0.1f);
+
+        // Find the canvas
+        Canvas mainCanvas = GetComponentInParent<Canvas>();
+        if (mainCanvas == null)
+            mainCanvas = FindObjectOfType<Canvas>();
+
+        if (mainCanvas != null)
+        {
+            // Get the revealing area (this manager's RectTransform or parent)
+            RectTransform revealingArea = GetComponent<RectTransform>();
+            if (revealingArea == null && transform.parent != null)
+                revealingArea = transform.parent.GetComponent<RectTransform>();
+
+            // Create a big sparkle burst for batch completion (more sparkles than single item)
+            SparkleBurstEffect.Burst(mainCanvas, revealingArea, 100, 2.5f);
+
+            if (debugMode)
+                Debug.Log("✨ Batch completion sparkles launched!");
+        }
+        else
+        {
+            Debug.LogWarning("❌ Could not find canvas for sparkles!");
+        }
     }
 
     private IEnumerator HideMessageAfterDelay()
