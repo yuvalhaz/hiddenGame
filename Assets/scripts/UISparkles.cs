@@ -51,8 +51,8 @@ public class UISparkles : MonoBehaviour
     public float duration = 1.0f;
     [Tooltip("גודל היעד - לפיזור הנצנצים")]
     public Vector2 targetSize = new Vector2(100f, 100f);
-    [Tooltip("טווח גדלי פונט")]
-    public Vector2 fontSizeRange = new Vector2(20f, 40f);
+    [Tooltip("טווח גדלים (פיקסלים)")]
+    public Vector2 sizeRange = new Vector2(20f, 40f);
     [Tooltip("מהירות הבהוב (פעמים לשניה)")]
     public float blinkSpeed = 8f;
 
@@ -69,7 +69,7 @@ public class UISparkles : MonoBehaviour
     class Sparkle
     {
         public RectTransform rt;
-        public Text text;
+        public Image img;
         public float life;
         public float age;
         public Color baseColor;
@@ -77,11 +77,96 @@ public class UISparkles : MonoBehaviour
     }
 
     readonly List<Sparkle> sparkles = new List<Sparkle>();
+    static Sprite cachedPlusSprite;
+    static Sprite cachedStarSprite;
     float elapsed;
 
     public void Begin()
     {
+        if (cachedPlusSprite == null) cachedPlusSprite = CreatePlusSprite();
+        if (cachedStarSprite == null) cachedStarSprite = CreateStarSprite();
         CreateSparkles();
+    }
+
+    // יצירת ספרייט של +
+    static Sprite CreatePlusSprite()
+    {
+        int size = 16;
+        var tex = new Texture2D(size, size, TextureFormat.ARGB32, false);
+        var pixels = new Color32[size * size];
+
+        // התחל עם שקוף
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = new Color32(255, 255, 255, 0);
+
+        // צייר + (קו אנכי וקו אפקי)
+        int center = size / 2;
+        int thickness = 3;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = center - thickness / 2; x <= center + thickness / 2; x++)
+            {
+                pixels[y * size + x] = Color.white; // קו אנכי
+            }
+        }
+
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = center - thickness / 2; y <= center + thickness / 2; y++)
+            {
+                pixels[y * size + x] = Color.white; // קו אפקי
+            }
+        }
+
+        tex.SetPixels32(pixels);
+        tex.Apply(false, false);
+        tex.filterMode = FilterMode.Bilinear;
+
+        var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        sprite.name = "UISparkles_Plus";
+        return sprite;
+    }
+
+    // יצירת ספרייט של *
+    static Sprite CreateStarSprite()
+    {
+        int size = 16;
+        var tex = new Texture2D(size, size, TextureFormat.ARGB32, false);
+        var pixels = new Color32[size * size];
+
+        // התחל עם שקוף
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = new Color32(255, 255, 255, 0);
+
+        int center = size / 2;
+
+        // צייר * (קווים באלכסונים + אנכי/אפקי)
+        for (int i = 0; i < size; i++)
+        {
+            // אלכסון \
+            pixels[i * size + i] = Color.white;
+            if (i > 0) pixels[i * size + (i - 1)] = Color.white;
+            if (i < size - 1) pixels[i * size + (i + 1)] = Color.white;
+
+            // אלכסון /
+            pixels[i * size + (size - 1 - i)] = Color.white;
+            if (i > 0) pixels[i * size + (size - i)] = Color.white;
+            if (i < size - 1) pixels[i * size + (size - 2 - i)] = Color.white;
+
+            // קו אנכי
+            pixels[i * size + center] = Color.white;
+            // קו אפקי
+            pixels[center * size + i] = Color.white;
+        }
+
+        tex.SetPixels32(pixels);
+        tex.Apply(false, false);
+        tex.filterMode = FilterMode.Bilinear;
+
+        var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        sprite.name = "UISparkles_Star";
+        return sprite;
     }
 
     void CreateSparkles()
@@ -90,7 +175,7 @@ public class UISparkles : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            var go = new GameObject("sparkle", typeof(RectTransform), typeof(Text));
+            var go = new GameObject("sparkle", typeof(RectTransform), typeof(Image));
             var rt = (RectTransform)go.transform;
             rt.SetParent(rtRoot, false);
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -101,20 +186,17 @@ public class UISparkles : MonoBehaviour
             Vector2 randomPos = Random.insideUnitCircle * radius * 0.8f;
             rt.anchoredPosition = randomPos;
 
-            var text = go.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.text = "+"; // מתחיל עם +
-            text.fontSize = (int)Random.Range(fontSizeRange.x, fontSizeRange.y);
-            text.alignment = TextAnchor.MiddleCenter;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            text.raycastTarget = false;
+            var img = go.GetComponent<Image>();
+            img.sprite = cachedPlusSprite; // מתחיל עם +
+            img.type = Image.Type.Simple;
+            img.raycastTarget = false;
 
             // צבע אקראי מהפלטה
             var baseCol = (Color)palette[Random.Range(0, palette.Length)];
-            text.color = baseCol;
+            img.color = baseCol;
 
-            rt.sizeDelta = new Vector2(text.fontSize, text.fontSize);
+            float size = Random.Range(sizeRange.x, sizeRange.y);
+            rt.sizeDelta = new Vector2(size, size);
 
             float life = duration * Random.Range(0.9f, 1.1f);
             float blinkOffset = Random.Range(0f, 1f); // כל נצנץ מתחיל בזמן שונה
@@ -122,7 +204,7 @@ public class UISparkles : MonoBehaviour
             sparkles.Add(new Sparkle
             {
                 rt = rt,
-                text = text,
+                img = img,
                 life = life,
                 age = 0f,
                 baseColor = baseCol,
@@ -144,7 +226,7 @@ public class UISparkles : MonoBehaviour
             // חישוב אם להציג + או *
             float blinkTime = (s.age + s.blinkOffset) * blinkSpeed;
             bool showPlus = (Mathf.FloorToInt(blinkTime) % 2) == 0;
-            s.text.text = showPlus ? "+" : "*";
+            s.img.sprite = showPlus ? cachedPlusSprite : cachedStarSprite;
 
             // פייד אאוט בסוף
             float t = Mathf.Clamp01(s.age / s.life);
@@ -166,7 +248,7 @@ public class UISparkles : MonoBehaviour
                 alpha = 1f;
             }
 
-            s.text.color = new Color(s.baseColor.r, s.baseColor.g, s.baseColor.b, alpha);
+            s.img.color = new Color(s.baseColor.r, s.baseColor.g, s.baseColor.b, alpha);
 
             if (s.age >= s.life)
             {
