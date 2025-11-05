@@ -102,7 +102,7 @@ public class UISparkles : MonoBehaviour
             rt.anchoredPosition = randomPos;
 
             var text = go.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.text = "+"; // מתחיל עם +
             text.fontSize = (int)Random.Range(fontSizeRange.x, fontSizeRange.y);
             text.alignment = TextAnchor.MiddleCenter;
