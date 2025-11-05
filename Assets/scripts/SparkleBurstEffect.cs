@@ -105,10 +105,14 @@ public class SparkleBurstEffect : MonoBehaviour
 
     public void Begin()
     {
+        Debug.Log($"[SparkleBurstEffect] Begin() called - Creating {count} sparkles");
+
         if (sparkleSprite == null)
             sparkleSprite = GetSparkleSprite();
 
         CreateSparkles();
+
+        Debug.Log($"[SparkleBurstEffect] Created {sparkles.Count} sparkles successfully");
     }
 
     static Sprite GetSparkleSprite()
@@ -139,6 +143,8 @@ public class SparkleBurstEffect : MonoBehaviour
         // Get the bounds of the target area
         Rect areaBounds = GetAreaBounds();
 
+        Debug.Log($"[SparkleBurstEffect] Creating sparkles in bounds: {areaBounds}");
+
         for (int i = 0; i < count; i++)
         {
             // Create sparkle GameObject
@@ -159,6 +165,7 @@ public class SparkleBurstEffect : MonoBehaviour
             var img = go.GetComponent<Image>();
             img.sprite = sparkleSprite;
             img.type = Image.Type.Simple;
+            img.raycastTarget = false;
 
             // Random sparkle color
             var baseCol = (Color)palette[Random.Range(0, palette.Length)];
@@ -168,6 +175,9 @@ public class SparkleBurstEffect : MonoBehaviour
             float size = Random.Range(sizeRange.x, sizeRange.y);
             rt.sizeDelta = new Vector2(size, size);
 
+            // Make sure sparkle renders on top
+            rt.SetAsLastSibling();
+
             // Random velocity - mostly upward and outward
             Vector2 dir = Random.insideUnitCircle.normalized;
             dir.y = Mathf.Abs(dir.y) * Random.Range(0.5f, 1f) + 0.3f; // Bias upward
@@ -176,6 +186,15 @@ public class SparkleBurstEffect : MonoBehaviour
 
             float rotSpeed = Random.Range(-720f, 720f); // Fast rotation for sparkle effect
             float life = duration * Random.Range(0.8f, 1.3f);
+
+            // Set Canvas Group alpha to ensure visibility
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.alpha = 1f;
+                cg.interactable = false;
+                cg.blocksRaycasts = false;
+            }
 
             sparkles.Add(new Sparkle
             {
@@ -190,25 +209,55 @@ public class SparkleBurstEffect : MonoBehaviour
                 pulsePhase = Random.Range(0f, Mathf.PI * 2f)
             });
         }
+
+        Debug.Log($"[SparkleBurstEffect] All {sparkles.Count} sparkles created and positioned");
     }
 
     Rect GetAreaBounds()
     {
-        if (targetArea == null)
+        if (targetArea == null || canvas == null)
         {
             // Default to full canvas
-            return new Rect(-Screen.width / 2f, -Screen.height / 2f, Screen.width, Screen.height);
+            RectTransform canvasRT = canvas != null ? canvas.GetComponent<RectTransform>() : null;
+            if (canvasRT != null)
+            {
+                Rect canvasRect = canvasRT.rect;
+                return new Rect(0, 0, canvasRect.width, canvasRect.height);
+            }
+            return new Rect(0, 0, Screen.width, Screen.height);
         }
 
-        // Get the rect of the target area in local space
-        Rect rect = targetArea.rect;
-        Vector2 center = targetArea.anchoredPosition;
+        // Convert target area's world corners to canvas local space
+        Vector3[] worldCorners = new Vector3[4];
+        targetArea.GetWorldCorners(worldCorners);
+
+        RectTransform canvasRT2 = canvas.GetComponent<RectTransform>();
+        Vector2 min = Vector2.positiveInfinity;
+        Vector2 max = Vector2.negativeInfinity;
+
+        for (int i = 0; i < 4; i++)
+        {
+            Vector2 localPoint;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                canvasRT2,
+                RectTransformUtility.WorldToScreenPoint(canvas.worldCamera, worldCorners[i]),
+                canvas.worldCamera,
+                out localPoint
+            );
+
+            min = Vector2.Min(min, localPoint);
+            max = Vector2.Max(max, localPoint);
+        }
+
+        // Convert to canvas space (0,0 at bottom-left)
+        Rect canvasRect2 = canvasRT2.rect;
+        Vector2 offset = new Vector2(canvasRect2.width / 2f, canvasRect2.height / 2f);
 
         return new Rect(
-            center.x + rect.xMin,
-            center.y + rect.yMin,
-            rect.width,
-            rect.height
+            min.x + offset.x,
+            min.y + offset.y,
+            max.x - min.x,
+            max.y - min.y
         );
     }
 
