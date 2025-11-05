@@ -181,10 +181,10 @@ public class UISparkles : MonoBehaviour
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
 
-            // מקם את הנצנץ באופן אקראי סביב היעד
-            float radius = Mathf.Max(targetSize.x, targetSize.y) * 0.5f;
-            Vector2 randomPos = Random.insideUnitCircle * radius * 0.8f;
-            rt.anchoredPosition = randomPos;
+            // מקם את הנצנץ באופן אקראי על פני כל שטח הספרייט
+            float x = Random.Range(-targetSize.x * 0.5f, targetSize.x * 0.5f);
+            float y = Random.Range(-targetSize.y * 0.5f, targetSize.y * 0.5f);
+            rt.anchoredPosition = new Vector2(x, y);
 
             var img = go.GetComponent<Image>();
             img.sprite = cachedPlusSprite; // מתחיל עם +
