@@ -20,6 +20,8 @@ public class ScrollableButtonBar : MonoBehaviour
 
     [Header("Button Data")]
     [SerializeField] private List<ButtonData> buttonDataList = new List<ButtonData>();
+    [SerializeField] private bool shuffleButtons = true;
+    [Tooltip("כבה את זה בזמן פיתוח כדי לראות כפתורים בסדר הנכון")]
 
     [Header("Animation Settings")]
     [SerializeField] private float animationSpeed = 10f;
@@ -49,8 +51,16 @@ public class ScrollableButtonBar : MonoBehaviour
             }
         }
 
-        // ✅ ערבב את הכפתורים לפני יצירתם!
-        ShuffleButtonData();
+        // ✅ ערבב את הכפתורים לפני יצירתם! (רק אם הופעל)
+        if (shuffleButtons)
+        {
+            ShuffleButtonData();
+            Debug.Log("[ScrollableButtonBar] כפתורים עורבבו");
+        }
+        else
+        {
+            Debug.Log("[ScrollableButtonBar] כפתורים בסדר מקורי (ללא ערבוב)");
+        }
 
         CreateButtons();
     }
