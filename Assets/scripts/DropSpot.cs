@@ -52,7 +52,7 @@ public class DropSpot : MonoBehaviour
             Debug.LogWarning($"[DropSpot] No RevealController on {spotId}!");
         }
 
-        // ✨ הפעל אפקט קונפטי/נצנצים!
+        // ✨ הפעל אפקט נצנצים עדין!
         TriggerSparkles();
 
         Debug.Log($"DropSpot {spotId} - Ghost destroyed, revealing background");
@@ -71,8 +71,8 @@ public class DropSpot : MonoBehaviour
         RectTransform rectTransform = transform as RectTransform;
         if (rectTransform != null)
         {
-            // הפעל burst של קונפטי מהמיקום של ה-DropSpot
-            UIConfetti.Burst(canvas, rectTransform, count: 50, duration: 1.0f);
+            // הפעל burst של נצנצים קטנים מהמיקום של ה-DropSpot
+            UISparkles.Burst(canvas, rectTransform, count: 20, duration: 0.8f);
             Debug.Log($"[DropSpot] Sparkles triggered on {spotId}");
         }
     }

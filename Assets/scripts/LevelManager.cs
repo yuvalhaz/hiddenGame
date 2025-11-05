@@ -163,6 +163,9 @@ public class LevelManager : MonoBehaviour
         if (debugMode)
             Debug.Log($"[LevelManager] Level {currentLevelIndex} completed!");
 
+        // 🎉 הפעל חגיגת קונפטי על השלמת שלב!
+        TriggerLevelCompleteConfetti();
+
         // Fire event
         OnLevelCompleted?.Invoke(currentLevelIndex);
 
@@ -189,6 +192,25 @@ public class LevelManager : MonoBehaviour
         {
             // No ads or ads not ready - advance immediately
             AdvanceToNextLevel();
+        }
+    }
+
+    private void TriggerLevelCompleteConfetti()
+    {
+        // מצא את ה-Canvas הראשי
+        Canvas canvas = FindObjectOfType<Canvas>();
+        if (canvas == null)
+        {
+            Debug.LogWarning("[LevelManager] No Canvas found for confetti celebration!");
+            return;
+        }
+
+        RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+        if (canvasRect != null)
+        {
+            // יצירת burst גדול של קונפטי ממרכז המסך - חגיגה גדולה!
+            UIConfetti.Burst(canvas, canvasRect, count: 150, duration: 2.0f);
+            Debug.Log("[LevelManager] 🎉 Level complete confetti celebration triggered!");
         }
     }
 
