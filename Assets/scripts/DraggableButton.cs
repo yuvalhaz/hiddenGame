@@ -737,9 +737,15 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         // עכשיו תעשה את שאר הדברים
         hitSpot.SettleItem(activeDragRT);
 
-        if (showConfettiOnSuccess && topCanvas && activeDragRT != null)
+        // ✨ הצג ניצנוצים מעל התמונה שהתגלתה
+        if (showConfettiOnSuccess && topCanvas)
         {
-            StartCoroutine(ShowConfetti(activeDragRT));
+            RectTransform spotRT = hitSpot.GetComponent<RectTransform>();
+            if (spotRT != null)
+            {
+                UISparkles.Burst(topCanvas, spotRT, count: 50, duration: 1.2f);
+                Debug.Log($"[DraggableButton] ✨ Sparkles triggered!");
+            }
         }
 
         activeDragRT = null;
