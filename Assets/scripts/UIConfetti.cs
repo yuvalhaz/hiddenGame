@@ -61,22 +61,36 @@ public class UIConfetti : MonoBehaviour
     [Tooltip("ספרייט לחתיכות הקונפטי (לא חובה). אם ריק – נוצר ספרייט לבן קטן בזיכרון.")]
     public Sprite pieceSprite;
 
-    // פלטת פסטלים: ירוק / תכלת / ורוד
+    // פלטת צבעים תוססת ועשירה יותר
     public Color32[] palette = new Color32[]
     {
-        // Greens (Pastel)
-        new Color32(0xA8,0xE6,0xCF,255), // Mint Green
-        new Color32(0xC7,0xF9,0xCC,255), // Soft Pastel Green
+        // Vibrant Greens
+        new Color32(0x00,0xFF,0x7F,255), // Spring Green
+        new Color32(0x32,0xCD,0x32,255), // Lime Green
+        new Color32(0x7F,0xFF,0x00,255), // Chartreuse
 
-        // Teals / Light Blues
-        new Color32(0xA0,0xE7,0xE5,255), // Light Turquoise
-        new Color32(0xB2,0xF7,0xEF,255), // Pastel Teal
-        new Color32(0xBD,0xE0,0xFE,255), // Baby Blue
+        // Vibrant Blues & Teals
+        new Color32(0x00,0xBF,0xFF,255), // Deep Sky Blue
+        new Color32(0x1E,0x90,0xFF,255), // Dodger Blue
+        new Color32(0x00,0xCE,0xD1,255), // Dark Turquoise
+        new Color32(0x48,0xD1,0xCC,255), // Medium Turquoise
 
-        // Pinks (Pastel)
-        new Color32(0xFF,0xC6,0xFF,255), // Pastel Pink
-        new Color32(0xFF,0xD1,0xDC,255), // Baby Pink
-        new Color32(0xFF,0xE5,0xEC,255)  // Blush
+        // Vibrant Pinks & Purples
+        new Color32(0xFF,0x14,0x93,255), // Deep Pink
+        new Color32(0xFF,0x69,0xB4,255), // Hot Pink
+        new Color32(0xDA,0x70,0xD6,255), // Orchid
+        new Color32(0xBA,0x55,0xD3,255), // Medium Orchid
+
+        // Vibrant Yellows & Oranges
+        new Color32(0xFF,0xD7,0x00,255), // Gold
+        new Color32(0xFF,0xA5,0x00,255), // Orange
+        new Color32(0xFF,0x8C,0x00,255), // Dark Orange
+        new Color32(0xFF,0x69,0x00,255), // Orange Red
+
+        // Vibrant Reds
+        new Color32(0xFF,0x00,0x00,255), // Red
+        new Color32(0xFF,0x45,0x00,255), // Orange Red
+        new Color32(0xFF,0x14,0x93,255)  // Deep Pink
     };
 
     // -------- מימוש --------
@@ -90,6 +104,9 @@ public class UIConfetti : MonoBehaviour
         public float age;         // זמן שעבר
         public Color baseColor;   // צבע בסיס (בלי שינויי פייד)
         public float startAlpha;  // אלפא התחלתי
+        public float pulsePhase;  // פאזה של אפקט נצנוץ
+        public float wobblePhase; // פאזה של תנודה
+        public Vector2 wobbleAxis; // כיוון התנודה
     }
 
     readonly List<Piece> pieces = new List<Piece>();
@@ -98,10 +115,14 @@ public class UIConfetti : MonoBehaviour
 
     public void Begin()
     {
+        Debug.Log($"[UIConfetti] Begin() - Creating {count} confetti pieces");
+
         if (pieceSprite == null)
             pieceSprite = GetWhiteSprite();
 
         CreatePieces();
+
+        Debug.Log($"[UIConfetti] Created {pieces.Count} confetti pieces successfully");
     }
 
     static Sprite GetWhiteSprite()
@@ -135,22 +156,38 @@ public class UIConfetti : MonoBehaviour
             var img = go.GetComponent<Image>();
             img.sprite = pieceSprite;
             img.type = Image.Type.Simple;
+            img.raycastTarget = false;
 
-            // צבע בסיס מהפלטה
+            // צבע בסיס מהפלטה - תוסס ועז!
             var baseCol = (Color)palette[Random.Range(0, palette.Length)];
             img.color = baseCol;
 
             float size = Random.Range(sizePxRange.x, sizePxRange.y);
-            rt.sizeDelta = new Vector2(size, size * Random.Range(0.7f, 1.3f));
+            // קונפטי בצורות שונות - מלבנים ארוכים יותר
+            float aspectRatio = Random.Range(0.4f, 1.8f);
+            rt.sizeDelta = new Vector2(size, size * aspectRatio);
 
-            // מהירות התחלתית אקראית, נטייה למעלה
+            // CanvasGroup לשליטה באלפא
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.alpha = 1f;
+                cg.interactable = false;
+                cg.blocksRaycasts = false;
+            }
+
+            // Render on top
+            rt.SetAsLastSibling();
+
+            // מהירות התחלתית אקראית, נטייה למעלה עם יותר וריאציה
             Vector2 dir = Random.insideUnitCircle.normalized;
-            dir.y = Mathf.Abs(dir.y) * Random.Range(0.6f, 1f) + 0.2f;
+            dir.y = Mathf.Abs(dir.y) * Random.Range(0.5f, 1f) + 0.3f;
             dir.Normalize();
             float spd = Random.Range(speedPxPerSec.x, speedPxPerSec.y);
 
-            float angVel = Random.Range(-360f, 360f);
-            float life = duration * Random.Range(0.9f, 1.2f);
+            // סיבוב מהיר יותר לאפקט דרמטי
+            float angVel = Random.Range(-540f, 540f);
+            float life = duration * Random.Range(0.8f, 1.3f);
 
             pieces.Add(new Piece
             {
@@ -161,7 +198,10 @@ public class UIConfetti : MonoBehaviour
                 life = life,
                 age = 0f,
                 baseColor = baseCol,
-                startAlpha = 1f
+                startAlpha = 1f,
+                pulsePhase = Random.Range(0f, Mathf.PI * 2f),
+                wobblePhase = Random.Range(0f, Mathf.PI * 2f),
+                wobbleAxis = Random.insideUnitCircle.normalized
             });
         }
     }
@@ -176,24 +216,39 @@ public class UIConfetti : MonoBehaviour
             var p = pieces[i];
             p.age += dt;
 
-            // "פיזיקה" פשוטה בפיקסלים
+            // "פיזיקה" משופרת עם תנודות
             p.vel += Vector2.down * gravityPx * dt;
             p.vel *= Mathf.Pow(airDrag, dt);
-            p.rt.anchoredPosition += p.vel * dt;
 
-            // סיבוב
+            // תנודה אופקית (wobble) לאפקט טבעי יותר
+            p.wobblePhase += dt * 3f;
+            Vector2 wobble = p.wobbleAxis * Mathf.Sin(p.wobblePhase) * 20f;
+
+            p.rt.anchoredPosition += (p.vel * dt) + (wobble * dt);
+
+            // סיבוב עם האטה הדרגתית
+            float t = Mathf.Clamp01(p.age / p.life);
+            float angVelDamped = p.angVel * (1f - t * 0.3f); // האטה ב-30%
             var e = p.rt.localEulerAngles;
-            e.z += p.angVel * dt;
+            e.z += angVelDamped * dt;
             p.rt.localEulerAngles = e;
 
-            // פייד + ריכוך פסטלי קבוע (לכיוון לבן)
-            float t = Mathf.Clamp01(p.age / p.life);
-            float alpha = Mathf.Lerp(p.startAlpha, 0f, Mathf.SmoothStep(0f, 1f, t));
-            Color pastel = Color.Lerp(p.baseColor, Color.white, 0.25f); // 25% לכיוון לבן
-            p.img.color = new Color(pastel.r, pastel.g, pastel.b, alpha);
+            // ✨ אפקט נצנוץ (pulse) כמו ספרקלס
+            p.pulsePhase += dt * 6f;
+            float pulse = (Mathf.Sin(p.pulsePhase) + 1f) * 0.5f; // 0..1
 
-            // שינוי קנה מידה עדין לאורך החיים
-            float s = Mathf.Lerp(1f, 0.6f, t);
+            // פייד עם נצנוץ
+            float alpha = Mathf.Lerp(p.startAlpha, 0f, Mathf.SmoothStep(0f, 1f, t));
+            alpha *= Mathf.Lerp(0.7f, 1f, pulse); // נצנוץ עדין
+
+            // 🎨 צבע דינמי - נצנוץ לכיוון בהיר יותר
+            Color vibrantColor = Color.Lerp(p.baseColor, Color.white, pulse * 0.3f);
+            p.img.color = new Color(vibrantColor.r, vibrantColor.g, vibrantColor.b, alpha);
+
+            // שינוי קנה מידה עם נצנוץ עדין
+            float baseScale = Mathf.Lerp(1f, 0.5f, t);
+            float pulseScale = Mathf.Lerp(0.9f, 1.1f, pulse);
+            float s = baseScale * pulseScale;
             p.rt.localScale = new Vector3(s, s, 1f);
 
             if (p.age >= p.life)
