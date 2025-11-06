@@ -128,6 +128,13 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("How many confetti pieces per spawn point")]
     [SerializeField] private float confettiSpawnRadius = 300f;
     [Tooltip("How far from text center to spawn confetti (in pixels)")]
+    [SerializeField] private float confettiSpawnDelay = 0.1f;
+    [Tooltip("Delay between each confetti spawn point (seconds) - creates wave effect")]
+    [SerializeField] private AudioClip finalCelebrationSound;
+    [Tooltip("Special sound effect for Well Done message (different from regular completion sounds)")]
+    [Range(0f, 1f)]
+    [SerializeField] private float finalCelebrationSoundVolume = 1f;
+    [Tooltip("Volume for the Well Done sound effect")]
 
     [Header("📺 Ad Settings")]
     [SerializeField] private bool showAdsOnBatchComplete = true;
@@ -1048,12 +1055,12 @@ public class DropSpotBatchManager : MonoBehaviour
         if (useAnimation)
             StartCoroutine(AnimateMessage());
 
-        // Play sound
+        // Play special Well Done sound (not regular completion sound)
         if (playSound)
-            PlayCompletionSound();
+            PlayFinalCelebrationSound();
 
-        // 🎊 Launch confetti from multiple points around the text - IMMEDIATELY!
-        SpawnConfettiAroundText(textComponent.GetComponent<RectTransform>());
+        // 🎊 Launch confetti from multiple points with staggered timing!
+        StartCoroutine(SpawnConfettiAroundTextStaggered(textComponent.GetComponent<RectTransform>()));
 
         // Keep message visible for duration
         yield return new WaitForSeconds(finalMessageDuration);
@@ -1071,7 +1078,102 @@ public class DropSpotBatchManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Spawns confetti from multiple points in a circle around the text
+    /// Plays special sound effect for final celebration (Well Done)
+    /// </summary>
+    private void PlayFinalCelebrationSound()
+    {
+        if (audioSource == null)
+        {
+            if (debugMode)
+                Debug.LogWarning("[PlayFinalCelebrationSound] No AudioSource assigned!");
+            return;
+        }
+
+        // Use special Well Done sound if assigned, otherwise fall back to regular completion sounds
+        if (finalCelebrationSound != null)
+        {
+            audioSource.PlayOneShot(finalCelebrationSound, finalCelebrationSoundVolume);
+            if (debugMode)
+                Debug.Log("🔊 Playing special Well Done sound effect!");
+        }
+        else
+        {
+            // Fallback to regular completion sound
+            PlayCompletionSound();
+            if (debugMode)
+                Debug.Log("🔊 No special Well Done sound - using regular completion sound");
+        }
+    }
+
+    /// <summary>
+    /// Spawns confetti from multiple points with staggered timing (wave effect)
+    /// </summary>
+    private IEnumerator SpawnConfettiAroundTextStaggered(RectTransform textRect)
+    {
+        if (textRect == null)
+        {
+            Debug.LogWarning("[SpawnConfettiAroundTextStaggered] textRect is null!");
+            yield break;
+        }
+
+        // Find the canvas
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+            canvas = FindObjectOfType<Canvas>();
+
+        if (canvas == null)
+        {
+            Debug.LogWarning("[SpawnConfettiAroundTextStaggered] No canvas found!");
+            yield break;
+        }
+
+        // Calculate spawn points in a circle around the text
+        int actualSpawnPoints = Mathf.Clamp(confettiSpawnPoints, 3, 8);
+        float angleStep = 360f / actualSpawnPoints;
+
+        if (debugMode)
+            Debug.Log($"🎊 Spawning confetti from {actualSpawnPoints} points with {confettiSpawnDelay}s delay between each");
+
+        for (int i = 0; i < actualSpawnPoints; i++)
+        {
+            float angle = i * angleStep * Mathf.Deg2Rad;
+
+            // Calculate offset position in a circle
+            Vector2 offset = new Vector2(
+                Mathf.Cos(angle) * confettiSpawnRadius,
+                Mathf.Sin(angle) * confettiSpawnRadius
+            );
+
+            // Create a temporary spawn point RectTransform
+            GameObject spawnPointGO = new GameObject($"ConfettiSpawn_{i}");
+            RectTransform spawnRT = spawnPointGO.AddComponent<RectTransform>();
+            spawnRT.SetParent(textRect, false);
+            spawnRT.anchorMin = new Vector2(0.5f, 0.5f);
+            spawnRT.anchorMax = new Vector2(0.5f, 0.5f);
+            spawnRT.pivot = new Vector2(0.5f, 0.5f);
+            spawnRT.anchoredPosition = offset;
+            spawnRT.sizeDelta = new Vector2(50, 50); // Small area for confetti spawn
+
+            // Launch confetti from this point
+            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f);
+
+            // Clean up spawn point after a delay
+            Destroy(spawnPointGO, 2f);
+
+            if (debugMode)
+                Debug.Log($"🎊 Confetti wave {i + 1}/{actualSpawnPoints}: angle={angle * Mathf.Rad2Deg}°, offset={offset}");
+
+            // ✨ Wait before spawning next wave (creates staggered effect!)
+            if (i < actualSpawnPoints - 1) // Don't wait after the last one
+                yield return new WaitForSeconds(confettiSpawnDelay);
+        }
+
+        if (debugMode)
+            Debug.Log($"🎊 All {actualSpawnPoints} confetti waves launched!");
+    }
+
+    /// <summary>
+    /// Spawns confetti from multiple points in a circle around the text (instant - all at once)
     /// </summary>
     private void SpawnConfettiAroundText(RectTransform textRect)
     {
