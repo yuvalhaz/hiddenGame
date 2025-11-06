@@ -8,8 +8,8 @@
 !Assets/
 
 # אל תתעלם מתיקיית Scripts שבתוך Assets
-!Assets/Scripts/
-!Assets/Scripts/**
+!Assets/scripts/
+!Assets/scripts/**
 
 # התעלם מקבצי meta
 *.meta

@@ -120,7 +120,7 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("Text component for final message")]
     [SerializeField] private string finalCelebrationMessage = "WELL DONE!";
     [Tooltip("Message to show when everything is complete")]
-    [SerializeField] private float finalMessageDuration = 5f;
+    [SerializeField] private float finalMessageDuration = 6.5f;
     [Tooltip("How long to show the final message (default: 5 seconds)")]
     [SerializeField] private int confettiSpawnPoints = 5;
     [Tooltip("Number of confetti spawn points around the text (3-8 recommended)")]
