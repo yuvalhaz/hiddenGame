@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public class UIConfetti : MonoBehaviour
 {
     // -------- API סטטי --------
-    public static void Burst(Canvas canvas, RectTransform target, int count = 100, float duration = 1.2f, AudioClip sfx = null, AudioSource audioSource = null, float volume = 1f)
+    public static void Burst(Canvas canvas, RectTransform target, int count = 100, float duration = 1.2f, AudioClip sfx = null, AudioSource audioSource = null, float volume = 1f, Color32[] customPalette = null)
     {
         if (canvas == null || target == null) return;
 
@@ -41,6 +41,13 @@ public class UIConfetti : MonoBehaviour
         spawner.confettiSound = sfx;
         spawner.confettiAudioSource = audioSource;
         spawner.confettiVolume = volume;
+
+        // אם יש פלטת צבעים מותאמת אישית, השתמש בה
+        if (customPalette != null && customPalette.Length > 0)
+        {
+            spawner.palette = customPalette;
+        }
+
         spawner.Begin();
     }
 

@@ -1136,6 +1136,16 @@ public class DropSpotBatchManager : MonoBehaviour
         int actualSpawnPoints = Mathf.Clamp(confettiSpawnPoints, 3, 8);
         float angleStep = 360f / actualSpawnPoints;
 
+        // 🎨 יצירת פלטת צבעים מנוגדים לצבע הטקסט
+        UnityEngine.UI.Text textComponent = textRect.GetComponent<UnityEngine.UI.Text>();
+        Color32[] contrastPalette = null;
+        if (textComponent != null)
+        {
+            contrastPalette = GenerateContrastingPalette(textComponent.color);
+            if (debugMode)
+                Debug.Log($"🎨 Using contrasting colors for confetti based on text color: {textComponent.color}");
+        }
+
         if (debugMode)
             Debug.Log($"🎊 Spawning confetti from {actualSpawnPoints} points with {confettiSpawnDelay}s delay between each");
 
@@ -1159,8 +1169,8 @@ public class DropSpotBatchManager : MonoBehaviour
             spawnRT.anchoredPosition = offset;
             spawnRT.sizeDelta = new Vector2(50, 50); // Small area for confetti spawn
 
-            // Launch confetti from this point with sound
-            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f, confettiBurstSound, audioSource, confettiBurstVolume);
+            // Launch confetti from this point with sound and contrasting colors
+            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f, confettiBurstSound, audioSource, confettiBurstVolume, contrastPalette);
 
             // Clean up spawn point after a delay
             Destroy(spawnPointGO, 2f);
@@ -1203,6 +1213,16 @@ public class DropSpotBatchManager : MonoBehaviour
         int actualSpawnPoints = Mathf.Clamp(confettiSpawnPoints, 3, 8);
         float angleStep = 360f / actualSpawnPoints;
 
+        // 🎨 יצירת פלטת צבעים מנוגדים לצבע הטקסט
+        UnityEngine.UI.Text textComponent = textRect.GetComponent<UnityEngine.UI.Text>();
+        Color32[] contrastPalette = null;
+        if (textComponent != null)
+        {
+            contrastPalette = GenerateContrastingPalette(textComponent.color);
+            if (debugMode)
+                Debug.Log($"🎨 Using contrasting colors for confetti based on text color: {textComponent.color}");
+        }
+
         for (int i = 0; i < actualSpawnPoints; i++)
         {
             float angle = i * angleStep * Mathf.Deg2Rad;
@@ -1223,8 +1243,8 @@ public class DropSpotBatchManager : MonoBehaviour
             spawnRT.anchoredPosition = offset;
             spawnRT.sizeDelta = new Vector2(50, 50); // Small area for confetti spawn
 
-            // Launch confetti from this point with sound
-            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f, confettiBurstSound, audioSource, confettiBurstVolume);
+            // Launch confetti from this point with sound and contrasting colors
+            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f, confettiBurstSound, audioSource, confettiBurstVolume, contrastPalette);
 
             // Clean up spawn point after a delay
             Destroy(spawnPointGO, 2f);
@@ -1235,6 +1255,42 @@ public class DropSpotBatchManager : MonoBehaviour
 
         if (debugMode)
             Debug.Log($"🎊 Total confetti spawned: {actualSpawnPoints} points × {confettiCountPerPoint} = {actualSpawnPoints * confettiCountPerPoint} pieces");
+    }
+
+    /// <summary>
+    /// יוצר פלטת צבעים מנוגדים לצבע הטקסט
+    /// </summary>
+    private Color32[] GenerateContrastingPalette(Color textColor)
+    {
+        List<Color32> contrastPalette = new List<Color32>();
+
+        // המרת צבע ל-HSV
+        Color.RGBToHSV(textColor, out float h, out float s, out float v);
+
+        // יצירת 15 צבעים מנוגדים
+        for (int i = 0; i < 15; i++)
+        {
+            // צבע משלים (complementary) - 180 מעלות ממול
+            float hueOffset = (180f + Random.Range(-60f, 60f)) / 360f;
+            float newHue = (h + hueOffset) % 1f;
+
+            // רוויה וערך גבוהים לצבעים תוססים
+            float newSaturation = Random.Range(0.7f, 1f);
+            float newValue = Random.Range(0.7f, 1f);
+
+            Color contrastColor = Color.HSVToRGB(newHue, newSaturation, newValue);
+            contrastPalette.Add(new Color32(
+                (byte)(contrastColor.r * 255),
+                (byte)(contrastColor.g * 255),
+                (byte)(contrastColor.b * 255),
+                255
+            ));
+        }
+
+        if (debugMode)
+            Debug.Log($"🎨 Generated {contrastPalette.Count} contrasting colors for text color {textColor}");
+
+        return contrastPalette.ToArray();
     }
 
     [ContextMenu("🎨 Test Message")]
