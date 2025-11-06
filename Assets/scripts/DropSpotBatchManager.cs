@@ -120,8 +120,8 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("Text component for final message")]
     [SerializeField] private string finalCelebrationMessage = "WELL DONE!";
     [Tooltip("Message to show when everything is complete")]
-    [SerializeField] private float finalMessageDuration = 3f;
-    [Tooltip("How long to show the final message")]
+    [SerializeField] private float finalMessageDuration = 5f;
+    [Tooltip("How long to show the final message (default: 5 seconds)")]
     [SerializeField] private int confettiSpawnPoints = 5;
     [Tooltip("Number of confetti spawn points around the text (3-8 recommended)")]
     [SerializeField] private int confettiCountPerPoint = 30;
@@ -987,10 +987,7 @@ public class DropSpotBatchManager : MonoBehaviour
         if (playSound)
             PlayCompletionSound();
 
-        // Wait a tiny bit for the text to position itself
-        yield return new WaitForSeconds(0.1f);
-
-        // 🎊 Launch confetti from multiple points around the text!
+        // 🎊 Launch confetti from multiple points around the text - IMMEDIATELY!
         SpawnConfettiAroundText(textComponent.GetComponent<RectTransform>());
 
         // Keep message visible for duration
