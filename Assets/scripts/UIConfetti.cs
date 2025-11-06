@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public class UIConfetti : MonoBehaviour
 {
     // -------- API סטטי --------
-    public static void Burst(Canvas canvas, RectTransform target, int count = 100, float duration = 1.2f)
+    public static void Burst(Canvas canvas, RectTransform target, int count = 100, float duration = 1.2f, AudioClip sfx = null, AudioSource audioSource = null, float volume = 1f)
     {
         if (canvas == null || target == null) return;
 
@@ -38,6 +38,9 @@ public class UIConfetti : MonoBehaviour
         spawner.canvas = canvas;
         spawner.count = count;
         spawner.duration = duration;
+        spawner.confettiSound = sfx;
+        spawner.confettiAudioSource = audioSource;
+        spawner.confettiVolume = volume;
         spawner.Begin();
     }
 
@@ -48,6 +51,14 @@ public class UIConfetti : MonoBehaviour
     public int count = 100;
     [Tooltip("משך חיים ממוצע (לחתיכה אחת)")]
     public float duration = 1.2f;
+
+    [Header("Audio")]
+    [Tooltip("סאונד לבורסט קונפטי")]
+    public AudioClip confettiSound;
+    [Tooltip("AudioSource להשמעת הסאונד")]
+    public AudioSource confettiAudioSource;
+    [Tooltip("עוצמת הסאונד")]
+    public float confettiVolume = 1f;
     [Tooltip("טווח גדלים (פיקסלים)")]
     public Vector2 sizePxRange = new Vector2(8f, 18f);
     [Tooltip("טווח מהירויות התחלתיות (פיקסלים/שניה)")]
@@ -116,6 +127,13 @@ public class UIConfetti : MonoBehaviour
     public void Begin()
     {
         Debug.Log($"[UIConfetti] Begin() - Creating {count} confetti pieces");
+
+        // השמעת סאונד קונפטי
+        if (confettiSound != null && confettiAudioSource != null)
+        {
+            confettiAudioSource.PlayOneShot(confettiSound, confettiVolume);
+            Debug.Log($"[UIConfetti] Playing confetti sound at volume {confettiVolume}");
+        }
 
         if (pieceSprite == null)
             pieceSprite = GetWhiteSprite();

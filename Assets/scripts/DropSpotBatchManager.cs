@@ -121,7 +121,7 @@ public class DropSpotBatchManager : MonoBehaviour
     [SerializeField] private string finalCelebrationMessage = "WELL DONE!";
     [Tooltip("Message to show when everything is complete")]
     [SerializeField] private float finalMessageDuration = 6.5f;
-    [Tooltip("How long to show the final message (default: 5 seconds)")]
+    [Tooltip("How long to show the final message (default: 6.5 seconds)")]
     [SerializeField] private int confettiSpawnPoints = 5;
     [Tooltip("Number of confetti spawn points around the text (3-8 recommended)")]
     [SerializeField] private int confettiCountPerPoint = 30;
@@ -135,6 +135,11 @@ public class DropSpotBatchManager : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float finalCelebrationSoundVolume = 1f;
     [Tooltip("Volume for the Well Done sound effect")]
+    [SerializeField] private AudioClip confettiBurstSound;
+    [Tooltip("Sound effect for each confetti burst")]
+    [Range(0f, 1f)]
+    [SerializeField] private float confettiBurstVolume = 0.7f;
+    [Tooltip("Volume for confetti burst sound (lower to avoid overwhelming)")]
 
     [Header("📺 Ad Settings")]
     [SerializeField] private bool showAdsOnBatchComplete = true;
@@ -1154,8 +1159,8 @@ public class DropSpotBatchManager : MonoBehaviour
             spawnRT.anchoredPosition = offset;
             spawnRT.sizeDelta = new Vector2(50, 50); // Small area for confetti spawn
 
-            // Launch confetti from this point
-            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f);
+            // Launch confetti from this point with sound
+            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f, confettiBurstSound, audioSource, confettiBurstVolume);
 
             // Clean up spawn point after a delay
             Destroy(spawnPointGO, 2f);
@@ -1218,8 +1223,8 @@ public class DropSpotBatchManager : MonoBehaviour
             spawnRT.anchoredPosition = offset;
             spawnRT.sizeDelta = new Vector2(50, 50); // Small area for confetti spawn
 
-            // Launch confetti from this point
-            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f);
+            // Launch confetti from this point with sound
+            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f, confettiBurstSound, audioSource, confettiBurstVolume);
 
             // Clean up spawn point after a delay
             Destroy(spawnPointGO, 2f);
