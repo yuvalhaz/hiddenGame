@@ -339,15 +339,25 @@ public class DropSpotBatchManager : MonoBehaviour
                 Debug.Log("🎉🎉🎉 BATCH COMPLETE! 🎉🎉🎉");
                 Debug.Log($"showMessage = {showCompletionMessage}");
             }
-            
+
             int completedBatch = currentBatch;
             batchesCompleted++;
-            
-            if (showCompletionMessage)
+
+            // ✅ Check if this is the LAST batch
+            bool isLastBatch = (currentBatch >= GetTotalBatches() - 1);
+
+            // Only show batch completion message if it's NOT the last batch
+            // (for last batch, we'll show the final celebration instead)
+            if (showCompletionMessage && (!isLastBatch || !showFinalCelebration))
             {
                 ShowCompletionMessage(completedBatch);
             }
-            
+            else if (isLastBatch && showFinalCelebration)
+            {
+                if (debugMode)
+                    Debug.Log("🏆 Skipping batch message - will show final celebration instead");
+            }
+
             currentBatch++;
             totalPlacedInCurrentBatch = 0;
             
