@@ -346,30 +346,38 @@ public class DropSpotBatchManager : MonoBehaviour
             // ✅ Check if this is the LAST batch
             bool isLastBatch = (currentBatch >= GetTotalBatches() - 1);
 
-            // Only show batch completion message if it's NOT the last batch
-            // (for last batch, we'll show the final celebration instead)
-            if (showCompletionMessage && (!isLastBatch || !showFinalCelebration))
+            currentBatch++;
+            totalPlacedInCurrentBatch = 0;
+
+            // ✅ עדכן UI אחרי מעבר לבאטץ' הבא
+            UpdateProgressUI();
+
+            // 🏆 If this is the LAST batch and final celebration is enabled - show it IMMEDIATELY!
+            if (isLastBatch && showFinalCelebration)
+            {
+                if (debugMode)
+                    Debug.Log("🏆 LAST BATCH - Showing final celebration IMMEDIATELY!");
+
+                StartCoroutine(ShowFinalCelebration());
+
+                if (debugMode)
+                    Debug.Log("━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+                return; // ✅ EXIT EARLY - don't process ads or next batch logic!
+            }
+
+            // For non-final batches, show regular completion message
+            if (showCompletionMessage)
             {
                 ShowCompletionMessage(completedBatch);
             }
-            else if (isLastBatch && showFinalCelebration)
-            {
-                if (debugMode)
-                    Debug.Log("🏆 Skipping batch message - will show final celebration instead");
-            }
 
-            currentBatch++;
-            totalPlacedInCurrentBatch = 0;
-            
-            // ✅ עדכן UI אחרי מעבר לבאטץ' הבא
-            UpdateProgressUI();
-            
             // ✅ בדוק אם צריך להציג פרסומת
             if (ShouldShowAdNow(completedBatch))
             {
                 if (debugMode)
                     Debug.Log($"📺 Will show ad after message for batch {completedBatch}");
-                
+
                 StartCoroutine(ShowAdAndContinue());
             }
             else
@@ -378,14 +386,6 @@ public class DropSpotBatchManager : MonoBehaviour
                 if (currentBatch < GetTotalBatches())
                 {
                     StartCoroutine(RevealNextBatchDelayed());
-                }
-                else
-                {
-                    // 🎉 ALL BATCHES COMPLETE - SHOW FINAL CELEBRATION!
-                    if (debugMode)
-                        Debug.Log("🏆🏆🏆 ALL BATCHES COMPLETE! 🏆🏆🏆");
-
-                    StartCoroutine(ShowFinalCelebration());
                 }
             }
             
