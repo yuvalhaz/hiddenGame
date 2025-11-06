@@ -110,7 +110,25 @@ public class DropSpotBatchManager : MonoBehaviour
         new Color(1f, 1f, 0f),         // צהוב
         new Color(1f, 0.5f, 0f)        // כתום
     };
-    
+
+    [Header("🏆 Final Celebration (All Items Complete)")]
+    [SerializeField] private bool showFinalCelebration = true;
+    [Tooltip("Show special celebration when ALL items are placed")]
+    [SerializeField] private GameObject finalCelebrationPanel;
+    [Tooltip("UI Panel for 'Well Done' message (can be same as completionPanel or different)")]
+    [SerializeField] private UnityEngine.UI.Text finalCelebrationText;
+    [Tooltip("Text component for final message")]
+    [SerializeField] private string finalCelebrationMessage = "WELL DONE!";
+    [Tooltip("Message to show when everything is complete")]
+    [SerializeField] private float finalMessageDuration = 3f;
+    [Tooltip("How long to show the final message")]
+    [SerializeField] private int confettiSpawnPoints = 5;
+    [Tooltip("Number of confetti spawn points around the text (3-8 recommended)")]
+    [SerializeField] private int confettiCountPerPoint = 30;
+    [Tooltip("How many confetti pieces per spawn point")]
+    [SerializeField] private float confettiSpawnRadius = 300f;
+    [Tooltip("How far from text center to spawn confetti (in pixels)")]
+
     [Header("📺 Ad Settings")]
     [SerializeField] private bool showAdsOnBatchComplete = true;
     [Tooltip("Show ads when completing batches")]
@@ -351,6 +369,14 @@ public class DropSpotBatchManager : MonoBehaviour
                 {
                     StartCoroutine(RevealNextBatchDelayed());
                 }
+                else
+                {
+                    // 🎉 ALL BATCHES COMPLETE - SHOW FINAL CELEBRATION!
+                    if (debugMode)
+                        Debug.Log("🏆🏆🏆 ALL BATCHES COMPLETE! 🏆🏆🏆");
+
+                    StartCoroutine(ShowFinalCelebration());
+                }
             }
             
             if (debugMode)
@@ -468,8 +494,11 @@ public class DropSpotBatchManager : MonoBehaviour
         }
         else
         {
+            // 🎉 ALL BATCHES COMPLETE - SHOW FINAL CELEBRATION!
             if (debugMode)
-                Debug.Log("🏆 All batches complete!");
+                Debug.Log("🏆🏆🏆 ALL BATCHES COMPLETE (after ad)! 🏆🏆🏆");
+
+            StartCoroutine(ShowFinalCelebration());
         }
     }
 
@@ -903,6 +932,132 @@ public class DropSpotBatchManager : MonoBehaviour
         return availableSpots;
     }
 
+    /// <summary>
+    /// Shows final "Well Done!" celebration with confetti from multiple spawn points
+    /// </summary>
+    private IEnumerator ShowFinalCelebration()
+    {
+        if (!showFinalCelebration)
+        {
+            if (debugMode)
+                Debug.Log("[ShowFinalCelebration] Final celebration is disabled");
+            yield break;
+        }
+
+        if (debugMode)
+            Debug.Log("🏆 ====== SHOWING FINAL CELEBRATION ======");
+
+        // Determine which panel and text to use
+        GameObject panel = finalCelebrationPanel != null ? finalCelebrationPanel : completionPanel;
+        UnityEngine.UI.Text textComponent = finalCelebrationText != null ? finalCelebrationText : completionText;
+
+        if (panel == null || textComponent == null)
+        {
+            Debug.LogError("❌ [ShowFinalCelebration] Missing UI components!");
+            yield break;
+        }
+
+        // Set up the message
+        textComponent.text = finalCelebrationMessage;
+
+        if (useRandomColors && messageColors.Count > 0)
+        {
+            textComponent.color = messageColors[Random.Range(0, messageColors.Count)];
+        }
+
+        panel.SetActive(true);
+        panel.transform.localScale = Vector3.one;
+        panel.transform.localRotation = Quaternion.identity;
+
+        // Animate the message
+        if (useAnimation)
+            StartCoroutine(AnimateMessage());
+
+        // Play sound
+        if (playSound)
+            PlayCompletionSound();
+
+        // Wait a tiny bit for the text to position itself
+        yield return new WaitForSeconds(0.1f);
+
+        // 🎊 Launch confetti from multiple points around the text!
+        SpawnConfettiAroundText(textComponent.GetComponent<RectTransform>());
+
+        // Keep message visible for duration
+        yield return new WaitForSeconds(finalMessageDuration);
+
+        // Animate out
+        if (useAnimation && panel != null)
+            yield return StartCoroutine(AnimateMessageOut());
+
+        // Hide panel
+        if (panel != null)
+            panel.SetActive(false);
+
+        if (debugMode)
+            Debug.Log("🏆 ====== FINAL CELEBRATION COMPLETE ======");
+    }
+
+    /// <summary>
+    /// Spawns confetti from multiple points in a circle around the text
+    /// </summary>
+    private void SpawnConfettiAroundText(RectTransform textRect)
+    {
+        if (textRect == null)
+        {
+            Debug.LogWarning("[SpawnConfettiAroundText] textRect is null!");
+            return;
+        }
+
+        // Find the canvas
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+            canvas = FindObjectOfType<Canvas>();
+
+        if (canvas == null)
+        {
+            Debug.LogWarning("[SpawnConfettiAroundText] No canvas found!");
+            return;
+        }
+
+        // Calculate spawn points in a circle around the text
+        int actualSpawnPoints = Mathf.Clamp(confettiSpawnPoints, 3, 8);
+        float angleStep = 360f / actualSpawnPoints;
+
+        for (int i = 0; i < actualSpawnPoints; i++)
+        {
+            float angle = i * angleStep * Mathf.Deg2Rad;
+
+            // Calculate offset position in a circle
+            Vector2 offset = new Vector2(
+                Mathf.Cos(angle) * confettiSpawnRadius,
+                Mathf.Sin(angle) * confettiSpawnRadius
+            );
+
+            // Create a temporary spawn point RectTransform
+            GameObject spawnPointGO = new GameObject($"ConfettiSpawn_{i}");
+            RectTransform spawnRT = spawnPointGO.AddComponent<RectTransform>();
+            spawnRT.SetParent(textRect, false);
+            spawnRT.anchorMin = new Vector2(0.5f, 0.5f);
+            spawnRT.anchorMax = new Vector2(0.5f, 0.5f);
+            spawnRT.pivot = new Vector2(0.5f, 0.5f);
+            spawnRT.anchoredPosition = offset;
+            spawnRT.sizeDelta = new Vector2(50, 50); // Small area for confetti spawn
+
+            // Launch confetti from this point
+            UIConfetti.Burst(canvas, spawnRT, confettiCountPerPoint, 1.5f);
+
+            // Clean up spawn point after a delay
+            Destroy(spawnPointGO, 2f);
+
+            if (debugMode)
+                Debug.Log($"🎊 Spawned confetti at point {i}: angle={angle * Mathf.Rad2Deg}°, offset={offset}");
+        }
+
+        if (debugMode)
+            Debug.Log($"🎊 Total confetti spawned: {actualSpawnPoints} points × {confettiCountPerPoint} = {actualSpawnPoints * confettiCountPerPoint} pieces");
+    }
+
     [ContextMenu("🎨 Test Message")]
     private void TestMessage()
     {
@@ -963,6 +1118,15 @@ public class DropSpotBatchManager : MonoBehaviour
             Debug.Log("📺 Showing ad...");
             RewardedAdsManager.Instance.ShowRewarded();
         }
+    }
+
+    [ContextMenu("🏆 Test Final Celebration")]
+    private void TestFinalCelebration()
+    {
+        if (debugMode)
+            Debug.Log("🏆 Testing final celebration...");
+
+        StartCoroutine(ShowFinalCelebration());
     }
 
     [ContextMenu("📊 Show Status")]
