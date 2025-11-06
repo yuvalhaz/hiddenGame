@@ -358,7 +358,7 @@ public class DropSpotBatchManager : MonoBehaviour
                 if (debugMode)
                     Debug.Log("🏆 LAST BATCH - Showing final celebration IMMEDIATELY!");
 
-                StartCoroutine(ShowFinalCelebration());
+                StartCoroutine(ShowFinalCelebrationWithAd(completedBatch));
 
                 if (debugMode)
                     Debug.Log("━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -940,6 +940,71 @@ public class DropSpotBatchManager : MonoBehaviour
             Debug.Log($"[GetCurrentBatchAvailableSpots] Found {availableSpots.Count} available spots in batch {currentBatch}");
 
         return availableSpots;
+    }
+
+    /// <summary>
+    /// Shows final "Well Done!" celebration with confetti, then shows ad if needed
+    /// </summary>
+    private IEnumerator ShowFinalCelebrationWithAd(int completedBatch)
+    {
+        // First, show the Well Done celebration
+        yield return StartCoroutine(ShowFinalCelebration());
+
+        // After Well Done is complete, check if we need to show an ad
+        if (ShouldShowAdNow(completedBatch))
+        {
+            if (debugMode)
+                Debug.Log($"📺 Showing ad AFTER Well Done message");
+
+            bool adClosed = false;
+
+            RewardedAdsManager.Instance.ShowRewarded(
+                onReward: () =>
+                {
+                    if (debugMode)
+                        Debug.Log("📺 Ad reward granted!");
+                },
+                onClosed: (completed) =>
+                {
+                    if (debugMode)
+                        Debug.Log($"📺 Ad closed after Well Done. Completed: {completed}");
+                    adClosed = true;
+                },
+                onFailed: (error) =>
+                {
+                    Debug.LogWarning($"📺 Ad failed: {error}");
+                    adClosed = true;
+                },
+                onOpened: () =>
+                {
+                    if (debugMode)
+                        Debug.Log("📺 Ad opened after Well Done!");
+                }
+            );
+
+            if (waitForAdToClose)
+            {
+                float timeout = 60f;
+                float elapsed = 0f;
+
+                while (!adClosed && elapsed < timeout)
+                {
+                    elapsed += Time.deltaTime;
+                    yield return null;
+                }
+
+                if (elapsed >= timeout)
+                    Debug.LogWarning("📺 Ad timeout!");
+            }
+
+            if (debugMode)
+                Debug.Log("📺 Ad sequence finished after Well Done");
+        }
+        else
+        {
+            if (debugMode)
+                Debug.Log("📺 No ad needed after Well Done");
+        }
     }
 
     /// <summary>
