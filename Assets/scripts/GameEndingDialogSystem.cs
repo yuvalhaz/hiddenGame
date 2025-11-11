@@ -21,12 +21,9 @@ public class GameEndingDialogSystem : MonoBehaviour
 
     void Start()
     {
-        // הסתר את כל הבועות
+        // הסתר את כל הבועות בהתחלה
         foreach (var bubble in dialogBubbles)
             if (bubble != null) bubble.SetActive(false);
-
-        // הצג את הבועה הראשונה
-        ShowCurrentDialog();
 
         // חבר את הכפתור
         if (nextButton != null)
