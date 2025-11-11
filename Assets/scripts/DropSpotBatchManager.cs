@@ -122,7 +122,32 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("Extra delay after message disappears before showing ad")]
     [SerializeField] private bool waitForAdToClose = true;
     [Tooltip("Wait for ad to close before revealing next batch")]
-    
+
+    [Header("🎊 End of Level Pop-up Bubbles")]
+    [SerializeField] private bool showEndOfLevelBubbles = true;
+    [Tooltip("Show 3 pop-up bubbles when all batches are complete")]
+    [SerializeField] private GameObject bubble1Panel;
+    [Tooltip("First bubble panel")]
+    [SerializeField] private UnityEngine.UI.Text bubble1Text;
+    [Tooltip("First bubble text")]
+    [SerializeField] private GameObject bubble2Panel;
+    [Tooltip("Second bubble panel")]
+    [SerializeField] private UnityEngine.UI.Text bubble2Text;
+    [Tooltip("Second bubble text")]
+    [SerializeField] private GameObject bubble3Panel;
+    [Tooltip("Third bubble panel")]
+    [SerializeField] private UnityEngine.UI.Text bubble3Text;
+    [Tooltip("Third bubble text")]
+    [SerializeField] private List<string> bubble1Messages = new List<string>() { "WELL DONE!", "AMAZING JOB!", "FANTASTIC!" };
+    [SerializeField] private List<string> bubble2Messages = new List<string>() { "YOU DID IT!", "PERFECT!", "INCREDIBLE!" };
+    [SerializeField] private List<string> bubble3Messages = new List<string>() { "LEVEL COMPLETE!", "EXCELLENT!", "AWESOME!" };
+    [SerializeField] private float bubbleDelay = 0.3f;
+    [Tooltip("Delay between each bubble appearing")]
+    [SerializeField] private float bubbleDuration = 1.5f;
+    [Tooltip("How long each bubble stays visible")]
+    [SerializeField] private float bubbleAnimationSpeed = 0.4f;
+    [Tooltip("Speed of bubble pop-in animation")]
+
     [Header("🐛 Debug")]
     [SerializeField] private bool debugMode = true;
     
@@ -156,7 +181,24 @@ public class DropSpotBatchManager : MonoBehaviour
             completionPanel.transform.localScale = Vector3.one;
             completionPanel.transform.localRotation = Quaternion.identity;
         }
-        
+
+        // Initialize bubble panels
+        if (bubble1Panel != null)
+        {
+            bubble1Panel.SetActive(false);
+            bubble1Panel.transform.localScale = Vector3.zero;
+        }
+        if (bubble2Panel != null)
+        {
+            bubble2Panel.SetActive(false);
+            bubble2Panel.transform.localScale = Vector3.zero;
+        }
+        if (bubble3Panel != null)
+        {
+            bubble3Panel.SetActive(false);
+            bubble3Panel.transform.localScale = Vector3.zero;
+        }
+
         isShowingMessage = false;
         hideMessageCoroutine = null;
         batchesCompleted = 0;
@@ -351,6 +393,14 @@ public class DropSpotBatchManager : MonoBehaviour
                 {
                     StartCoroutine(RevealNextBatchDelayed());
                 }
+                else
+                {
+                    // All batches complete - show end-of-level bubbles
+                    if (showEndOfLevelBubbles)
+                    {
+                        StartCoroutine(ShowEndOfLevelBubblesDelayed());
+                    }
+                }
             }
             
             if (debugMode)
@@ -461,7 +511,7 @@ public class DropSpotBatchManager : MonoBehaviour
         
         if (debugMode)
             Debug.Log("📺 Ad finished. Continuing...");
-        
+
         if (currentBatch < GetTotalBatches())
         {
             StartCoroutine(RevealNextBatchDelayed());
@@ -470,6 +520,12 @@ public class DropSpotBatchManager : MonoBehaviour
         {
             if (debugMode)
                 Debug.Log("🏆 All batches complete!");
+
+            // Show 3 end-of-level bubbles
+            if (showEndOfLevelBubbles)
+            {
+                StartCoroutine(ShowEndOfLevelBubbles());
+            }
         }
     }
 
@@ -634,16 +690,147 @@ public class DropSpotBatchManager : MonoBehaviour
     private void PlayCompletionSound()
     {
         if (audioSource == null) return;
-        
+
         AudioClip clip = null;
-        
+
         if (useRandomSound && completionSounds.Count > 0)
             clip = completionSounds[Random.Range(0, completionSounds.Count)];
         else if (singleSound != null)
             clip = singleSound;
-        
+
         if (clip != null)
             audioSource.PlayOneShot(clip, soundVolume);
+    }
+
+    private IEnumerator ShowEndOfLevelBubblesDelayed()
+    {
+        // Wait for the completion message to finish
+        float messageTime = messageDuration;
+        if (useAnimation)
+            messageTime += animationDuration * 0.5f;
+
+        yield return new WaitForSeconds(messageTime + 0.5f);
+
+        yield return StartCoroutine(ShowEndOfLevelBubbles());
+    }
+
+    private IEnumerator ShowEndOfLevelBubbles()
+    {
+        if (debugMode)
+            Debug.Log("🎊 Showing end-of-level bubbles!");
+
+        // Show Bubble 1
+        if (bubble1Panel != null && bubble1Text != null)
+        {
+            string message1 = bubble1Messages.Count > 0 ? bubble1Messages[Random.Range(0, bubble1Messages.Count)] : "WELL DONE!";
+            yield return StartCoroutine(ShowSingleBubble(bubble1Panel, bubble1Text, message1));
+            yield return new WaitForSeconds(bubbleDelay);
+        }
+
+        // Show Bubble 2
+        if (bubble2Panel != null && bubble2Text != null)
+        {
+            string message2 = bubble2Messages.Count > 0 ? bubble2Messages[Random.Range(0, bubble2Messages.Count)] : "YOU DID IT!";
+            yield return StartCoroutine(ShowSingleBubble(bubble2Panel, bubble2Text, message2));
+            yield return new WaitForSeconds(bubbleDelay);
+        }
+
+        // Show Bubble 3
+        if (bubble3Panel != null && bubble3Text != null)
+        {
+            string message3 = bubble3Messages.Count > 0 ? bubble3Messages[Random.Range(0, bubble3Messages.Count)] : "LEVEL COMPLETE!";
+            yield return StartCoroutine(ShowSingleBubble(bubble3Panel, bubble3Text, message3));
+        }
+
+        // Wait for bubbles to be visible
+        yield return new WaitForSeconds(bubbleDuration);
+
+        // Hide all bubbles
+        yield return StartCoroutine(HideAllBubbles());
+
+        if (debugMode)
+            Debug.Log("🎊 End-of-level bubbles complete!");
+    }
+
+    private IEnumerator ShowSingleBubble(GameObject panel, UnityEngine.UI.Text text, string message)
+    {
+        if (panel == null || text == null)
+            yield break;
+
+        // Set message and random color
+        text.text = message;
+        if (useRandomColors && messageColors.Count > 0)
+        {
+            text.color = messageColors[Random.Range(0, messageColors.Count)];
+        }
+
+        // Activate panel
+        panel.SetActive(true);
+        panel.transform.localScale = Vector3.zero;
+
+        // Play sound
+        if (playSound)
+            PlayCompletionSound();
+
+        // Animate pop-in
+        float elapsed = 0f;
+        Vector3 targetScale = Vector3.one;
+
+        while (elapsed < bubbleAnimationSpeed)
+        {
+            elapsed += Time.deltaTime;
+            float progress = elapsed / bubbleAnimationSpeed;
+
+            // Bouncy scale animation
+            float bounce = Mathf.Sin(progress * Mathf.PI * 0.5f);
+            float overshoot = 1f + Mathf.Sin(progress * Mathf.PI) * 0.3f;
+            panel.transform.localScale = targetScale * bounce * overshoot;
+
+            yield return null;
+        }
+
+        panel.transform.localScale = targetScale;
+
+        if (debugMode)
+            Debug.Log($"🎊 Bubble shown: {message}");
+    }
+
+    private IEnumerator HideAllBubbles()
+    {
+        float duration = bubbleAnimationSpeed * 0.5f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float progress = elapsed / duration;
+            float scale = 1f - progress;
+
+            if (bubble1Panel != null)
+                bubble1Panel.transform.localScale = Vector3.one * scale;
+            if (bubble2Panel != null)
+                bubble2Panel.transform.localScale = Vector3.one * scale;
+            if (bubble3Panel != null)
+                bubble3Panel.transform.localScale = Vector3.one * scale;
+
+            yield return null;
+        }
+
+        if (bubble1Panel != null)
+        {
+            bubble1Panel.transform.localScale = Vector3.zero;
+            bubble1Panel.SetActive(false);
+        }
+        if (bubble2Panel != null)
+        {
+            bubble2Panel.transform.localScale = Vector3.zero;
+            bubble2Panel.SetActive(false);
+        }
+        if (bubble3Panel != null)
+        {
+            bubble3Panel.transform.localScale = Vector3.zero;
+            bubble3Panel.SetActive(false);
+        }
     }
 
     private string GetCompletionMessage(int batch)
@@ -843,7 +1030,7 @@ public class DropSpotBatchManager : MonoBehaviour
             Debug.LogError("❌ RewardedAdsManager not found!");
             return;
         }
-        
+
         Debug.Log("📺 Testing ad...");
         RewardedAdsManager.Instance.ShowRewarded(
             onReward: () => Debug.Log("✅ Reward!"),
@@ -851,6 +1038,20 @@ public class DropSpotBatchManager : MonoBehaviour
             onFailed: (error) => Debug.LogError($"❌ Failed: {error}"),
             onOpened: () => Debug.Log("📺 Opened!")
         );
+    }
+
+    [ContextMenu("🎊 Test End-of-Level Bubbles")]
+    private void TestEndOfLevelBubbles()
+    {
+        if (bubble1Panel == null || bubble2Panel == null || bubble3Panel == null ||
+            bubble1Text == null || bubble2Text == null || bubble3Text == null)
+        {
+            Debug.LogError("❌ Bubble UI not assigned!");
+            return;
+        }
+
+        Debug.Log("🎊 Testing end-of-level bubbles...");
+        StartCoroutine(ShowEndOfLevelBubbles());
     }
 
     [ContextMenu("🎬 Test Complete Flow")]
