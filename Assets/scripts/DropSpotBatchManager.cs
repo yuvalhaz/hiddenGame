@@ -124,7 +124,7 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("Wait for ad to close before revealing next batch")]
     
     [Header("💬 Ending Dialog")]
-    [SerializeField] private GameEndingDialogSystem endingDialogSystem;
+    [SerializeField] private EndingDialogController endingDialogSystem;
     [Tooltip("בועות הדיבור שיופיעו בסוף המשחק")]
 
     [Header("🐛 Debug")]

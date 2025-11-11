@@ -6,7 +6,7 @@ using System.Collections;
 /// <summary>
 /// מערכת פשוטה לסיום משחק - מציגה 3 בועות דיבור
 /// </summary>
-public class GameEndingDialogSystem : MonoBehaviour
+public class EndingDialogController : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private GameObject[] dialogBubbles; // 3 בועות דיבור
@@ -38,7 +38,7 @@ public class GameEndingDialogSystem : MonoBehaviour
 
     private void ShowCurrentDialog()
     {
-        Debug.Log($"[GameEndingDialogSystem] ShowCurrentDialog() - showing dialog {currentDialog}");
+        Debug.Log($"[EndingDialogController] ShowCurrentDialog() - showing dialog {currentDialog}");
 
         // הסתר את כל הבועות
         foreach (var bubble in dialogBubbles)
@@ -48,11 +48,11 @@ public class GameEndingDialogSystem : MonoBehaviour
         if (currentDialog < dialogBubbles.Length && dialogBubbles[currentDialog] != null)
         {
             dialogBubbles[currentDialog].SetActive(true);
-            Debug.Log($"[GameEndingDialogSystem] ✅ Bubble {currentDialog} is now visible");
+            Debug.Log($"[EndingDialogController] ✅ Bubble {currentDialog} is now visible");
         }
         else
         {
-            Debug.LogError($"[GameEndingDialogSystem] ❌ Cannot show dialog {currentDialog} - out of bounds or null!");
+            Debug.LogError($"[EndingDialogController] ❌ Cannot show dialog {currentDialog} - out of bounds or null!");
         }
 
         // עדכן טקסט כפתור
@@ -91,28 +91,28 @@ public class GameEndingDialogSystem : MonoBehaviour
         // 📺 בדוק אם יש להציג פרסומת לפני סיום
         if (RewardedAdsManager.Instance != null)
         {
-            Debug.Log("[GameEndingDialogSystem] 📺 מציג פרסומת לפני סיום...");
+            Debug.Log("[EndingDialogController] 📺 מציג פרסומת לפני סיום...");
 
             bool adFinished = false;
 
             RewardedAdsManager.Instance.ShowRewarded(
                 onReward: () =>
                 {
-                    Debug.Log("[GameEndingDialogSystem] 📺 פרסומת הושלמה!");
+                    Debug.Log("[EndingDialogController] 📺 פרסומת הושלמה!");
                 },
                 onClosed: (completed) =>
                 {
-                    Debug.Log($"[GameEndingDialogSystem] 📺 פרסומת נסגרה. הושלמה: {completed}");
+                    Debug.Log($"[EndingDialogController] 📺 פרסומת נסגרה. הושלמה: {completed}");
                     adFinished = true;
                 },
                 onFailed: (error) =>
                 {
-                    Debug.LogWarning($"[GameEndingDialogSystem] 📺 פרסומת נכשלה: {error}");
+                    Debug.LogWarning($"[EndingDialogController] 📺 פרסומת נכשלה: {error}");
                     adFinished = true;
                 },
                 onOpened: () =>
                 {
-                    Debug.Log("[GameEndingDialogSystem] 📺 פרסומת נפתחה");
+                    Debug.Log("[EndingDialogController] 📺 פרסומת נפתחה");
                 }
             );
 
@@ -127,7 +127,7 @@ public class GameEndingDialogSystem : MonoBehaviour
             }
 
             if (elapsed >= timeout)
-                Debug.LogWarning("[GameEndingDialogSystem] ⏰ פרסומת timeout!");
+                Debug.LogWarning("[EndingDialogController] ⏰ פרסומת timeout!");
 
             // המתן רגע אחרי הפרסומת
             yield return new WaitForSeconds(0.5f);
@@ -136,7 +136,7 @@ public class GameEndingDialogSystem : MonoBehaviour
         // בצע את הפעולה המבוקשת
         if (quitGameInsteadOfLoadScene)
         {
-            Debug.Log("[GameEndingDialogSystem] 🚪 יוצא מהמשחק...");
+            Debug.Log("[EndingDialogController] 🚪 יוצא מהמשחק...");
             #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
             #else
@@ -145,7 +145,7 @@ public class GameEndingDialogSystem : MonoBehaviour
         }
         else
         {
-            Debug.Log($"[GameEndingDialogSystem] 🔄 טוען סצנה: {sceneToLoad}");
+            Debug.Log($"[EndingDialogController] 🔄 טוען סצנה: {sceneToLoad}");
             SceneManager.LoadScene(sceneToLoad);
         }
     }
@@ -155,12 +155,12 @@ public class GameEndingDialogSystem : MonoBehaviour
     /// </summary>
     public void StartEndingDialog()
     {
-        Debug.Log("[GameEndingDialogSystem] 🎬 StartEndingDialog() called!");
-        Debug.Log($"[GameEndingDialogSystem] Dialog bubbles count: {dialogBubbles.Length}");
+        Debug.Log("[EndingDialogController] 🎬 StartEndingDialog() called!");
+        Debug.Log($"[EndingDialogController] Dialog bubbles count: {dialogBubbles.Length}");
 
         currentDialog = 0;
         ShowCurrentDialog();
 
-        Debug.Log($"[GameEndingDialogSystem] After ShowCurrentDialog - first bubble should be visible");
+        Debug.Log($"[EndingDialogController] After ShowCurrentDialog - first bubble should be visible");
     }
 }
