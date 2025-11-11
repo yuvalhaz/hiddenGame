@@ -43,6 +43,8 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("Legacy Unity UI Text component")]
     [SerializeField] private Canvas canvas;
     [Tooltip("Canvas for confetti effect (optional)")]
+    [SerializeField] private EndingDialogController endingDialogController;
+    [Tooltip("Controller for comic speech bubbles after WELL DONE (optional)")]
     
     [SerializeField] private float messageDuration = 2f;
     [Tooltip("How long to show the message (seconds)")]
@@ -144,9 +146,10 @@ public class DropSpotBatchManager : MonoBehaviour
     private int currentBatch = 0;
     private int totalPlacedInCurrentBatch = 0;
     private int batchesCompleted = 0;
-    
+
     private Coroutine hideMessageCoroutine = null;
     private bool isShowingMessage = false;
+    private bool isLastBatchCompletion = false; // האם זו השלמת הבאץ' האחרון?
 
     private void OnValidate()
     {
@@ -359,6 +362,7 @@ public class DropSpotBatchManager : MonoBehaviour
                 if (isLastBatch)
                 {
                     // באץ' אחרון - הצג "WELL DONE!" + בועות
+                    isLastBatchCompletion = true; // ✅ סמן שזה הבאץ' האחרון
                     ShowCustomMessage("WELL DONE!");
 
                     if (debugMode)
@@ -678,15 +682,31 @@ public class DropSpotBatchManager : MonoBehaviour
     private IEnumerator HideMessageAfterDelay()
     {
         yield return new WaitForSeconds(messageDuration);
-        
+
         if (useAnimation && completionPanel != null)
             yield return StartCoroutine(AnimateMessageOut());
-        
+
         if (completionPanel != null)
             completionPanel.SetActive(false);
-        
+
         isShowingMessage = false;
         hideMessageCoroutine = null;
+
+        // ✅ אם זה היה הבאץ' האחרון, הפעל בועות דיבור
+        if (isLastBatchCompletion && endingDialogController != null)
+        {
+            if (debugMode)
+                Debug.Log("💬 Starting ending dialog after WELL DONE!");
+
+            endingDialogController.StartEndingDialog();
+            isLastBatchCompletion = false; // ✅ איפוס הדגל
+        }
+        else if (isLastBatchCompletion && endingDialogController == null)
+        {
+            if (debugMode)
+                Debug.LogWarning("💬 EndingDialogController is not assigned!");
+            isLastBatchCompletion = false; // ✅ איפוס הדגל
+        }
     }
 
     private IEnumerator AnimateMessage()
