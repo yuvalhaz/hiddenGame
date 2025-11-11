@@ -14,9 +14,9 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private Text buttonText;
 
     [Header("Animation Settings")]
-    [SerializeField] private float delayBetweenBubbles = 2.5f; // זמן המתנה בין בועות (שניות)
+    [SerializeField] private float delayBetweenBubbles = 0.3f; // זמן המתנה בין בועות (שניות)
     [SerializeField] private float animationDuration = 0.5f; // משך אנימציית pop-in
-    [SerializeField] private float bubbleDisplayTime = 2.0f; // כמה זמן כל בועה נשארת על המסך
+    [SerializeField] private float allBubblesDisplayTime = 2.0f; // כמה זמן כל הבועות נשארות על המסך אחרי הבועה האחרונה
     [SerializeField] private bool autoAdvance = true; // להעביר אוטומטית בין בועות או לחכות ללחיצה
 
     [Header("Settings")]
@@ -59,22 +59,13 @@ public class EndingDialogController : MonoBehaviour
     {
         Debug.Log($"[EndingDialogController] ShowCurrentDialog() - showing dialog {currentDialog}");
 
-        // הסתר את כל הבועות
-        foreach (var bubble in dialogBubbles)
-        {
-            if (bubble != null)
-            {
-                bubble.SetActive(false);
-                bubble.transform.localScale = Vector3.zero;
-            }
-        }
-
+        // ✅ לא מסתירים בועות קודמות! רק מציגים את הנוכחית
         // הצג את הבועה הנוכחית עם אנימציה
         if (currentDialog < dialogBubbles.Length && dialogBubbles[currentDialog] != null)
         {
             dialogBubbles[currentDialog].SetActive(true);
             StartCoroutine(AnimateBubblePopIn(dialogBubbles[currentDialog]));
-            Debug.Log($"[EndingDialogController] ✅ Bubble {currentDialog} is now visible with animation");
+            Debug.Log($"[EndingDialogController] ✅ Bubble {currentDialog} is now popping in! Previous bubbles stay visible.");
         }
         else
         {
@@ -247,13 +238,18 @@ public class EndingDialogController : MonoBehaviour
 
             Debug.Log($"[EndingDialogController] Showing bubble {i}/{dialogBubbles.Length - 1}");
 
-            // המתן את משך האנימציה + זמן התצוגה
-            yield return new WaitForSeconds(animationDuration + bubbleDisplayTime);
+            // ✅ המתן 0.3 שניות לפני הבועה הבאה (כל הבועות נשארות על המסך!)
+            yield return new WaitForSeconds(delayBetweenBubbles);
         }
 
-        Debug.Log("[EndingDialogController] ✅ All bubbles shown! Starting end game sequence...");
+        Debug.Log("[EndingDialogController] ✅ All bubbles shown! Displaying all together...");
 
-        // כל הבועות הוצגו - סיים את המשחק
+        // ✅ כל הבועות על המסך - המתן את הזמן שהן נשארות ביחד
+        yield return new WaitForSeconds(allBubblesDisplayTime);
+
+        Debug.Log("[EndingDialogController] Starting end game sequence...");
+
+        // סיים את המשחק
         yield return new WaitForSeconds(0.5f);
         EndGame();
     }
