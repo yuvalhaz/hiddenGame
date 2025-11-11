@@ -90,7 +90,7 @@ public class GameEndingDialogSystem : MonoBehaviour
     /// <summary>
     /// קריאה מבחוץ להתחלת הדיאלוג
     /// </summary>
-    public void StartDialog()
+    public void StartEndingDialog()
     {
         currentDialog = 0;
         ShowCurrentDialog();
