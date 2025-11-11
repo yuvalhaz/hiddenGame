@@ -955,6 +955,52 @@ public class DropSpotBatchManager : MonoBehaviour
         return useCustomBatchSizes ? customBatchSizes.Count : numberOfBatches;
     }
 
+    // ===== PUBLIC METHODS FOR EXTERNAL USE =====
+
+    /// <summary>
+    /// Returns the index of the current batch
+    /// </summary>
+    public int GetCurrentBatchIndex()
+    {
+        return currentBatch;
+    }
+
+    /// <summary>
+    /// Returns a list of available (not yet placed) DropSpots in the current batch
+    /// </summary>
+    public List<DropSpot> GetCurrentBatchAvailableSpots()
+    {
+        List<DropSpot> availableSpots = new List<DropSpot>();
+
+        if (currentBatch >= GetTotalBatches())
+        {
+            if (debugMode)
+                Debug.Log("[DropSpotBatchManager] No more batches available");
+            return availableSpots;
+        }
+
+        int start = GetBatchStartIndex(currentBatch);
+        int size = GetBatchSize(currentBatch);
+        int end = start + size;
+
+        for (int i = start; i < end && i < allDropSpots.Count; i++)
+        {
+            if (allDropSpots[i] == null) continue;
+
+            // Only include spots that haven't been placed yet
+            if (GameProgressManager.Instance != null &&
+                !GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
+            {
+                availableSpots.Add(allDropSpots[i]);
+            }
+        }
+
+        if (debugMode)
+            Debug.Log($"[DropSpotBatchManager] Found {availableSpots.Count} available spots in batch {currentBatch}");
+
+        return availableSpots;
+    }
+
     [ContextMenu("🎨 Test Message")]
     private void TestMessage()
     {
