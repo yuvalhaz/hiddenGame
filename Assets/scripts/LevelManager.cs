@@ -191,45 +191,17 @@ public class LevelManager : MonoBehaviour
         // Fire event
         OnLevelCompleted?.Invoke(currentLevelIndex);
 
-        // בדוק אם זו הרמה האחרונה במשחק
-        bool isFinalLevel = (currentLevelIndex >= levelConfig.Count - 1);
+        // ההודעה "WELL DONE!" כבר הוצגה על ידי DropSpotBatchManager בסיום הבאץ' האחרון
+        // פה רק נטפל בפרסומות ובמעבר לרמה הבאה
 
-        if (isFinalLevel)
-        {
-            // זה הספוט האחרון במשחק כולו - הצג "WELL DONE!" קבוע
-            if (batchManager != null)
-            {
-                batchManager.ShowCustomMessage("WELL DONE!");
-
-                if (debugMode)
-                    Debug.Log("[LevelManager] 🏆 FINAL GAME COMPLETION! Showing: WELL DONE!");
-            }
-
-            // חכה שההודעה תוצג ואז הצג פרסומת
-            StartCoroutine(ShowAdAfterDelay(true));
-        }
-        else
-        {
-            // עוד יש רמות - אל תציג הודעה, פשוט המשך
-            if (debugMode)
-                Debug.Log("[LevelManager] More levels remaining, no message");
-
-            StartCoroutine(ShowAdAfterDelay(false));
-        }
+        // חכה קצת כדי שההודעה תוצג
+        StartCoroutine(ShowAdAfterDelay());
     }
 
-    private System.Collections.IEnumerator ShowAdAfterDelay(bool isFinalLevel)
+    private System.Collections.IEnumerator ShowAdAfterDelay()
     {
-        // אם זו הרמה האחרונה, חכה שההודעה תוצג
-        if (isFinalLevel)
-        {
-            yield return new WaitForSeconds(2.5f);
-        }
-        else
-        {
-            // אחרת המשך מהר
-            yield return new WaitForSeconds(0.3f);
-        }
+        // חכה שההודעה והבועות יסתיימו
+        yield return new WaitForSeconds(2.5f);
 
         // Show ad if ads manager is available
         if (adsManager != null && adsManager.IsReady())

@@ -343,27 +343,37 @@ public class DropSpotBatchManager : MonoBehaviour
             {
                 Debug.Log("🎉🎉🎉 BATCH COMPLETE! 🎉🎉🎉");
                 Debug.Log($"Batch size: {batchSize}");
+                Debug.Log($"Current batch: {currentBatch}");
+                Debug.Log($"Total batches: {GetTotalBatches()}");
                 Debug.Log($"showMessage = {showCompletionMessage}");
             }
 
             int completedBatch = currentBatch;
             batchesCompleted++;
 
+            // בדוק אם זה הבאץ' האחרון במסך
+            bool isLastBatch = (currentBatch >= GetTotalBatches() - 1);
+
             if (showCompletionMessage)
             {
-                // בדוק אם זה אובייקט בודד או באץ'
-                if (batchSize == 1 && useObjectCompletionMessages)
+                if (isLastBatch)
                 {
+                    // באץ' אחרון - הצג "WELL DONE!" + בועות
+                    ShowCustomMessage("WELL DONE!");
+
                     if (debugMode)
-                        Debug.Log("🎯 Single object completion!");
-                    ShowObjectCompletionMessage(completedBatch);
+                        Debug.Log("🏆 Last batch! Showing WELL DONE with confetti!");
                 }
                 else
                 {
+                    // באץ' רגיל - הצג הודעת עידוד רגילה
                     ShowCompletionMessage(completedBatch);
+
+                    if (debugMode)
+                        Debug.Log($"📝 Regular batch {completedBatch}, showing encouragement message");
                 }
             }
-            
+
             currentBatch++;
             totalPlacedInCurrentBatch = 0;
             
