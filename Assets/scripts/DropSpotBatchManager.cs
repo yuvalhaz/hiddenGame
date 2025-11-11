@@ -41,6 +41,8 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("The panel/canvas that contains the message")]
     [SerializeField] private UnityEngine.UI.Text completionText;
     [Tooltip("Legacy Unity UI Text component")]
+    [SerializeField] private Canvas canvas;
+    [Tooltip("Canvas for confetti effect (optional)")]
     
     [SerializeField] private float messageDuration = 2f;
     [Tooltip("How long to show the message (seconds)")]
@@ -169,11 +171,19 @@ public class DropSpotBatchManager : MonoBehaviour
             completionPanel.transform.localScale = Vector3.one;
             completionPanel.transform.localRotation = Quaternion.identity;
         }
-        
+
         isShowingMessage = false;
         hideMessageCoroutine = null;
         batchesCompleted = 0;
-        
+
+        // מצא Canvas אוטומטית אם לא הוגדר
+        if (canvas == null)
+        {
+            canvas = FindObjectOfType<Canvas>();
+            if (canvas != null && debugMode)
+                Debug.Log("[DropSpotBatchManager] ✅ Auto-found Canvas for confetti");
+        }
+
         if (audioSource == null && playSound)
         {
             audioSource = GetComponent<AudioSource>();
@@ -539,6 +549,19 @@ public class DropSpotBatchManager : MonoBehaviour
 
         if (playSound)
             PlayCompletionSound();
+
+        // 🎉 הצג בועות קונפטי!
+        if (canvas != null && completionPanel != null)
+        {
+            var panelRT = completionPanel.GetComponent<RectTransform>();
+            if (panelRT != null)
+            {
+                UIConfetti.Burst(canvas, panelRT, count: 150, duration: 1.5f);
+
+                if (debugMode)
+                    Debug.Log("🎊 Confetti burst triggered!");
+            }
+        }
 
         hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
 
