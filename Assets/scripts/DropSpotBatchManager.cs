@@ -933,4 +933,40 @@ public class DropSpotBatchManager : MonoBehaviour
         Debug.Log($"Batches: {GetTotalBatches()}");
         Debug.Log($"Total spots: {GetTotalRequiredSpots()}");
     }
+
+    /// <summary>
+    /// Returns a list of available (unfilled) DropSpots in the current batch
+    /// </summary>
+    public List<DropSpot> GetCurrentBatchAvailableSpots()
+    {
+        List<DropSpot> availableSpots = new List<DropSpot>();
+
+        if (currentBatch >= GetTotalBatches())
+        {
+            if (debugMode)
+                Debug.Log("[DropSpotBatchManager] No more batches available");
+            return availableSpots;
+        }
+
+        int startIdx = GetBatchStartIndex(currentBatch);
+        int batchSize = GetBatchSize(currentBatch);
+        int endIdx = startIdx + batchSize;
+
+        for (int i = startIdx; i < endIdx && i < allDropSpots.Count; i++)
+        {
+            if (allDropSpots[i] == null) continue;
+
+            // Check if this spot is not yet filled
+            if (GameProgressManager.Instance != null &&
+                !GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
+            {
+                availableSpots.Add(allDropSpots[i]);
+            }
+        }
+
+        if (debugMode)
+            Debug.Log($"[DropSpotBatchManager] Found {availableSpots.Count} available spots in current batch {currentBatch}");
+
+        return availableSpots;
+    }
 }
