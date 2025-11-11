@@ -939,6 +939,7 @@ public class DropSpotBatchManager : MonoBehaviour
     /// </summary>
     public int GetCurrentBatchIndex()
     {
+        // Returns the current batch index for hint system
         return currentBatch;
     }
 
