@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 /// <summary>
 /// מערכת פשוטה לסיום משחק - מציגה 3 בועות דיבור
@@ -73,8 +74,63 @@ public class GameEndingDialogSystem : MonoBehaviour
 
     private void EndGame()
     {
+        StartCoroutine(EndGameCoroutine());
+    }
+
+    private IEnumerator EndGameCoroutine()
+    {
+        // המתן רגע קטן
+        yield return new WaitForSeconds(0.3f);
+
+        // 📺 בדוק אם יש להציג פרסומת לפני סיום
+        if (RewardedAdsManager.Instance != null)
+        {
+            Debug.Log("[GameEndingDialogSystem] 📺 מציג פרסומת לפני סיום...");
+
+            bool adFinished = false;
+
+            RewardedAdsManager.Instance.ShowRewarded(
+                onReward: () =>
+                {
+                    Debug.Log("[GameEndingDialogSystem] 📺 פרסומת הושלמה!");
+                },
+                onClosed: (completed) =>
+                {
+                    Debug.Log($"[GameEndingDialogSystem] 📺 פרסומת נסגרה. הושלמה: {completed}");
+                    adFinished = true;
+                },
+                onFailed: (error) =>
+                {
+                    Debug.LogWarning($"[GameEndingDialogSystem] 📺 פרסומת נכשלה: {error}");
+                    adFinished = true;
+                },
+                onOpened: () =>
+                {
+                    Debug.Log("[GameEndingDialogSystem] 📺 פרסומת נפתחה");
+                }
+            );
+
+            // המתן עד שהפרסומת תסתיים
+            float timeout = 60f;
+            float elapsed = 0f;
+
+            while (!adFinished && elapsed < timeout)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            if (elapsed >= timeout)
+                Debug.LogWarning("[GameEndingDialogSystem] ⏰ פרסומת timeout!");
+
+            // המתן רגע אחרי הפרסומת
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        // בצע את הפעולה המבוקשת
         if (quitGameInsteadOfLoadScene)
         {
+            Debug.Log("[GameEndingDialogSystem] 🚪 יוצא מהמשחק...");
             #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
             #else
@@ -83,6 +139,7 @@ public class GameEndingDialogSystem : MonoBehaviour
         }
         else
         {
+            Debug.Log($"[GameEndingDialogSystem] 🔄 טוען סצנה: {sceneToLoad}");
             SceneManager.LoadScene(sceneToLoad);
         }
     }

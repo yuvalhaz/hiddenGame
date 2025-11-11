@@ -123,9 +123,13 @@ public class DropSpotBatchManager : MonoBehaviour
     [SerializeField] private bool waitForAdToClose = true;
     [Tooltip("Wait for ad to close before revealing next batch")]
     
+    [Header("💬 Ending Dialog")]
+    [SerializeField] private GameEndingDialogSystem endingDialogSystem;
+    [Tooltip("בועות הדיבור שיופיעו בסוף המשחק")]
+
     [Header("🐛 Debug")]
     [SerializeField] private bool debugMode = true;
-    
+
     private int currentBatch = 0;
     private int totalPlacedInCurrentBatch = 0;
     private int batchesCompleted = 0;
@@ -325,33 +329,38 @@ public class DropSpotBatchManager : MonoBehaviour
             int completedBatch = currentBatch;
             batchesCompleted++;
             
+            bool isLastBatch = (completedBatch == GetTotalBatches() - 1);
+            bool willShowAd = ShouldShowAdNow(completedBatch);
+
             if (showCompletionMessage)
             {
-                ShowCompletionMessage(completedBatch);
+                ShowCompletionMessage(completedBatch, willShowAd);
             }
-            
+
             currentBatch++;
             totalPlacedInCurrentBatch = 0;
-            
+
             // ✅ עדכן UI אחרי מעבר לבאטץ' הבא
             UpdateProgressUI();
-            
+
             // ✅ בדוק אם צריך להציג פרסומת
-            if (ShouldShowAdNow(completedBatch))
+            // אם זה הבאטץ' האחרון, הפרסומת תופיע אחרי בועות הדיבור
+            if (willShowAd && !isLastBatch)
             {
                 if (debugMode)
                     Debug.Log($"📺 Will show ad after message for batch {completedBatch}");
-                
+
                 StartCoroutine(ShowAdAndContinue());
             }
-            else
+            else if (!isLastBatch)
             {
-                // אין פרסומת - המשך לבאטץ' הבא
+                // אין פרסומת ולא באטץ' אחרון - המשך לבאטץ' הבא
                 if (currentBatch < GetTotalBatches())
                 {
                     StartCoroutine(RevealNextBatchDelayed());
                 }
             }
+            // אם זה באטץ' אחרון, HideMessageAfterDelay יפעיל את בועות הדיבור
             
             if (debugMode)
                 Debug.Log("━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -473,10 +482,10 @@ public class DropSpotBatchManager : MonoBehaviour
         }
     }
 
-    private void ShowCompletionMessage(int batch)
+    private void ShowCompletionMessage(int batch, bool willShowAd = false)
     {
         if (debugMode)
-            Debug.Log($"💬 ShowCompletionMessage({batch})");
+            Debug.Log($"💬 ShowCompletionMessage({batch}, willShowAd={willShowAd})");
         
         if (isShowingMessage)
         {
@@ -515,23 +524,35 @@ public class DropSpotBatchManager : MonoBehaviour
         if (playSound)
             PlayCompletionSound();
         
-        hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
-        
+        // בדוק אם זה הבאטץ' האחרון
+        bool isLastBatch = (batch == GetTotalBatches() - 1);
+
+        hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay(isLastBatch));
+
         Debug.Log($"<color=yellow>🎉 {message} 🎉</color>");
     }
 
-    private IEnumerator HideMessageAfterDelay()
+    private IEnumerator HideMessageAfterDelay(bool isLastBatch = false)
     {
         yield return new WaitForSeconds(messageDuration);
-        
+
         if (useAnimation && completionPanel != null)
             yield return StartCoroutine(AnimateMessageOut());
-        
+
         if (completionPanel != null)
             completionPanel.SetActive(false);
-        
+
         isShowingMessage = false;
         hideMessageCoroutine = null;
+
+        // אם זה הבאטץ' האחרון - הפעל בועות דיבור
+        if (isLastBatch && endingDialogSystem != null)
+        {
+            if (debugMode)
+                Debug.Log("🎬 Starting ending dialog bubbles!");
+
+            endingDialogSystem.StartEndingDialog();
+        }
     }
 
     private IEnumerator AnimateMessage()
