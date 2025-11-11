@@ -102,10 +102,9 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("Use different messages when completing a batch with only 1 object")]
     [SerializeField] private List<string> objectCompletionMessages = new List<string>()
     {
-        "WALL DONE!",
+        "WELL DONE!",
         "OBJECT COMPLETE!",
         "NICE!",
-        "WELL DONE!",
         "GOOD JOB!",
         "EXCELLENT!",
         "PERFECT!"
