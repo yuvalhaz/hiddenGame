@@ -845,6 +845,11 @@ public class DropSpotBatchManager : MonoBehaviour
         return useCustomBatchSizes ? customBatchSizes.Count : numberOfBatches;
     }
 
+    public int GetCurrentBatchIndex()
+    {
+        return currentBatch;
+    }
+
     [ContextMenu("🎨 Test Message")]
     private void TestMessage()
     {
