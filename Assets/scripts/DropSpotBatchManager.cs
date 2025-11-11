@@ -96,7 +96,21 @@ public class DropSpotBatchManager : MonoBehaviour
         "BRILLIANT!",
         "INCREDIBLE!"
     };
-    
+
+    [Header("🎯 Object Completion Messages (For Single Objects)")]
+    [SerializeField] private bool useObjectCompletionMessages = true;
+    [Tooltip("Use different messages when completing a batch with only 1 object")]
+    [SerializeField] private List<string> objectCompletionMessages = new List<string>()
+    {
+        "WALL DONE!",
+        "OBJECT COMPLETE!",
+        "NICE!",
+        "WELL DONE!",
+        "GOOD JOB!",
+        "EXCELLENT!",
+        "PERFECT!"
+    };
+
     [Header("🎨 Random Colors")]
     [SerializeField] private bool useRandomColors = true;
     [SerializeField] private List<Color> messageColors = new List<Color>()
@@ -319,15 +333,26 @@ public class DropSpotBatchManager : MonoBehaviour
             if (debugMode)
             {
                 Debug.Log("🎉🎉🎉 BATCH COMPLETE! 🎉🎉🎉");
+                Debug.Log($"Batch size: {batchSize}");
                 Debug.Log($"showMessage = {showCompletionMessage}");
             }
-            
+
             int completedBatch = currentBatch;
             batchesCompleted++;
-            
+
             if (showCompletionMessage)
             {
-                ShowCompletionMessage(completedBatch);
+                // בדוק אם זה אובייקט בודד או באץ'
+                if (batchSize == 1 && useObjectCompletionMessages)
+                {
+                    if (debugMode)
+                        Debug.Log("🎯 Single object completion!");
+                    ShowObjectCompletionMessage(completedBatch);
+                }
+                else
+                {
+                    ShowCompletionMessage(completedBatch);
+                }
             }
             
             currentBatch++;
@@ -473,11 +498,14 @@ public class DropSpotBatchManager : MonoBehaviour
         }
     }
 
-    private void ShowCompletionMessage(int batch)
+    /// <summary>
+    /// Public method to show a custom message (e.g., for level completion)
+    /// </summary>
+    public void ShowCustomMessage(string customMessage)
     {
         if (debugMode)
-            Debug.Log($"💬 ShowCompletionMessage({batch})");
-        
+            Debug.Log($"💬 ShowCustomMessage: {customMessage}");
+
         if (isShowingMessage)
         {
             if (hideMessageCoroutine != null)
@@ -485,39 +513,134 @@ public class DropSpotBatchManager : MonoBehaviour
             if (completionPanel != null)
                 completionPanel.SetActive(false);
         }
-        
+
         isShowingMessage = true;
-        
-        string message = GetCompletionMessage(batch);
-        
+
         if (completionPanel == null || completionText == null)
         {
             Debug.LogError("❌ Panel or Text is NULL!");
             isShowingMessage = false;
             return;
         }
-        
+
         completionPanel.transform.localScale = Vector3.one;
         completionPanel.transform.localRotation = Quaternion.identity;
-        
-        completionText.text = message;
-        
+
+        completionText.text = customMessage;
+
         if (useRandomColors && messageColors.Count > 0)
         {
             completionText.color = messageColors[Random.Range(0, messageColors.Count)];
         }
-        
+
         completionPanel.SetActive(true);
-        
+
         if (useAnimation)
             StartCoroutine(AnimateMessage());
-        
+
         if (playSound)
             PlayCompletionSound();
-        
+
         hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
-        
+
+        Debug.Log($"<color=yellow>🎉 {customMessage} 🎉</color>");
+    }
+
+    private void ShowCompletionMessage(int batch)
+    {
+        if (debugMode)
+            Debug.Log($"💬 ShowCompletionMessage({batch})");
+
+        if (isShowingMessage)
+        {
+            if (hideMessageCoroutine != null)
+                StopCoroutine(hideMessageCoroutine);
+            if (completionPanel != null)
+                completionPanel.SetActive(false);
+        }
+
+        isShowingMessage = true;
+
+        string message = GetCompletionMessage(batch);
+
+        if (completionPanel == null || completionText == null)
+        {
+            Debug.LogError("❌ Panel or Text is NULL!");
+            isShowingMessage = false;
+            return;
+        }
+
+        completionPanel.transform.localScale = Vector3.one;
+        completionPanel.transform.localRotation = Quaternion.identity;
+
+        completionText.text = message;
+
+        if (useRandomColors && messageColors.Count > 0)
+        {
+            completionText.color = messageColors[Random.Range(0, messageColors.Count)];
+        }
+
+        completionPanel.SetActive(true);
+
+        if (useAnimation)
+            StartCoroutine(AnimateMessage());
+
+        if (playSound)
+            PlayCompletionSound();
+
+        hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
+
         Debug.Log($"<color=yellow>🎉 {message} 🎉</color>");
+    }
+
+    /// <summary>
+    /// Show object completion message (for single-object batches)
+    /// </summary>
+    private void ShowObjectCompletionMessage(int batch)
+    {
+        if (debugMode)
+            Debug.Log($"💬 ShowObjectCompletionMessage({batch})");
+
+        if (isShowingMessage)
+        {
+            if (hideMessageCoroutine != null)
+                StopCoroutine(hideMessageCoroutine);
+            if (completionPanel != null)
+                completionPanel.SetActive(false);
+        }
+
+        isShowingMessage = true;
+
+        string message = GetObjectCompletionMessage();
+
+        if (completionPanel == null || completionText == null)
+        {
+            Debug.LogError("❌ Panel or Text is NULL!");
+            isShowingMessage = false;
+            return;
+        }
+
+        completionPanel.transform.localScale = Vector3.one;
+        completionPanel.transform.localRotation = Quaternion.identity;
+
+        completionText.text = message;
+
+        if (useRandomColors && messageColors.Count > 0)
+        {
+            completionText.color = messageColors[Random.Range(0, messageColors.Count)];
+        }
+
+        completionPanel.SetActive(true);
+
+        if (useAnimation)
+            StartCoroutine(AnimateMessage());
+
+        if (playSound)
+            PlayCompletionSound();
+
+        hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
+
+        Debug.Log($"<color=yellow>🎯 {message} 🎯</color>");
     }
 
     private IEnumerator HideMessageAfterDelay()
@@ -650,11 +773,19 @@ public class DropSpotBatchManager : MonoBehaviour
     {
         if (useCustomMessagesPerBatch && batch < customMessagesPerBatch.Count)
             return customMessagesPerBatch[batch];
-        
+
         if (randomMessages.Count > 0)
             return randomMessages[Random.Range(0, randomMessages.Count)];
-        
+
         return "GREAT!";
+    }
+
+    private string GetObjectCompletionMessage()
+    {
+        if (objectCompletionMessages.Count > 0)
+            return objectCompletionMessages[Random.Range(0, objectCompletionMessages.Count)];
+
+        return "WELL DONE!";
     }
 
     private IEnumerator RevealNextBatchDelayed()
