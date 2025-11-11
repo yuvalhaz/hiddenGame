@@ -328,9 +328,17 @@ public class DropSpotBatchManager : MonoBehaviour
             
             int completedBatch = currentBatch;
             batchesCompleted++;
-            
+
             bool isLastBatch = (completedBatch == GetTotalBatches() - 1);
             bool willShowAd = ShouldShowAdNow(completedBatch);
+
+            if (debugMode)
+            {
+                Debug.Log($"🔍 Batch {completedBatch} completed!");
+                Debug.Log($"🔍 isLastBatch = {isLastBatch} (completed={completedBatch}, total={GetTotalBatches()})");
+                Debug.Log($"🔍 willShowAd = {willShowAd}");
+                Debug.Log($"🔍 showCompletionMessage = {showCompletionMessage}");
+            }
 
             if (showCompletionMessage)
             {
@@ -359,6 +367,11 @@ public class DropSpotBatchManager : MonoBehaviour
                 {
                     StartCoroutine(RevealNextBatchDelayed());
                 }
+            }
+            else
+            {
+                if (debugMode)
+                    Debug.Log($"🏁 This was the LAST batch! Ending dialog will be triggered after message");
             }
             // אם זה באטץ' אחרון, HideMessageAfterDelay יפעיל את בועות הדיבור
             
@@ -545,6 +558,9 @@ public class DropSpotBatchManager : MonoBehaviour
         isShowingMessage = false;
         hideMessageCoroutine = null;
 
+        if (debugMode)
+            Debug.Log($"🔍 HideMessageAfterDelay: isLastBatch={isLastBatch}, endingDialogSystem={(endingDialogSystem != null ? "EXISTS" : "NULL")}");
+
         // אם זה הבאטץ' האחרון - הפעל בועות דיבור
         if (isLastBatch && endingDialogSystem != null)
         {
@@ -552,6 +568,10 @@ public class DropSpotBatchManager : MonoBehaviour
                 Debug.Log("🎬 Starting ending dialog bubbles!");
 
             endingDialogSystem.StartEndingDialog();
+        }
+        else if (isLastBatch && endingDialogSystem == null)
+        {
+            Debug.LogError("❌ Last batch completed but endingDialogSystem is NULL! Assign GameEndingDialogSystem in inspector!");
         }
     }
 

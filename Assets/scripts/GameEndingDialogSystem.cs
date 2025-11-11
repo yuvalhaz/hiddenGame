@@ -38,13 +38,22 @@ public class GameEndingDialogSystem : MonoBehaviour
 
     private void ShowCurrentDialog()
     {
+        Debug.Log($"[GameEndingDialogSystem] ShowCurrentDialog() - showing dialog {currentDialog}");
+
         // הסתר את כל הבועות
         foreach (var bubble in dialogBubbles)
             if (bubble != null) bubble.SetActive(false);
 
         // הצג את הבועה הנוכחית
         if (currentDialog < dialogBubbles.Length && dialogBubbles[currentDialog] != null)
+        {
             dialogBubbles[currentDialog].SetActive(true);
+            Debug.Log($"[GameEndingDialogSystem] ✅ Bubble {currentDialog} is now visible");
+        }
+        else
+        {
+            Debug.LogError($"[GameEndingDialogSystem] ❌ Cannot show dialog {currentDialog} - out of bounds or null!");
+        }
 
         // עדכן טקסט כפתור
         if (buttonText != null)
@@ -146,7 +155,12 @@ public class GameEndingDialogSystem : MonoBehaviour
     /// </summary>
     public void StartEndingDialog()
     {
+        Debug.Log("[GameEndingDialogSystem] 🎬 StartEndingDialog() called!");
+        Debug.Log($"[GameEndingDialogSystem] Dialog bubbles count: {dialogBubbles.Length}");
+
         currentDialog = 0;
         ShowCurrentDialog();
+
+        Debug.Log($"[GameEndingDialogSystem] After ShowCurrentDialog - first bubble should be visible");
     }
 }
