@@ -850,6 +850,28 @@ public class DropSpotBatchManager : MonoBehaviour
         return currentBatch;
     }
 
+    public List<DropSpot> GetCurrentBatchAvailableSpots()
+    {
+        List<DropSpot> availableSpots = new List<DropSpot>();
+
+        int start = GetBatchStartIndex(currentBatch);
+        int size = GetBatchSize(currentBatch);
+        int end = start + size;
+
+        for (int i = start; i < end && i < allDropSpots.Count; i++)
+        {
+            if (allDropSpots[i] == null) continue;
+
+            // רק spots שעוד לא הושמו
+            if (GameProgressManager.Instance != null && !GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
+            {
+                availableSpots.Add(allDropSpots[i]);
+            }
+        }
+
+        return availableSpots;
+    }
+
     [ContextMenu("🎨 Test Message")]
     private void TestMessage()
     {
