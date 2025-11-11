@@ -122,6 +122,12 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("Extra delay after message disappears before showing ad")]
     [SerializeField] private bool waitForAdToClose = true;
     [Tooltip("Wait for ad to close before revealing next batch")]
+
+    [Header("🎬 Game Ending")]
+    [SerializeField] private GameEndingDialogSystem endingDialogSystem;
+    [Tooltip("Dialog system that shows when all batches are complete")]
+    [SerializeField] private float delayBeforeEndingDialog = 1f;
+    [Tooltip("Delay after last 'WELL DONE!' before showing ending dialogs")]
     
     [Header("🐛 Debug")]
     [SerializeField] private bool debugMode = true;
@@ -351,6 +357,14 @@ public class DropSpotBatchManager : MonoBehaviour
                 {
                     StartCoroutine(RevealNextBatchDelayed());
                 }
+                else
+                {
+                    // כל הבאטצ'ים הסתיימו!
+                    if (debugMode)
+                        Debug.Log("🏆 All batches complete (no ad)!");
+
+                    StartCoroutine(ShowGameEndingDialog());
+                }
             }
             
             if (debugMode)
@@ -461,7 +475,7 @@ public class DropSpotBatchManager : MonoBehaviour
         
         if (debugMode)
             Debug.Log("📺 Ad finished. Continuing...");
-        
+
         if (currentBatch < GetTotalBatches())
         {
             StartCoroutine(RevealNextBatchDelayed());
@@ -470,6 +484,9 @@ public class DropSpotBatchManager : MonoBehaviour
         {
             if (debugMode)
                 Debug.Log("🏆 All batches complete!");
+
+            // הצג דיאלוג סיום
+            StartCoroutine(ShowGameEndingDialog());
         }
     }
 
@@ -977,5 +994,29 @@ public class DropSpotBatchManager : MonoBehaviour
             Debug.Log($"[DropSpotBatchManager] Found {availableSpots.Count} available spots in current batch {currentBatch}");
 
         return availableSpots;
+    }
+
+    /// <summary>
+    /// Shows the game ending dialog after all batches are complete
+    /// </summary>
+    private IEnumerator ShowGameEndingDialog()
+    {
+        if (debugMode)
+            Debug.Log("🎬 [DropSpotBatchManager] Preparing to show ending dialog...");
+
+        // המתן זמן קצר אחרי הודעת "WELL DONE!" האחרונה
+        yield return new WaitForSeconds(delayBeforeEndingDialog);
+
+        if (endingDialogSystem != null)
+        {
+            if (debugMode)
+                Debug.Log("🎬 [DropSpotBatchManager] Starting ending dialog system!");
+
+            endingDialogSystem.StartEndingDialog();
+        }
+        else
+        {
+            Debug.LogWarning("[DropSpotBatchManager] ⚠️ Ending Dialog System is not assigned!");
+        }
     }
 }
