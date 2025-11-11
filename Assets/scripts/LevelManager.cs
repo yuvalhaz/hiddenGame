@@ -191,45 +191,23 @@ public class LevelManager : MonoBehaviour
         // Fire event
         OnLevelCompleted?.Invoke(currentLevelIndex);
 
-        // בדוק אם זו הרמה האחרונה
-        bool isLastLevel = (currentLevelIndex >= levelConfig.Count - 1);
-
-        if (isLastLevel)
+        // הצג "WELL DONE!" קבוע בסיום כל level
+        if (batchManager != null)
         {
-            // זו הרמה האחרונה - הצג "WELL DONE!" קבוע
-            if (batchManager != null)
-            {
-                batchManager.ShowCustomMessage("WELL DONE!");
+            batchManager.ShowCustomMessage("WELL DONE!");
 
-                if (debugMode)
-                    Debug.Log("[LevelManager] 🏆 Showing final game completion message: WELL DONE!");
-            }
-
-            // חכה קצת ואז הצג פרסומת
-            StartCoroutine(ShowAdAfterDelay(isLastLevel));
-        }
-        else
-        {
-            // עוד לא הרמה האחרונה - פשוט המשך לרמה הבאה
             if (debugMode)
-                Debug.Log("[LevelManager] More levels remaining, advancing...");
-
-            StartCoroutine(ShowAdAfterDelay(isLastLevel));
+                Debug.Log("[LevelManager] Showing level completion message: WELL DONE!");
         }
+
+        // חכה קצת ואז הצג פרסומת
+        StartCoroutine(ShowAdAfterDelay());
     }
 
-    private System.Collections.IEnumerator ShowAdAfterDelay(bool isLastLevel)
+    private System.Collections.IEnumerator ShowAdAfterDelay()
     {
-        // אם זו הרמה האחרונה, חכה שההודעה תוצג
-        if (isLastLevel)
-        {
-            yield return new WaitForSeconds(2.5f);
-        }
-        else
-        {
-            // אחרת, חכה רק קצת
-            yield return new WaitForSeconds(0.5f);
-        }
+        // חכה שההודעה תוצג
+        yield return new WaitForSeconds(2.5f);
 
         // Show ad if ads manager is available
         if (adsManager != null && adsManager.IsReady())
