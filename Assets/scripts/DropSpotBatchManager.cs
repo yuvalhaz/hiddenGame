@@ -1017,6 +1017,34 @@ public class DropSpotBatchManager : MonoBehaviour
         return currentBatch;
     }
 
+    // Get list of available (not yet placed) drop spots in current batch
+    public List<DropSpot> GetCurrentBatchAvailableSpots()
+    {
+        List<DropSpot> availableSpots = new List<DropSpot>();
+
+        if (currentBatch >= GetTotalBatches())
+            return availableSpots;
+
+        int startIdx = GetBatchStartIndex(currentBatch);
+        int batchSize = GetBatchSize(currentBatch);
+        int endIdx = startIdx + batchSize;
+
+        for (int i = startIdx; i < endIdx && i < allDropSpots.Count; i++)
+        {
+            if (allDropSpots[i] != null)
+            {
+                // Only include spots that are active and not yet filled
+                if (allDropSpots[i].gameObject.activeSelf &&
+                    (GameProgressManager.Instance == null || !GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId)))
+                {
+                    availableSpots.Add(allDropSpots[i]);
+                }
+            }
+        }
+
+        return availableSpots;
+    }
+
     [ContextMenu("🎨 Test Message")]
     private void TestMessage()
     {
