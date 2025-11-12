@@ -7,6 +7,10 @@ using UnityEngine.EventSystems;
 /// </summary>
 public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
 {
+    [Header("Target Dialog")]
+    [SerializeField] private HintDialog hintDialog;
+    [Tooltip("גרור לכאן את HintDialog מה-Hierarchy")]
+
     private CanvasGroup myCanvasGroup;
     private Image myImage;
 
@@ -93,16 +97,23 @@ public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
         Debug.Log("║   הכפתור נלחץ! זה עובד!                ║");
         Debug.Log("╚════════════════════════════════════════╝");
 
-        // מצא את HintDialog ופתח אותו
-        HintDialog dialog = FindObjectOfType<HintDialog>();
-        if (dialog != null)
+        // אם לא מחובר ידנית, נסה למצוא
+        if (hintDialog == null)
+        {
+            Debug.Log("🔍 מחפש HintDialog בסצנה...");
+            hintDialog = FindObjectOfType<HintDialog>(true); // true = include inactive objects
+        }
+
+        // פתח את HintDialog
+        if (hintDialog != null)
         {
             Debug.Log("✅ מצאתי HintDialog - פותח אותו!");
-            dialog.Open();
+            hintDialog.Open();
         }
         else
         {
             Debug.LogError("❌ לא מצאתי HintDialog בסצנה!");
+            Debug.LogError("💡 פתרון: גרור את HintDialog GameObject לשדה 'Hint Dialog' ב-Inspector");
         }
     }
 }
