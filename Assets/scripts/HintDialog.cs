@@ -30,16 +30,46 @@ public class HintDialog : MonoBehaviour
 
     private void Awake()
     {
-        if (dialogGroup == null) dialogGroup = GetComponent<CanvasGroup>();
-        if (watchAdButton != null) watchAdButton.onClick.AddListener(OnWatchAd);
-        if (closeButton != null)   closeButton.onClick.AddListener(Close);
+        Debug.Log("════════════════════════════════════════════════════");
+        Debug.Log("[HintDialog] ⚙️ Awake נקרא!");
+
+        if (dialogGroup == null)
+        {
+            dialogGroup = GetComponent<CanvasGroup>();
+            if (dialogGroup == null)
+            {
+                Debug.LogError("[HintDialog] ❌ CanvasGroup לא נמצא! יוצר אחד חדש...");
+                dialogGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+        }
+        Debug.Log($"[HintDialog] dialogGroup = {(dialogGroup != null ? "✅" : "❌")}");
+
+        if (watchAdButton != null)
+        {
+            watchAdButton.onClick.AddListener(OnWatchAd);
+            Debug.Log("[HintDialog] ✅ watchAdButton מחובר");
+        }
+        else
+        {
+            Debug.LogWarning("[HintDialog] ⚠️ watchAdButton is NULL");
+        }
+
+        if (closeButton != null)
+        {
+            closeButton.onClick.AddListener(Close);
+            Debug.Log("[HintDialog] ✅ closeButton מחובר");
+        }
+        else
+        {
+            Debug.LogWarning("[HintDialog] ⚠️ closeButton is NULL");
+        }
 
         // ✅ שמור את ה-RectTransform וה-anchoredPosition המקורי
         rectTransform = GetComponent<RectTransform>();
         if (rectTransform != null)
         {
             originalAnchoredPosition = rectTransform.anchoredPosition;
-            Debug.Log($"[HintDialog] Saved original anchoredPosition: {originalAnchoredPosition}");
+            Debug.Log($"[HintDialog] ✅ Saved original anchoredPosition: {originalAnchoredPosition}");
         }
         else
         {
@@ -52,16 +82,22 @@ public class HintDialog : MonoBehaviour
             hintSystem = FindObjectOfType<VisualHintSystem>();
             if (hintSystem != null)
             {
-                Debug.Log("[HintDialog] מצא VisualHintSystem אוטומטית!");
+                Debug.Log("[HintDialog] ✅ מצא VisualHintSystem אוטומטית!");
             }
             else
             {
-                Debug.LogWarning("[HintDialog] לא נמצא VisualHintSystem בסצנה!");
+                Debug.LogWarning("[HintDialog] ⚠️ לא נמצא VisualHintSystem בסצנה!");
             }
+        }
+        else
+        {
+            Debug.Log("[HintDialog] ✅ hintSystem כבר מחובר");
         }
 
         // ✅ הסתר את הדיאלוג בהתחלה
+        Debug.Log("[HintDialog] קורא ל-HideImmediate() להסתרה ראשונית");
         HideImmediate();
+        Debug.Log("════════════════════════════════════════════════════");
     }
 
     private void OnEnable()
@@ -81,23 +117,42 @@ public class HintDialog : MonoBehaviour
 
     public void Open()
     {
+        Debug.Log("════════════════════════════════════════════════════");
+        Debug.Log("[HintDialog] 🎬 Open() נקרא!");
+        Debug.Log($"[HintDialog] isShowingHint = {isShowingHint}");
+        Debug.Log($"[HintDialog] dialogGroup = {(dialogGroup != null ? "✅ קיים" : "❌ NULL")}");
+        Debug.Log($"[HintDialog] hintSystem = {(hintSystem != null ? "✅ קיים" : "❌ NULL")}");
+
         // ✅ אם הרמז פועל - אל תפתח!
         if (isShowingHint)
         {
-            Debug.Log("[HintDialog] 🚫 Cannot open - hint is currently showing!");
+            Debug.LogWarning("[HintDialog] 🚫 Cannot open - hint is currently showing!");
+            Debug.Log("════════════════════════════════════════════════════");
             return;
         }
 
         // ✅ בדיקה: האם יש כפתורים זמינים לרמז?
-        if (hintSystem != null && !hintSystem.HasAvailableButtons())
+        if (hintSystem != null)
         {
-            Debug.Log("[HintDialog] אין כפתורים זמינים לרמז - כל הכפתורים כבר הוצבו!");
-            // אופציה: להציג הודעה למשתמש או לא לפתוח את הדיאלוג
-            return;
+            bool hasButtons = hintSystem.HasAvailableButtons();
+            Debug.Log($"[HintDialog] HasAvailableButtons = {hasButtons}");
+
+            if (!hasButtons)
+            {
+                Debug.LogWarning("[HintDialog] אין כפתורים זמינים לרמז - כל הכפתורים כבר הוצבו!");
+                Debug.Log("════════════════════════════════════════════════════");
+                return;
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[HintDialog] ⚠️ hintSystem is NULL - skipping button check");
         }
 
+        Debug.Log("[HintDialog] ✅ כל הבדיקות עברו - קורא ל-ShowImmediate()");
         ShowImmediate();
         transform.SetAsLastSibling();
+        Debug.Log("════════════════════════════════════════════════════");
     }
 
     public void Close()
@@ -169,19 +224,30 @@ public class HintDialog : MonoBehaviour
 
     private void ShowImmediate()
     {
-        if (dialogGroup == null) return;
+        Debug.Log("[HintDialog] 🟢 ShowImmediate נקרא!");
 
-        Debug.Log($"[HintDialog] 🟢 ShowImmediate - showing dialog");
+        if (dialogGroup == null)
+        {
+            Debug.LogError("[HintDialog] ❌ dialogGroup is NULL! Cannot show dialog!");
+            Debug.LogError("[HintDialog] 💡 פתרון: הוסף CanvasGroup component ל-HintDialog GameObject");
+            return;
+        }
+
+        Debug.Log($"[HintDialog] Before: alpha={dialogGroup.alpha}, interactable={dialogGroup.interactable}, blocksRaycasts={dialogGroup.blocksRaycasts}");
 
         // ✅ רק CanvasGroup - אל תגע ב-children!
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
         dialogGroup.blocksRaycasts = true;
 
+        Debug.Log($"[HintDialog] After: alpha={dialogGroup.alpha}, interactable={dialogGroup.interactable}, blocksRaycasts={dialogGroup.blocksRaycasts}");
+
         // 🔊 Play open sound
         PlayOpenSound();
 
-        Debug.Log($"[HintDialog] ✅ Dialog is now visible and interactive");
+        Debug.Log($"[HintDialog] ✅ Dialog should now be visible!");
+        Debug.Log($"[HintDialog] GameObject.activeSelf = {gameObject.activeSelf}");
+        Debug.Log($"[HintDialog] GameObject.activeInHierarchy = {gameObject.activeInHierarchy}");
     }
 
     private void PlayOpenSound()
