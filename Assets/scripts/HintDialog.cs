@@ -168,13 +168,10 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🟢 ShowImmediate - enabling all children");
+        Debug.Log($"[HintDialog] 🟢 ShowImmediate - showing dialog");
 
-        // ✅ הפעל את כל ה-children
-        for (int i = 0; i < transform.childCount; i++)
-        {
-            transform.GetChild(i).gameObject.SetActive(true);
-        }
+        // ✅ Make sure the dialog GameObject itself is active
+        gameObject.SetActive(true);
 
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
@@ -183,7 +180,7 @@ public class HintDialog : MonoBehaviour
         // 🔊 Play open sound
         PlayOpenSound();
 
-        Debug.Log($"[HintDialog] ✅ All children enabled");
+        Debug.Log($"[HintDialog] ✅ Dialog is now visible and interactive");
     }
 
     private void PlayOpenSound()
@@ -208,18 +205,15 @@ public class HintDialog : MonoBehaviour
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🔴 HideImmediate - disabling all children");
+        Debug.Log($"[HintDialog] 🔴 HideImmediate - hiding dialog");
 
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
-        // ✅ כבה את כל ה-children - החלון יעלם לגמרי!
-        for (int i = 0; i < transform.childCount; i++)
-        {
-            transform.GetChild(i).gameObject.SetActive(false);
-        }
+        // ✅ Don't disable children - just use CanvasGroup to hide
+        // This allows the dialog to reopen properly
 
-        Debug.Log($"[HintDialog] ✅ All {transform.childCount} children disabled");
+        Debug.Log($"[HintDialog] ✅ Dialog hidden via CanvasGroup");
     }
 }
