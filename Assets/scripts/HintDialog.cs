@@ -170,8 +170,11 @@ public class HintDialog : MonoBehaviour
 
         Debug.Log($"[HintDialog] 🟢 ShowImmediate - showing dialog");
 
-        // ✅ Make sure the dialog GameObject itself is active
-        gameObject.SetActive(true);
+        // ✅ Enable all child objects
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            transform.GetChild(i).gameObject.SetActive(true);
+        }
 
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
@@ -207,13 +210,23 @@ public class HintDialog : MonoBehaviour
 
         Debug.Log($"[HintDialog] 🔴 HideImmediate - hiding dialog");
 
+        // ✅ First set CanvasGroup to hide visually
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
-        // ✅ Don't disable children - just use CanvasGroup to hide
-        // This allows the dialog to reopen properly
+        // ✅ Then disable children to fully close the dialog
+        // We do this AFTER setting CanvasGroup to avoid visual issues
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            Transform child = transform.GetChild(i);
+            // Only disable if it's not a button (to avoid breaking button references)
+            if (child != null)
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
 
-        Debug.Log($"[HintDialog] ✅ Dialog hidden via CanvasGroup");
+        Debug.Log($"[HintDialog] ✅ Dialog hidden and children disabled");
     }
 }
