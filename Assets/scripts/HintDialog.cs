@@ -59,6 +59,9 @@ public class HintDialog : MonoBehaviour
                 Debug.LogWarning("[HintDialog] לא נמצא VisualHintSystem בסצנה!");
             }
         }
+
+        // ✅ הסתר את הדיאלוג בהתחלה
+        HideImmediate();
     }
 
     private void OnEnable()
@@ -170,12 +173,7 @@ public class HintDialog : MonoBehaviour
 
         Debug.Log($"[HintDialog] 🟢 ShowImmediate - showing dialog");
 
-        // ✅ Enable all child objects
-        for (int i = 0; i < transform.childCount; i++)
-        {
-            transform.GetChild(i).gameObject.SetActive(true);
-        }
-
+        // ✅ רק CanvasGroup - אל תגע ב-children!
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
         dialogGroup.blocksRaycasts = true;
@@ -210,23 +208,12 @@ public class HintDialog : MonoBehaviour
 
         Debug.Log($"[HintDialog] 🔴 HideImmediate - hiding dialog");
 
-        // ✅ First set CanvasGroup to hide visually
+        // ✅ רק CanvasGroup - אל תגע ב-children!
+        // זה הדרך הנכונה לעבוד עם UI ב-Unity
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
 
-        // ✅ Then disable children to fully close the dialog
-        // We do this AFTER setting CanvasGroup to avoid visual issues
-        for (int i = 0; i < transform.childCount; i++)
-        {
-            Transform child = transform.GetChild(i);
-            // Only disable if it's not a button (to avoid breaking button references)
-            if (child != null)
-            {
-                child.gameObject.SetActive(false);
-            }
-        }
-
-        Debug.Log($"[HintDialog] ✅ Dialog hidden and children disabled");
+        Debug.Log($"[HintDialog] ✅ Dialog hidden via CanvasGroup only");
     }
 }
