@@ -10,6 +10,7 @@ public class LevelManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private GameProgressManager progressManager;
     [SerializeField] private RewardedAdsManager adsManager;
+    [SerializeField] private DropSpotBatchManager batchManager;
     
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
@@ -58,7 +59,8 @@ public class LevelManager : MonoBehaviour
         // Find references if not assigned
         if (!progressManager) progressManager = FindObjectOfType<GameProgressManager>();
         if (!adsManager) adsManager = FindObjectOfType<RewardedAdsManager>();
-        
+        if (!batchManager) batchManager = FindObjectOfType<DropSpotBatchManager>();
+
         ValidateLevels();
     }
 
@@ -66,6 +68,29 @@ public class LevelManager : MonoBehaviour
     {
         LoadCurrentLevel();
         RefreshAvailableItems();
+
+        // חיבור לאירוע של GameProgressManager
+        if (progressManager != null)
+        {
+            progressManager.OnItemPlaced -= OnItemPlaced;
+            progressManager.OnItemPlaced += OnItemPlaced;
+
+            if (debugMode)
+                Debug.Log("[LevelManager] Connected to OnItemPlaced event");
+        }
+        else
+        {
+            Debug.LogError("[LevelManager] ❌ GameProgressManager is NULL!");
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // ניתוק מהאירוע
+        if (progressManager != null)
+        {
+            progressManager.OnItemPlaced -= OnItemPlaced;
+        }
     }
 
     private void ValidateLevels()
@@ -161,10 +186,22 @@ public class LevelManager : MonoBehaviour
     private void CompleteCurrentLevel()
     {
         if (debugMode)
-            Debug.Log($"[LevelManager] Level {currentLevelIndex} completed!");
+            Debug.Log($"[LevelManager] 🎉 Level {currentLevelIndex} completed!");
 
         // Fire event
         OnLevelCompleted?.Invoke(currentLevelIndex);
+
+        // ההודעה "WELL DONE!" כבר הוצגה על ידי DropSpotBatchManager בסיום הבאץ' האחרון
+        // פה רק נטפל בפרסומות ובמעבר לרמה הבאה
+
+        // חכה קצת כדי שההודעה תוצג
+        StartCoroutine(ShowAdAfterDelay());
+    }
+
+    private System.Collections.IEnumerator ShowAdAfterDelay()
+    {
+        // חכה שההודעה והבועות יסתיימו
+        yield return new WaitForSeconds(2.5f);
 
         // Show ad if ads manager is available
         if (adsManager != null && adsManager.IsReady())
@@ -175,7 +212,7 @@ public class LevelManager : MonoBehaviour
                     if (debugMode) Debug.Log("[LevelManager] Ad reward received");
                 },
                 onClosed: (completed) =>
-                {  // FIX: Accept the bool parameter
+                {
                     AdvanceToNextLevel();
                 },
                 onFailed: (error) =>

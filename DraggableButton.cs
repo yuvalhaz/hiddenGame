@@ -85,12 +85,6 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         return isDragging;
     }
 
-    // ✅ הוסף: בדיקה האם הכפתור כבר הוצב בהצלחה
-    public bool HasBeenPlaced()
-    {
-        return wasSuccessfullyPlaced;
-    }
-
     public void OnBeginDrag(PointerEventData eventData)
     {
         originalPosition = rectTransform.anchoredPosition;
@@ -128,20 +122,21 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         float distanceFromOriginal = Vector2.Distance(localPoint, originalPosition);
         bool wasOut = isDraggingOut;
         isDraggingOut = distanceFromOriginal > dragThreshold;
-        
+
         // ✅ רק לפני שיוצרים drag visual - תזיז את הכפתור
         // אחרי שיצרנו drag visual - אל תזיז את הכפתור המקורי!
-        if (!wasOut && isDraggingOut)
+        // ✅ תיקון: בדוק גם ש-activeDragRT == null כדי למנוע יצירה כפולה
+        if (!wasOut && isDraggingOut && activeDragRT == null)
         {
             // כאן אנחנו עוברים את ה-threshold בפעם הראשונה
             if (debugMode)
                 Debug.Log($"[DraggableButton] Button crossed threshold! Creating drag visual for {buttonID}");
-            
+
             buttonBar.OnButtonDraggedOut(this, originalIndex);
-            
+
             CreateDragVisual();
             canvasGroup.alpha = 0f;
-            
+
             // ✅ החזר את הכפתור המקורי למיקום המקורי שלו!
             rectTransform.anchoredPosition = originalPosition;
         }
@@ -765,23 +760,58 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private IEnumerator ShowConfetti(RectTransform target)
     {
         if (!target || !topCanvas) yield break;
-        
-        Debug.Log($"[DraggableButton] 🎊 CONFETTI! (add UIConfetti script for visual effect)");
-        
+
+        Debug.Log($"[DraggableButton] ✨ SPARKLES! Spreading across entire revealing area");
+
+        // Find the revealing area (the area containing all drop spots)
+        RectTransform revealingArea = FindRevealingArea();
+
+        // Create sparkle burst across the entire revealing area
+        SparkleBurstEffect.Burst(topCanvas, revealingArea, confettiCount, 2f);
+
         yield return new WaitForSeconds(0.1f);
     }
-    
+
+    private RectTransform FindRevealingArea()
+    {
+        // Try to find a DropSpotBatchManager which manages all drop spots
+        var batchManager = FindObjectOfType<DropSpotBatchManager>();
+        if (batchManager != null)
+        {
+            return batchManager.GetComponent<RectTransform>();
+        }
+
+        // Fallback: find the first DropSpot and get its parent container
+        var firstDropSpot = FindObjectOfType<DropSpot>();
+        if (firstDropSpot != null && firstDropSpot.transform.parent != null)
+        {
+            return firstDropSpot.transform.parent.GetComponent<RectTransform>();
+        }
+
+        // Last fallback: use the entire canvas
+        if (debugMode)
+            Debug.Log("[DraggableButton] Using entire canvas for sparkle area");
+
+        return topCanvas.GetComponent<RectTransform>();
+    }
+
     private IEnumerator DestroyButtonAfterDelay()
     {
         yield return new WaitForSeconds(0.2f);
-        
+
         if (gameObject != null)
         {
             Debug.Log($"[DraggableButton] Destroying button: {buttonID}");
             Destroy(gameObject);
         }
     }
-    
+
+
+    public bool HasBeenPlaced()
+    {
+        return wasSuccessfullyPlaced;
+    }
+
     // ===== אפשור/כיבוי Raycast על DropSpot =====
     
     private void EnableMatchingDropSpot(bool enable)
