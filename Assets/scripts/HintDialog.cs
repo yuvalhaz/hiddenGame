@@ -13,6 +13,13 @@ public class HintDialog : MonoBehaviour
     [Header("🎯 Hint System")]
     [SerializeField] private VisualHintSystem hintSystem; // ← חיבור למערכת הרמזים החדשה!
 
+    [Header("🔊 Audio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip openSound;
+    [Tooltip("Sound to play when dialog opens")]
+    [Range(0f, 1f)]
+    [SerializeField] private float soundVolume = 1f;
+
     [Header("Events")]
     public UnityEvent onHintGranted;
     public UnityEvent onClosed;
@@ -173,7 +180,28 @@ public class HintDialog : MonoBehaviour
         dialogGroup.interactable = true;
         dialogGroup.blocksRaycasts = true;
 
+        // 🔊 Play open sound
+        PlayOpenSound();
+
         Debug.Log($"[HintDialog] ✅ All children enabled");
+    }
+
+    private void PlayOpenSound()
+    {
+        if (openSound == null) return;
+
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+            }
+        }
+
+        audioSource.PlayOneShot(openSound, soundVolume);
+        Debug.Log("[HintDialog] 🔊 Playing open sound");
     }
 
     private void HideImmediate()
