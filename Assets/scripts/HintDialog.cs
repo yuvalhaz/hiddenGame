@@ -20,6 +20,9 @@ public class HintDialog : MonoBehaviour
     [Tooltip("Invoked when dialog is closed")]
     public UnityEvent onClosed;
 
+    // Prevent infinite recursion if onClosed event is misconfigured
+    private bool isClosing = false;
+
     private void Awake()
     {
         if (dialogGroup == null)
@@ -63,8 +66,13 @@ public class HintDialog : MonoBehaviour
     /// </summary>
     public void Close()
     {
+        // Prevent infinite recursion if onClosed is connected to Close()
+        if (isClosing) return;
+
+        isClosing = true;
         HideImmediate();
         onClosed?.Invoke();
+        isClosing = false;
     }
 
     /// <summary>
