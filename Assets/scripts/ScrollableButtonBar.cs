@@ -330,6 +330,32 @@ public class ScrollableButtonBar : MonoBehaviour
     }
 
     /// <summary>
+    /// Scroll to button by ID (instant).
+    /// </summary>
+    public void ScrollToButton(string buttonID)
+    {
+        ScrollToButton(buttonID, 0f);
+    }
+
+    /// <summary>
+    /// Scroll to button by ID with animation.
+    /// </summary>
+    /// <param name="buttonID">The button ID to scroll to</param>
+    /// <param name="duration">Animation duration in seconds (0 = instant)</param>
+    public void ScrollToButton(string buttonID, float duration)
+    {
+        if (string.IsNullOrEmpty(buttonID))
+            return;
+
+        // Find button with matching ID
+        DraggableButton targetButton = buttons.Find(b => b != null && b.GetButtonID() == buttonID);
+        if (targetButton != null)
+        {
+            ScrollToButton(targetButton, duration);
+        }
+    }
+
+    /// <summary>
     /// Scroll the ScrollRect to make a specific button visible (instant).
     /// </summary>
     public void ScrollToButton(DraggableButton button)
