@@ -40,19 +40,45 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     // ✅ הוספה: שמירת ההפניה ל-ScrollRect כדי להשבית אותו
     private ScrollRect parentScrollRect;
 
+    // ✅ Cache the overlay canvas to prevent FindObjectsOfType calls every frame
+    private Canvas cachedOverlayCanvas;
+
     void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
         canvas = GetComponentInParent<Canvas>();
         canvasGroup = GetComponent<CanvasGroup>();
-        
+
         if (canvasGroup == null)
         {
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
-        
+
         // ✅ מצא את ה-ScrollRect ההורה
         parentScrollRect = GetComponentInParent<ScrollRect>();
+
+        // ✅ Cache overlay canvas to avoid FindObjectsOfType in drag operations
+        CacheOverlayCanvas();
+    }
+
+    private void CacheOverlayCanvas()
+    {
+        if (topCanvas != null)
+        {
+            cachedOverlayCanvas = topCanvas;
+            return;
+        }
+
+        // ✅ Find once and cache - not every frame!
+        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        foreach (var c in canvases)
+        {
+            if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
+            {
+                cachedOverlayCanvas = c;
+                return;
+            }
+        }
     }
 
     void OnDestroy()
@@ -250,24 +276,12 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         }
         
         Debug.Log($"[DraggableButton] === CREATE DRAG VISUAL START === buttonID: {buttonID}");
-        
-        Canvas host = topCanvas;
+
+        // ✅ Use cached canvas to avoid FindObjectsOfType!
+        Canvas host = cachedOverlayCanvas;
         if (host == null)
         {
-            Canvas[] canvases = FindObjectsOfType<Canvas>();
-            foreach (var c in canvases)
-            {
-                if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
-                {
-                    host = c;
-                    break;
-                }
-            }
-        }
-        
-        if (host == null)
-        {
-            Debug.LogError("[DraggableButton] No canvas found!");
+            Debug.LogError("[DraggableButton] No cached canvas found!");
             return;
         }
         
@@ -336,21 +350,9 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                 Debug.LogWarning($"[DraggableButton] UpdateDragPosition called but activeDragRT is null!");
             return;
         }
-        
-        Canvas host = topCanvas;
-        if (host == null)
-        {
-            Canvas[] canvases = FindObjectsOfType<Canvas>();
-            foreach (var c in canvases)
-            {
-                if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
-                {
-                    host = c;
-                    break;
-                }
-            }
-        }
-        
+
+        // ✅ Use cached canvas to avoid FindObjectsOfType every frame!
+        Canvas host = cachedOverlayCanvas;
         if (host == null) return;
         
         // ✅ חישוב מיקום מדויק יותר
