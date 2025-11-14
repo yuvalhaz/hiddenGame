@@ -142,6 +142,64 @@ public class ScrollableButtonBar : MonoBehaviour
         Debug.Log("[ScrollableButtonBar] ✅ Bar refreshed!");
     }
 
+    // ✅ Public API to scroll to a specific button by index
+    public void ScrollToButton(int buttonIndex)
+    {
+        if (scrollRect == null || contentPanel == null)
+        {
+            Debug.LogWarning("[ScrollableButtonBar] ScrollRect or ContentPanel is null!");
+            return;
+        }
+
+        if (buttonIndex < 0 || buttonIndex >= buttons.Count)
+        {
+            Debug.LogWarning($"[ScrollableButtonBar] Invalid button index: {buttonIndex}");
+            return;
+        }
+
+        if (buttons[buttonIndex] == null)
+        {
+            Debug.LogWarning($"[ScrollableButtonBar] Button at index {buttonIndex} is null!");
+            return;
+        }
+
+        // Calculate normalized position for the button
+        RectTransform buttonRect = buttons[buttonIndex].GetComponent<RectTransform>();
+        if (buttonRect == null) return;
+
+        // Get the button's position relative to content panel
+        float buttonPos = -buttonRect.anchoredPosition.x;
+        float contentWidth = contentPanel.rect.width;
+        float viewportWidth = scrollRect.viewport.rect.width;
+        float scrollableWidth = Mathf.Max(0, contentWidth - viewportWidth);
+
+        if (scrollableWidth <= 0)
+        {
+            scrollRect.horizontalNormalizedPosition = 0;
+            return;
+        }
+
+        // Calculate normalized position (0 = left, 1 = right)
+        float normalizedPos = Mathf.Clamp01(buttonPos / scrollableWidth);
+        scrollRect.horizontalNormalizedPosition = normalizedPos;
+
+        Debug.Log($"[ScrollableButtonBar] Scrolled to button {buttonIndex} at position {normalizedPos:F2}");
+    }
+
+    // ✅ Overload to scroll by button ID
+    public void ScrollToButton(string buttonID)
+    {
+        int index = buttons.FindIndex(b => b != null && b.buttonID == buttonID);
+        if (index >= 0)
+        {
+            ScrollToButton(index);
+        }
+        else
+        {
+            Debug.LogWarning($"[ScrollableButtonBar] Button with ID '{buttonID}' not found!");
+        }
+    }
+
 
     void CreateButtons()
     {
