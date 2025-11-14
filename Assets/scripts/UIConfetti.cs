@@ -112,7 +112,7 @@ public class UIConfetti : MonoBehaviour
         var tex = new Texture2D(2, 2, TextureFormat.ARGB32, false);
         var px = new Color32[] { Color.white, Color.white, Color.white, Color.white };
         tex.SetPixels32(px);
-        tex.Apply(false, false);
+        tex.Apply(false, true); // ✅ makeNoLongerReadable=true to free CPU memory and prevent TLS leak
 
         cachedWhiteSprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 100f);
         cachedWhiteSprite.name = "UIConfetti_White";

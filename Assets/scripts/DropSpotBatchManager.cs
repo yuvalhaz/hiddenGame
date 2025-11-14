@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+// using System.Linq; // ✅ Removed to prevent TLS allocations from LINQ queries
 using UnityEngine;
 
 /// <summary>
@@ -797,7 +797,14 @@ public class DropSpotBatchManager : MonoBehaviour
 
     private int GetTotalRequiredSpots()
     {
-        return useCustomBatchSizes ? customBatchSizes.Sum() : numberOfBatches * spotsPerBatch;
+        if (!useCustomBatchSizes)
+            return numberOfBatches * spotsPerBatch;
+
+        // ✅ Replace LINQ Sum() with manual loop to prevent TLS allocations
+        int sum = 0;
+        for (int i = 0; i < customBatchSizes.Count; i++)
+            sum += customBatchSizes[i];
+        return sum;
     }
 
     private int GetBatchSize(int batch)
