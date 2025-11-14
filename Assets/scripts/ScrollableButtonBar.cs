@@ -216,6 +216,27 @@ public class ScrollableButtonBar : MonoBehaviour
         }
     }
 
+    // ✅ Overload to scroll by DraggableButton reference with animation duration
+    public void ScrollToButton(DraggableButton button, float duration)
+    {
+        if (button == null)
+        {
+            Debug.LogWarning("[ScrollableButtonBar] Button is null!");
+            return;
+        }
+
+        int index = buttons.IndexOf(button);
+        if (index >= 0)
+        {
+            bool useSmooth = duration > 0;
+            ScrollToButton(index, useSmooth);
+        }
+        else
+        {
+            Debug.LogWarning($"[ScrollableButtonBar] Button not found in buttons list!");
+        }
+    }
+
     // ✅ Coroutine for smooth scrolling
     private IEnumerator SmoothScrollTo(float targetPosition)
     {

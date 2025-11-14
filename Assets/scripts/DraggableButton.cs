@@ -87,6 +87,12 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         return isDragging;
     }
 
+    // ✅ Public API to check if button was successfully placed (used by VisualHintSystem)
+    public bool HasBeenPlaced()
+    {
+        return wasSuccessfullyPlaced;
+    }
+
     public void OnBeginDrag(PointerEventData eventData)
     {
         originalPosition = rectTransform.anchoredPosition;
