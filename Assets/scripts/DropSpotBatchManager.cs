@@ -831,6 +831,12 @@ public class DropSpotBatchManager : MonoBehaviour
         return useCustomBatchSizes ? customBatchSizes.Count : numberOfBatches;
     }
 
+    // ✅ Public API for external systems (like VisualHintSystem)
+    public int GetCurrentBatchIndex()
+    {
+        return currentBatch;
+    }
+
     [ContextMenu("🎨 Test Message")]
     private void TestMessage()
     {
