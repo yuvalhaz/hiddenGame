@@ -430,6 +430,52 @@ public class ScrollableButtonBar : MonoBehaviour
     }
 
     /// <summary>
+    /// Coroutine version of ScrollToButton for use with yield return.
+    /// Returns IEnumerator so it can be yielded on.
+    /// </summary>
+    /// <param name="button">The button to scroll to</param>
+    /// <param name="duration">Animation duration in seconds (0 = instant)</param>
+    public System.Collections.IEnumerator ScrollToButtonCoroutine(DraggableButton button, float duration)
+    {
+        if (button == null || scrollRect == null || contentPanel == null)
+            yield break;
+
+        // Find the button's index
+        int index = buttons.IndexOf(button);
+        if (index < 0) yield break;
+
+        // Get button's RectTransform
+        RectTransform buttonRT = button.GetComponent<RectTransform>();
+        if (buttonRT == null) yield break;
+
+        // Calculate the normalized position (0-1) to scroll to
+        float buttonX = buttonRT.anchoredPosition.x;
+        float contentWidth = contentPanel.rect.width;
+        float viewportWidth = scrollRect.viewport.rect.width;
+
+        if (contentWidth <= viewportWidth)
+        {
+            // Content fits in viewport, no need to scroll
+            scrollRect.horizontalNormalizedPosition = 0f;
+            yield break;
+        }
+
+        // Calculate normalized position to center the button
+        float normalizedPos = Mathf.Clamp01(buttonX / (contentWidth - viewportWidth));
+
+        if (duration > 0f)
+        {
+            // Animated scroll - yield the animation coroutine
+            yield return StartCoroutine(AnimateScrollTo(normalizedPos, duration));
+        }
+        else
+        {
+            // Instant scroll
+            scrollRect.horizontalNormalizedPosition = normalizedPos;
+        }
+    }
+
+    /// <summary>
     /// Smoothly animate scrolling to a target position.
     /// </summary>
     private System.Collections.IEnumerator AnimateScrollTo(float targetNormalizedPos, float duration)
