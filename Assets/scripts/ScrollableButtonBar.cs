@@ -333,7 +333,7 @@ public class ScrollableButtonBar : MonoBehaviour
     /// Scroll the ScrollRect to make a specific button visible.
     /// Used by hint system to focus on a specific button.
     /// </summary>
-    public void ScrollToButton(DraggableButton button)
+    public void ScrollToButton(DraggableButton button, bool animated = false)
     {
         if (button == null || scrollRect == null || contentPanel == null)
             return;
@@ -360,17 +360,52 @@ public class ScrollableButtonBar : MonoBehaviour
 
         // Calculate normalized position to center the button
         float normalizedPos = Mathf.Clamp01(buttonX / (contentWidth - viewportWidth));
-        scrollRect.horizontalNormalizedPosition = normalizedPos;
+
+        if (animated)
+        {
+            // Animated scroll - start coroutine
+            StartCoroutine(AnimateScrollTo(normalizedPos));
+        }
+        else
+        {
+            // Instant scroll
+            scrollRect.horizontalNormalizedPosition = normalizedPos;
+        }
     }
 
     /// <summary>
     /// Scroll to button with index.
     /// </summary>
-    public void ScrollToButton(int index)
+    public void ScrollToButton(int index, bool animated = false)
     {
         if (index >= 0 && index < buttons.Count)
         {
-            ScrollToButton(buttons[index]);
+            ScrollToButton(buttons[index], animated);
         }
+    }
+
+    /// <summary>
+    /// Smoothly animate scrolling to a target position.
+    /// </summary>
+    private System.Collections.IEnumerator AnimateScrollTo(float targetNormalizedPos)
+    {
+        float startPos = scrollRect.horizontalNormalizedPosition;
+        float elapsed = 0f;
+        float duration = 0.3f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            // Smooth easing
+            float easedT = t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+
+            scrollRect.horizontalNormalizedPosition = Mathf.Lerp(startPos, targetNormalizedPos, easedT);
+
+            yield return null;
+        }
+
+        scrollRect.horizontalNormalizedPosition = targetNormalizedPos;
     }
 }
