@@ -216,6 +216,21 @@ public class ScrollableButtonBar : MonoBehaviour
         }
     }
 
+    // ✅ Overload to scroll by button ID with animation duration (float)
+    public void ScrollToButton(string buttonID, float duration)
+    {
+        int index = buttons.FindIndex(b => b != null && b.buttonID == buttonID);
+        if (index >= 0)
+        {
+            bool useSmooth = duration > 0;
+            ScrollToButton(index, useSmooth);
+        }
+        else
+        {
+            Debug.LogWarning($"[ScrollableButtonBar] Button with ID '{buttonID}' not found!");
+        }
+    }
+
     // ✅ Overload to scroll by DraggableButton reference with animation duration
     public void ScrollToButton(DraggableButton button, float duration)
     {
