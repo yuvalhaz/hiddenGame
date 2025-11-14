@@ -177,24 +177,40 @@ public class UIConfetti : MonoBehaviour
             p.age += dt;
 
             // "פיזיקה" פשוטה בפיקסלים
-            p.vel += Vector2.down * gravityPx * dt;
-            p.vel *= Mathf.Pow(airDrag, dt);
-            p.rt.anchoredPosition += p.vel * dt;
+            p.vel.x += 0f; // No horizontal gravity
+            p.vel.y += -gravityPx * dt;
+            float dragFactor = Mathf.Pow(airDrag, dt);
+            p.vel.x *= dragFactor;
+            p.vel.y *= dragFactor;
 
-            // סיבוב
-            var e = p.rt.localEulerAngles;
-            e.z += p.angVel * dt;
-            p.rt.localEulerAngles = e;
+            // ✅ עדכון מיקום ישירות על ה-vector הקיים
+            Vector2 currentPos = p.rt.anchoredPosition;
+            currentPos.x += p.vel.x * dt;
+            currentPos.y += p.vel.y * dt;
+            p.rt.anchoredPosition = currentPos;
 
-            // פייד + ריכוך פסטלי קבוע (לכיוון לבן)
+            // ✅ סיבוב - עדכון ישיר על ה-transform (לא יוצר Vector3 חדש)
+            p.rt.Rotate(0f, 0f, p.angVel * dt);
+
+            // ✅ פייד + ריכוך פסטלי קבוע (לכיוון לבן) - עדכון ישיר על ה-color הקיים
             float t = Mathf.Clamp01(p.age / p.life);
             float alpha = Mathf.Lerp(p.startAlpha, 0f, Mathf.SmoothStep(0f, 1f, t));
-            Color pastel = Color.Lerp(p.baseColor, Color.white, 0.25f); // 25% לכיוון לבן
-            p.img.color = new Color(pastel.r, pastel.g, pastel.b, alpha);
 
-            // שינוי קנה מידה עדין לאורך החיים
+            // מחשב pastel color inline ללא allocation
+            Color imgColor = p.img.color;
+            imgColor.r = Mathf.Lerp(p.baseColor.r, 1f, 0.25f);
+            imgColor.g = Mathf.Lerp(p.baseColor.g, 1f, 0.25f);
+            imgColor.b = Mathf.Lerp(p.baseColor.b, 1f, 0.25f);
+            imgColor.a = alpha;
+            p.img.color = imgColor;
+
+            // ✅ שינוי קנה מידה עדין לאורך החיים - עדכון ישיר על ה-vector הקיים
             float s = Mathf.Lerp(1f, 0.6f, t);
-            p.rt.localScale = new Vector3(s, s, 1f);
+            Vector3 scale = p.rt.localScale;
+            scale.x = s;
+            scale.y = s;
+            scale.z = 1f;
+            p.rt.localScale = scale;
 
             if (p.age >= p.life)
             {

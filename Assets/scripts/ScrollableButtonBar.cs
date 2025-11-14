@@ -35,6 +35,9 @@ public class ScrollableButtonBar : MonoBehaviour
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
 
+    // ✅ Reusable list to prevent per-frame allocations
+    private List<RectTransform> toRemove = new List<RectTransform>();
+
     void Start()
     {
         if (buttonDataList.Count == 0)
@@ -55,8 +58,9 @@ public class ScrollableButtonBar : MonoBehaviour
     void Update()
     {
         // ✅ אנימציה חלקה ורציפה בלי קפיצות!
-        List<RectTransform> toRemove = new List<RectTransform>();
-        
+        // ✅ נקה את הרשימה במקום ליצור חדשה (מונע TLS allocations)
+        toRemove.Clear();
+
         foreach (var kvp in buttonsAnimating)
         {
             RectTransform rect = kvp.Key;
