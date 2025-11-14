@@ -12,8 +12,8 @@ public class HintButton : MonoBehaviour
     [SerializeField] private Button button;
 
     [Header("Target UI")]
-    [SerializeField] private CanvasGroup targetGroup;
     [Tooltip("The hint dialog CanvasGroup to show when button is clicked")]
+    [SerializeField] private CanvasGroup targetGroup;
 
     [Header("Events")]
     [Tooltip("Optional event triggered when button is pressed")]
