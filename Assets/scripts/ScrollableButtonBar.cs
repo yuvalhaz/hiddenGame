@@ -330,10 +330,17 @@ public class ScrollableButtonBar : MonoBehaviour
     }
 
     /// <summary>
-    /// Scroll the ScrollRect to make a specific button visible.
-    /// Used by hint system to focus on a specific button.
+    /// Scroll the ScrollRect to make a specific button visible (instant).
     /// </summary>
-    public void ScrollToButton(DraggableButton button, bool animated = false)
+    public void ScrollToButton(DraggableButton button)
+    {
+        ScrollToButton(button, false);
+    }
+
+    /// <summary>
+    /// Scroll the ScrollRect to make a specific button visible.
+    /// </summary>
+    public void ScrollToButton(DraggableButton button, bool animated)
     {
         if (button == null || scrollRect == null || contentPanel == null)
             return;
@@ -374,9 +381,17 @@ public class ScrollableButtonBar : MonoBehaviour
     }
 
     /// <summary>
+    /// Scroll to button with index (instant).
+    /// </summary>
+    public void ScrollToButton(int index)
+    {
+        ScrollToButton(index, false);
+    }
+
+    /// <summary>
     /// Scroll to button with index.
     /// </summary>
-    public void ScrollToButton(int index, bool animated = false)
+    public void ScrollToButton(int index, bool animated)
     {
         if (index >= 0 && index < buttons.Count)
         {
