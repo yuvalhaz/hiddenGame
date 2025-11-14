@@ -100,6 +100,17 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         rectTransform.anchoredPosition = position;
     }
 
+    /// <summary>
+    /// Check if this button has been successfully placed on a DropSpot.
+    /// </summary>
+    public bool HasBeenPlaced()
+    {
+        if (GameProgressManager.Instance == null)
+            return false;
+
+        return GameProgressManager.Instance.IsItemPlaced(buttonID);
+    }
+
     #endregion
 
     #region Drag Event Handlers

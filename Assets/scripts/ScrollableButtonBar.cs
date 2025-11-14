@@ -316,7 +316,7 @@ public class ScrollableButtonBar : MonoBehaviour
         if (index >= 0 && index < buttonDataList.Count && index < buttons.Count)
         {
             buttonDataList[index].buttonSprite = sprite;
-            
+
             GameObject buttonObj = buttons[index].gameObject;
             if (buttonObj != null)
             {
@@ -326,6 +326,51 @@ public class ScrollableButtonBar : MonoBehaviour
                     img.sprite = sprite;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Scroll the ScrollRect to make a specific button visible.
+    /// Used by hint system to focus on a specific button.
+    /// </summary>
+    public void ScrollToButton(DraggableButton button)
+    {
+        if (button == null || scrollRect == null || contentPanel == null)
+            return;
+
+        // Find the button's index
+        int index = buttons.IndexOf(button);
+        if (index < 0) return;
+
+        // Get button's RectTransform
+        RectTransform buttonRT = button.GetComponent<RectTransform>();
+        if (buttonRT == null) return;
+
+        // Calculate the normalized position (0-1) to scroll to
+        float buttonX = buttonRT.anchoredPosition.x;
+        float contentWidth = contentPanel.rect.width;
+        float viewportWidth = scrollRect.viewport.rect.width;
+
+        if (contentWidth <= viewportWidth)
+        {
+            // Content fits in viewport, no need to scroll
+            scrollRect.horizontalNormalizedPosition = 0f;
+            return;
+        }
+
+        // Calculate normalized position to center the button
+        float normalizedPos = Mathf.Clamp01(buttonX / (contentWidth - viewportWidth));
+        scrollRect.horizontalNormalizedPosition = normalizedPos;
+    }
+
+    /// <summary>
+    /// Scroll to button with index.
+    /// </summary>
+    public void ScrollToButton(int index)
+    {
+        if (index >= 0 && index < buttons.Count)
+        {
+            ScrollToButton(buttons[index]);
         }
     }
 }
