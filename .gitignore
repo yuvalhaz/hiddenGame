@@ -1,15 +1,18 @@
-# התעלם מהכל
+# Ignore everything
 *
 
-# אל תתעלם מקובץ ה־gitignore עצמו
+# Don't ignore .gitignore
 !.gitignore
 
-# אל תתעלם מתיקיית Assets
+# Don't ignore Assets folder
 !Assets/
 
-# אל תתעלם מתיקיית Scripts שבתוך Assets
-!Assets/Scripts/
-!Assets/Scripts/**
+# Don't ignore scripts folder (lowercase)
+!Assets/scripts/
+!Assets/scripts/**
 
-# התעלם מקבצי meta
+# Don't ignore markdown files
+!*.md
+
+# Ignore meta files
 *.meta
