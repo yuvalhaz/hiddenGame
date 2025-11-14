@@ -31,7 +31,7 @@ public class ImageRevealController : MonoBehaviour
 
         if (placeholderImage != null)
         {
-            placeholderImage.color = Color.white;
+            placeholderImage.color = new Color(1f, 1f, 1f, 1f); // הסתר גם placeholder!
         }
     }
 

@@ -20,6 +20,8 @@ public class ScrollableButtonBar : MonoBehaviour
 
     [Header("Button Data")]
     [SerializeField] private List<ButtonData> buttonDataList = new List<ButtonData>();
+    [SerializeField] private bool shuffleButtons = true;
+    [Tooltip("כבה את זה בזמן פיתוח כדי לראות כפתורים בסדר הנכון")]
 
     [Header("Animation Settings")]
     [SerializeField] private float animationSpeed = 10f;
@@ -49,8 +51,16 @@ public class ScrollableButtonBar : MonoBehaviour
             }
         }
 
-        // ✅ ערבב את הכפתורים לפני יצירתם!
-        ShuffleButtonData();
+        // ✅ ערבב את הכפתורים לפני יצירתם! (רק אם הופעל)
+        if (shuffleButtons)
+        {
+            ShuffleButtonData();
+            Debug.Log("[ScrollableButtonBar] כפתורים עורבבו");
+        }
+        else
+        {
+            Debug.Log("[ScrollableButtonBar] כפתורים בסדר מקורי (ללא ערבוב)");
+        }
 
         CreateButtons();
     }
@@ -439,6 +449,95 @@ public class ScrollableButtonBar : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// גוללת את הבר כך שהכפתור הספציפי יהיה נראה במרכז
+    /// </summary>
+    /// <param name="button">הכפתור שאליו לגלול</param>
+    /// <param name="duration">משך הגלילה בשניות</param>
+    public IEnumerator ScrollToButton(DraggableButton button, float duration = 0.5f)
+    {
+        if (button == null || scrollRect == null)
+        {
+            Debug.LogWarning("[ScrollableButtonBar] Cannot scroll - button or scrollRect is null");
+            yield break;
+        }
 
+        // מצא את האינדקס של הכפתור
+        int index = buttons.IndexOf(button);
+        if (index == -1)
+        {
+            Debug.LogWarning("[ScrollableButtonBar] Button not found in list");
+            yield break;
+        }
+
+        Debug.Log($"[ScrollableButtonBar] 📜 גולל לכפתור {index}: {button.GetButtonID()}");
+
+        RectTransform buttonRect = button.GetComponent<RectTransform>();
+        if (buttonRect == null)
+        {
+            yield break;
+        }
+
+        // חשב את המיקום של הכפתור ב-content
+        float buttonPosX = buttonRect.anchoredPosition.x;
+
+        // חשב את רוחב ה-viewport
+        RectTransform viewportRect = scrollRect.viewport;
+        float viewportWidth = viewportRect != null ? viewportRect.rect.width : 0f;
+
+        // חשב את רוחב ה-content
+        float contentWidth = contentPanel.rect.width;
+
+        // חשב את ה-normalizedPosition הרצוי (0 = שמאל, 1 = ימין)
+        // נרצה שהכפתור יהיה במרכז ה-viewport
+        float targetNormalizedPos = 0f;
+
+        if (contentWidth > viewportWidth)
+        {
+            // המיקום של הכפתור ביחס ל-content (ממרכז הכפתור)
+            float buttonCenter = buttonPosX + (buttonWidth / 2f);
+
+            // נרצה שמרכז הכפתור יהיה במרכז ה-viewport
+            float targetScrollPos = buttonCenter - (viewportWidth / 2f);
+
+            // Normalize לטווח 0-1
+            float maxScrollDistance = contentWidth - viewportWidth;
+            targetNormalizedPos = Mathf.Clamp01(targetScrollPos / maxScrollDistance);
+        }
+
+        Debug.Log($"[ScrollableButtonBar] גלילה ל-position: {targetNormalizedPos:F2}");
+
+        // אנימציית גלילה חלקה
+        float startPos = scrollRect.horizontalNormalizedPosition;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+
+            // EaseInOut לגלילה חלקה
+            float smoothT = t < 0.5f
+                ? 2f * t * t
+                : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+
+            scrollRect.horizontalNormalizedPosition = Mathf.Lerp(startPos, targetNormalizedPos, smoothT);
+
+            yield return null;
+        }
+
+        // ודא שהגענו למיקום הסופי
+        scrollRect.horizontalNormalizedPosition = targetNormalizedPos;
+
+        Debug.Log("[ScrollableButtonBar] ✅ גלילה הושלמה!");
+    }
+
+    /// <summary>
+    /// מחזיר את הכפתור לפי buttonID
+    /// </summary>
+    public DraggableButton GetButtonByID(string buttonID)
+    {
+        return buttons.Find(btn => btn != null && btn.GetButtonID() == buttonID);
+    }
 
 }

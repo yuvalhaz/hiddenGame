@@ -2,10 +2,25 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
+/// <summary>
+/// כפתור הינט - עובד בלי Button component, רק עם Image
+/// </summary>
 public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
 {
+    [Header("Target Dialog")]
+    [SerializeField] private HintDialog hintDialog;
+    [Tooltip("גרור לכאן את HintDialog מה-Hierarchy")]
+
     private CanvasGroup myCanvasGroup;
     private Image myImage;
+
+
+ 
+    
+    private float lastClickTime = 0f;  // ← הוסף את זה
+    private float clickCooldown = 0.5f; // ← חכה 0.5 שניות בין clicks
+
+
 
     private void Awake()
     {
@@ -13,6 +28,7 @@ public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
         Debug.Log("HintButtonSimple - Awake!");
         Debug.Log("██████████████████████████████████████████");
 
+        // ✅ תקן שקיפות
         myCanvasGroup = GetComponent<CanvasGroup>();
         if (myCanvasGroup == null)
         {
@@ -41,6 +57,7 @@ public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
 
     private void LateUpdate()
     {
+        // שמור על הכפתור גלוי בכל frame
         if (myCanvasGroup != null)
         {
             myCanvasGroup.alpha = 1f;
@@ -51,6 +68,7 @@ public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
 
     private void FixVisibility()
     {
+        // CanvasGroup
         if (myCanvasGroup != null)
         {
             myCanvasGroup.alpha = 1f;
@@ -58,12 +76,13 @@ public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
             myCanvasGroup.blocksRaycasts = true;
         }
 
+        // Image - חובה ללחיצות!
         if (myImage != null)
         {
             Color c = myImage.color;
             c.a = 1f;
             myImage.color = c;
-            myImage.raycastTarget = true;
+            myImage.raycastTarget = true; // ✅✅✅ זה המפתח ללחיצות בלי Button!
             Debug.Log("✅ Image.raycastTarget = true");
         }
 
@@ -72,23 +91,39 @@ public class HintButtonSimple : MonoBehaviour, IPointerClickHandler
 
     private void Update()
     {
+        // בדוק אם לוחצים על העכבר
         if (Input.GetMouseButtonDown(0))
         {
             Debug.Log("🖱️ לחיצת עכבר זוהתה!");
         }
     }
 
-    public void OnPointerClick(PointerEventData eventData)
+    // ✅ זה נקרא כש לוחצים על ה-Image!
+ public void OnPointerClick(PointerEventData eventData)
     {
+        // ← הוסף בדיקה זו בתחילת הפונקציה
+        if (Time.time - lastClickTime < clickCooldown)
+        {
+            Debug.Log("לחיצה מהירה מדי - דלג");
+            return;
+        }
+        lastClickTime = Time.time;
+        
         Debug.Log("╔════════════════════════════════════════╗");
         Debug.Log("║   הכפתור נלחץ! זה עובד!                ║");
         Debug.Log("╚════════════════════════════════════════╝");
+        
+        if (hintDialog == null)
+        {
+            Debug.Log("🔍 מחפש HintDialog בסצנה...");
+            hintDialog = FindObjectOfType<HintDialog>(true);
+        }
 
-        HintDialog dialog = FindObjectOfType<HintDialog>();
-        if (dialog != null)
+        if (hintDialog != null)
         {
             Debug.Log("✅ מצאתי HintDialog - פותח אותו!");
-            dialog.Open();
+            hintDialog.Open();
+            EventSystem.current.SetSelectedGameObject(null); // ← הסר צהוב
         }
         else
         {
