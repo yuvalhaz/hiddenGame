@@ -334,13 +334,15 @@ public class ScrollableButtonBar : MonoBehaviour
     /// </summary>
     public void ScrollToButton(DraggableButton button)
     {
-        ScrollToButton(button, false);
+        ScrollToButton(button, 0f);
     }
 
     /// <summary>
-    /// Scroll the ScrollRect to make a specific button visible.
+    /// Scroll the ScrollRect to make a specific button visible with animation.
     /// </summary>
-    public void ScrollToButton(DraggableButton button, bool animated)
+    /// <param name="button">The button to scroll to</param>
+    /// <param name="duration">Animation duration in seconds (0 = instant)</param>
+    public void ScrollToButton(DraggableButton button, float duration)
     {
         if (button == null || scrollRect == null || contentPanel == null)
             return;
@@ -368,10 +370,10 @@ public class ScrollableButtonBar : MonoBehaviour
         // Calculate normalized position to center the button
         float normalizedPos = Mathf.Clamp01(buttonX / (contentWidth - viewportWidth));
 
-        if (animated)
+        if (duration > 0f)
         {
             // Animated scroll - start coroutine
-            StartCoroutine(AnimateScrollTo(normalizedPos));
+            StartCoroutine(AnimateScrollTo(normalizedPos, duration));
         }
         else
         {
@@ -385,28 +387,32 @@ public class ScrollableButtonBar : MonoBehaviour
     /// </summary>
     public void ScrollToButton(int index)
     {
-        ScrollToButton(index, false);
+        ScrollToButton(index, 0f);
     }
 
     /// <summary>
-    /// Scroll to button with index.
+    /// Scroll to button with index with animation.
     /// </summary>
-    public void ScrollToButton(int index, bool animated)
+    /// <param name="index">Index of the button</param>
+    /// <param name="duration">Animation duration in seconds (0 = instant)</param>
+    public void ScrollToButton(int index, float duration)
     {
         if (index >= 0 && index < buttons.Count)
         {
-            ScrollToButton(buttons[index], animated);
+            ScrollToButton(buttons[index], duration);
         }
     }
 
     /// <summary>
     /// Smoothly animate scrolling to a target position.
     /// </summary>
-    private System.Collections.IEnumerator AnimateScrollTo(float targetNormalizedPos)
+    private System.Collections.IEnumerator AnimateScrollTo(float targetNormalizedPos, float duration)
     {
         float startPos = scrollRect.horizontalNormalizedPosition;
         float elapsed = 0f;
-        float duration = 0.3f;
+
+        // Clamp duration to reasonable values
+        duration = Mathf.Max(0.1f, duration);
 
         while (elapsed < duration)
         {
