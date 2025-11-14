@@ -25,8 +25,10 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private int originalIndex;
     private bool isDraggingOut = false;
     private CanvasGroup canvasGroup;
-    private string buttonID;
     private bool isDragging = false;
+
+    // ✅ Public property for buttonID (used by ScrollableButtonBar and other systems)
+    public string buttonID { get; private set; }
     
     private RectTransform activeDragRT;
     private Image activeDragImage;

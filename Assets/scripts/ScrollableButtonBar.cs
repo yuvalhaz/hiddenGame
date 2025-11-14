@@ -38,6 +38,9 @@ public class ScrollableButtonBar : MonoBehaviour
     // ✅ Reusable list to prevent per-frame allocations
     private List<RectTransform> toRemove = new List<RectTransform>();
 
+    // ✅ Cache RectTransform -> button index mapping to avoid GetComponent in Update
+    private Dictionary<RectTransform, int> rectToIndexCache = new Dictionary<RectTransform, int>();
+
     void Start()
     {
         if (buttonDataList.Count == 0)
@@ -69,18 +72,23 @@ public class ScrollableButtonBar : MonoBehaviour
                 toRemove.Add(rect);
                 continue;
             }
-            
-            // מצא את האינדקס של הכפתור
+
+            // ✅ מצא את האינדקס מה-cache (ללא GetComponent allocation!)
             int index = -1;
-            for (int i = 0; i < buttons.Count; i++)
+            if (!rectToIndexCache.TryGetValue(rect, out index))
             {
-                if (buttons[i] != null && buttons[i].GetComponent<RectTransform>() == rect)
+                // Fallback: מצא את האינדקס ושמור ב-cache
+                for (int i = 0; i < buttons.Count; i++)
                 {
-                    index = i;
-                    break;
+                    if (buttons[i] != null && buttons[i].transform == rect.transform)
+                    {
+                        index = i;
+                        rectToIndexCache[rect] = i;
+                        break;
+                    }
                 }
             }
-            
+
             if (index == -1 || index >= targetPositions.Count)
             {
                 toRemove.Add(rect);
@@ -142,8 +150,8 @@ public class ScrollableButtonBar : MonoBehaviour
         Debug.Log("[ScrollableButtonBar] ✅ Bar refreshed!");
     }
 
-    // ✅ Public API to scroll to a specific button by index
-    public void ScrollToButton(int buttonIndex)
+    // ✅ Public API to scroll to a specific button by index with optional smooth scrolling
+    public void ScrollToButton(int buttonIndex, bool smooth = false)
     {
         if (scrollRect == null || contentPanel == null)
         {
@@ -181,23 +189,49 @@ public class ScrollableButtonBar : MonoBehaviour
 
         // Calculate normalized position (0 = left, 1 = right)
         float normalizedPos = Mathf.Clamp01(buttonPos / scrollableWidth);
-        scrollRect.horizontalNormalizedPosition = normalizedPos;
+
+        if (smooth)
+        {
+            StartCoroutine(SmoothScrollTo(normalizedPos));
+        }
+        else
+        {
+            scrollRect.horizontalNormalizedPosition = normalizedPos;
+        }
 
         Debug.Log($"[ScrollableButtonBar] Scrolled to button {buttonIndex} at position {normalizedPos:F2}");
     }
 
-    // ✅ Overload to scroll by button ID
-    public void ScrollToButton(string buttonID)
+    // ✅ Overload to scroll by button ID with optional smooth scrolling
+    public void ScrollToButton(string buttonID, bool smooth = false)
     {
         int index = buttons.FindIndex(b => b != null && b.buttonID == buttonID);
         if (index >= 0)
         {
-            ScrollToButton(index);
+            ScrollToButton(index, smooth);
         }
         else
         {
             Debug.LogWarning($"[ScrollableButtonBar] Button with ID '{buttonID}' not found!");
         }
+    }
+
+    // ✅ Coroutine for smooth scrolling
+    private IEnumerator SmoothScrollTo(float targetPosition)
+    {
+        float startPosition = scrollRect.horizontalNormalizedPosition;
+        float elapsed = 0f;
+        float duration = 0.3f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            scrollRect.horizontalNormalizedPosition = Mathf.Lerp(startPosition, targetPosition, t);
+            yield return null;
+        }
+
+        scrollRect.horizontalNormalizedPosition = targetPosition;
     }
 
 
@@ -245,6 +279,9 @@ public class ScrollableButtonBar : MonoBehaviour
             buttonStates.Add(true);
             targetPositions.Add(buttonRect.anchoredPosition);
             originalPositions.Add(buttonRect.anchoredPosition);
+
+            // ✅ Populate cache to avoid GetComponent calls in Update
+            rectToIndexCache[buttonRect] = i;
             
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
             if (buttonText != null)
