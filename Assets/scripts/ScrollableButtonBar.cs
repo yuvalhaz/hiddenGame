@@ -432,6 +432,7 @@ public class ScrollableButtonBar : MonoBehaviour
     /// <summary>
     /// Coroutine version of ScrollToButton for use with yield return.
     /// Returns IEnumerator so it can be yielded on.
+    /// Use this when you need to wait for scroll completion in a coroutine.
     /// </summary>
     /// <param name="button">The button to scroll to</param>
     /// <param name="duration">Animation duration in seconds (0 = instant)</param>
