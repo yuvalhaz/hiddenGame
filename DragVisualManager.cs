@@ -14,7 +14,7 @@ public class DragVisualManager
     private readonly bool debugMode;
 
     // Offset above finger/cursor (in pixels)
-    private const float FINGER_OFFSET = 220f;
+    private const float FINGER_OFFSET = 120f;
 
     private RectTransform dragVisualRT;
     private Image dragVisualImage;
@@ -114,26 +114,12 @@ public class DragVisualManager
     }
 
     /// <summary>
-    /// Update the position of the drag visual - positioned directly over the matching DropSpot.
+    /// Update the position of the drag visual - follows finger with offset above.
     /// </summary>
     public void UpdatePosition(PointerEventData eventData)
     {
         if (dragVisualRT == null) return;
 
-        // Find the matching DropSpot
-        DropSpot spot = DropSpotCache.Get(buttonID);
-        if (spot != null)
-        {
-            // Position drag visual exactly over the DropSpot
-            RectTransform spotRT = spot.GetComponent<RectTransform>();
-            if (spotRT != null)
-            {
-                dragVisualRT.position = spotRT.position;
-                return;
-            }
-        }
-
-        // Fallback: if DropSpot not found, follow finger position
         Canvas canvas = FindTopCanvas();
         if (canvas == null) return;
 
@@ -145,6 +131,8 @@ public class DragVisualManager
             out worldPos
         );
 
+        // Position the image above the finger/cursor
+        // Center it (half height) + additional offset to keep it above the finger
         Vector3 offset = new Vector3(0, dragVisualRT.rect.height * 0.5f + FINGER_OFFSET, 0);
         dragVisualRT.position = worldPos + offset;
     }
