@@ -41,6 +41,10 @@ public class DropSpotBatchManager : MonoBehaviour
     [Tooltip("The panel/canvas that contains the message")]
     [SerializeField] private UnityEngine.UI.Text completionText;
     [Tooltip("Legacy Unity UI Text component")]
+    [SerializeField] private Canvas canvas;
+    [Tooltip("Canvas for confetti effect (optional)")]
+    [SerializeField] private EndingDialogController endingDialogController;
+    [Tooltip("Controller for comic speech bubbles after WELL DONE (optional)")]
     
     [SerializeField] private float messageDuration = 2f;
     [Tooltip("How long to show the message (seconds)")]
@@ -96,7 +100,20 @@ public class DropSpotBatchManager : MonoBehaviour
         "BRILLIANT!",
         "INCREDIBLE!"
     };
-    
+
+    [Header("🎯 Object Completion Messages (For Single Objects)")]
+    [SerializeField] private bool useObjectCompletionMessages = true;
+    [Tooltip("Use different messages when completing a batch with only 1 object")]
+    [SerializeField] private List<string> objectCompletionMessages = new List<string>()
+    {
+        "WELL DONE!",
+        "OBJECT COMPLETE!",
+        "NICE!",
+        "GOOD JOB!",
+        "EXCELLENT!",
+        "PERFECT!"
+    };
+
     [Header("🎨 Random Colors")]
     [SerializeField] private bool useRandomColors = true;
     [SerializeField] private List<Color> messageColors = new List<Color>()
@@ -129,9 +146,10 @@ public class DropSpotBatchManager : MonoBehaviour
     private int currentBatch = 0;
     private int totalPlacedInCurrentBatch = 0;
     private int batchesCompleted = 0;
-    
+
     private Coroutine hideMessageCoroutine = null;
     private bool isShowingMessage = false;
+    private bool isLastBatchCompletion = false; // האם זו השלמת הבאץ' האחרון?
 
     private void OnValidate()
     {
@@ -156,11 +174,19 @@ public class DropSpotBatchManager : MonoBehaviour
             completionPanel.transform.localScale = Vector3.one;
             completionPanel.transform.localRotation = Quaternion.identity;
         }
-        
+
         isShowingMessage = false;
         hideMessageCoroutine = null;
         batchesCompleted = 0;
-        
+
+        // מצא Canvas אוטומטית אם לא הוגדר
+        if (canvas == null)
+        {
+            canvas = FindObjectOfType<Canvas>();
+            if (canvas != null && debugMode)
+                Debug.Log("[DropSpotBatchManager] ✅ Auto-found Canvas for confetti");
+        }
+
         if (audioSource == null && playSound)
         {
             audioSource = GetComponent<AudioSource>();
@@ -319,17 +345,39 @@ public class DropSpotBatchManager : MonoBehaviour
             if (debugMode)
             {
                 Debug.Log("🎉🎉🎉 BATCH COMPLETE! 🎉🎉🎉");
+                Debug.Log($"Batch size: {batchSize}");
+                Debug.Log($"Current batch: {currentBatch}");
+                Debug.Log($"Total batches: {GetTotalBatches()}");
                 Debug.Log($"showMessage = {showCompletionMessage}");
             }
-            
+
             int completedBatch = currentBatch;
             batchesCompleted++;
-            
+
+            // בדוק אם זה הבאץ' האחרון במסך
+            bool isLastBatch = (currentBatch >= GetTotalBatches() - 1);
+
             if (showCompletionMessage)
             {
-                ShowCompletionMessage(completedBatch);
+                if (isLastBatch)
+                {
+                    // באץ' אחרון - הצג "WELL DONE!" + בועות
+                    isLastBatchCompletion = true; // ✅ סמן שזה הבאץ' האחרון
+                    ShowCustomMessage("WELL DONE!");
+
+                    if (debugMode)
+                        Debug.Log("🏆 Last batch! Showing WELL DONE with confetti!");
+                }
+                else
+                {
+                    // באץ' רגיל - הצג הודעת עידוד רגילה
+                    ShowCompletionMessage(completedBatch);
+
+                    if (debugMode)
+                        Debug.Log($"📝 Regular batch {completedBatch}, showing encouragement message");
+                }
             }
-            
+
             currentBatch++;
             totalPlacedInCurrentBatch = 0;
             
@@ -473,11 +521,14 @@ public class DropSpotBatchManager : MonoBehaviour
         }
     }
 
-    private void ShowCompletionMessage(int batch)
+    /// <summary>
+    /// Public method to show a custom message (e.g., for level completion)
+    /// </summary>
+    public void ShowCustomMessage(string customMessage)
     {
         if (debugMode)
-            Debug.Log($"💬 ShowCompletionMessage({batch})");
-        
+            Debug.Log($"💬 ShowCustomMessage: {customMessage}");
+
         if (isShowingMessage)
         {
             if (hideMessageCoroutine != null)
@@ -485,53 +536,177 @@ public class DropSpotBatchManager : MonoBehaviour
             if (completionPanel != null)
                 completionPanel.SetActive(false);
         }
-        
+
         isShowingMessage = true;
-        
-        string message = GetCompletionMessage(batch);
-        
+
         if (completionPanel == null || completionText == null)
         {
             Debug.LogError("❌ Panel or Text is NULL!");
             isShowingMessage = false;
             return;
         }
-        
+
         completionPanel.transform.localScale = Vector3.one;
         completionPanel.transform.localRotation = Quaternion.identity;
-        
-        completionText.text = message;
-        
+
+        completionText.text = customMessage;
+
         if (useRandomColors && messageColors.Count > 0)
         {
             completionText.color = messageColors[Random.Range(0, messageColors.Count)];
         }
-        
+
         completionPanel.SetActive(true);
-        
+
         if (useAnimation)
             StartCoroutine(AnimateMessage());
-        
+
         if (playSound)
             PlayCompletionSound();
-        
+
+        // 🎉 הצג בועות קונפטי!
+        if (canvas != null && completionPanel != null)
+        {
+            var panelRT = completionPanel.GetComponent<RectTransform>();
+            if (panelRT != null)
+            {
+                UIConfetti.Burst(canvas, panelRT, count: 150, duration: 1.5f);
+
+                if (debugMode)
+                    Debug.Log("🎊 Confetti burst triggered!");
+            }
+        }
+
         hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
-        
+
+        Debug.Log($"<color=yellow>🎉 {customMessage} 🎉</color>");
+    }
+
+    private void ShowCompletionMessage(int batch)
+    {
+        if (debugMode)
+            Debug.Log($"💬 ShowCompletionMessage({batch})");
+
+        if (isShowingMessage)
+        {
+            if (hideMessageCoroutine != null)
+                StopCoroutine(hideMessageCoroutine);
+            if (completionPanel != null)
+                completionPanel.SetActive(false);
+        }
+
+        isShowingMessage = true;
+
+        string message = GetCompletionMessage(batch);
+
+        if (completionPanel == null || completionText == null)
+        {
+            Debug.LogError("❌ Panel or Text is NULL!");
+            isShowingMessage = false;
+            return;
+        }
+
+        completionPanel.transform.localScale = Vector3.one;
+        completionPanel.transform.localRotation = Quaternion.identity;
+
+        completionText.text = message;
+
+        if (useRandomColors && messageColors.Count > 0)
+        {
+            completionText.color = messageColors[Random.Range(0, messageColors.Count)];
+        }
+
+        completionPanel.SetActive(true);
+
+        if (useAnimation)
+            StartCoroutine(AnimateMessage());
+
+        if (playSound)
+            PlayCompletionSound();
+
+        hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
+
         Debug.Log($"<color=yellow>🎉 {message} 🎉</color>");
+    }
+
+    /// <summary>
+    /// Show object completion message (for single-object batches)
+    /// </summary>
+    private void ShowObjectCompletionMessage(int batch)
+    {
+        if (debugMode)
+            Debug.Log($"💬 ShowObjectCompletionMessage({batch})");
+
+        if (isShowingMessage)
+        {
+            if (hideMessageCoroutine != null)
+                StopCoroutine(hideMessageCoroutine);
+            if (completionPanel != null)
+                completionPanel.SetActive(false);
+        }
+
+        isShowingMessage = true;
+
+        string message = GetObjectCompletionMessage();
+
+        if (completionPanel == null || completionText == null)
+        {
+            Debug.LogError("❌ Panel or Text is NULL!");
+            isShowingMessage = false;
+            return;
+        }
+
+        completionPanel.transform.localScale = Vector3.one;
+        completionPanel.transform.localRotation = Quaternion.identity;
+
+        completionText.text = message;
+
+        if (useRandomColors && messageColors.Count > 0)
+        {
+            completionText.color = messageColors[Random.Range(0, messageColors.Count)];
+        }
+
+        completionPanel.SetActive(true);
+
+        if (useAnimation)
+            StartCoroutine(AnimateMessage());
+
+        if (playSound)
+            PlayCompletionSound();
+
+        hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
+
+        Debug.Log($"<color=yellow>🎯 {message} 🎯</color>");
     }
 
     private IEnumerator HideMessageAfterDelay()
     {
         yield return new WaitForSeconds(messageDuration);
-        
+
         if (useAnimation && completionPanel != null)
             yield return StartCoroutine(AnimateMessageOut());
-        
+
         if (completionPanel != null)
             completionPanel.SetActive(false);
-        
+
         isShowingMessage = false;
         hideMessageCoroutine = null;
+
+        // ✅ אם זה היה הבאץ' האחרון, הפעל בועות דיבור
+        if (isLastBatchCompletion && endingDialogController != null)
+        {
+            if (debugMode)
+                Debug.Log("💬 Starting ending dialog after WELL DONE!");
+
+            endingDialogController.StartEndingDialog();
+            isLastBatchCompletion = false; // ✅ איפוס הדגל
+        }
+        else if (isLastBatchCompletion && endingDialogController == null)
+        {
+            if (debugMode)
+                Debug.LogWarning("💬 EndingDialogController is not assigned!");
+            isLastBatchCompletion = false; // ✅ איפוס הדגל
+        }
     }
 
     private IEnumerator AnimateMessage()
@@ -650,11 +825,19 @@ public class DropSpotBatchManager : MonoBehaviour
     {
         if (useCustomMessagesPerBatch && batch < customMessagesPerBatch.Count)
             return customMessagesPerBatch[batch];
-        
+
         if (randomMessages.Count > 0)
             return randomMessages[Random.Range(0, randomMessages.Count)];
-        
+
         return "GREAT!";
+    }
+
+    private string GetObjectCompletionMessage()
+    {
+        if (objectCompletionMessages.Count > 0)
+            return objectCompletionMessages[Random.Range(0, objectCompletionMessages.Count)];
+
+        return "WELL DONE!";
     }
 
     private IEnumerator RevealNextBatchDelayed()
@@ -822,6 +1005,52 @@ public class DropSpotBatchManager : MonoBehaviour
     private int GetTotalBatches()
     {
         return useCustomBatchSizes ? customBatchSizes.Count : numberOfBatches;
+    }
+
+    // ===== PUBLIC METHODS FOR EXTERNAL USE =====
+
+    /// <summary>
+    /// Returns the index of the current batch
+    /// </summary>
+    public int GetCurrentBatchIndex()
+    {
+        return currentBatch;
+    }
+
+    /// <summary>
+    /// Returns a list of available (not yet placed) DropSpots in the current batch
+    /// </summary>
+    public List<DropSpot> GetCurrentBatchAvailableSpots()
+    {
+        List<DropSpot> availableSpots = new List<DropSpot>();
+
+        if (currentBatch >= GetTotalBatches())
+        {
+            if (debugMode)
+                Debug.Log("[DropSpotBatchManager] No more batches available");
+            return availableSpots;
+        }
+
+        int start = GetBatchStartIndex(currentBatch);
+        int size = GetBatchSize(currentBatch);
+        int end = start + size;
+
+        for (int i = start; i < end && i < allDropSpots.Count; i++)
+        {
+            if (allDropSpots[i] == null) continue;
+
+            // Only include spots that haven't been placed yet
+            if (GameProgressManager.Instance != null &&
+                !GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
+            {
+                availableSpots.Add(allDropSpots[i]);
+            }
+        }
+
+        if (debugMode)
+            Debug.Log($"[DropSpotBatchManager] Found {availableSpots.Count} available spots in batch {currentBatch}");
+
+        return availableSpots;
     }
 
     [ContextMenu("🎨 Test Message")]
