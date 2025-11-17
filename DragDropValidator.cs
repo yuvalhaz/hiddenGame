@@ -44,7 +44,7 @@ public class DragDropValidator
             return null;
         }
 
-        // Check distance
+        // Check distance from finger/pointer position to spot (not drag visual position)
         RectTransform spotRT = hitSpot.GetComponent<RectTransform>();
         if (spotRT == null)
         {
@@ -52,7 +52,16 @@ public class DragDropValidator
             return null;
         }
 
-        float distance = Vector3.Distance(dragVisual.position, spotRT.position);
+        // Convert pointer screen position to world position
+        Vector3 pointerWorldPos;
+        RectTransformUtility.ScreenPointToWorldPointInRectangle(
+            (RectTransform)canvas.transform,
+            eventData.position,
+            eventData.pressEventCamera,
+            out pointerWorldPos
+        );
+
+        float distance = Vector3.Distance(pointerWorldPos, spotRT.position);
 
         if (distance > dropDistanceThreshold)
         {
