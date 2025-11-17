@@ -14,7 +14,7 @@ public class DragVisualManager
     private readonly bool debugMode;
 
     // Offset above finger/cursor (in pixels)
-    private const float FINGER_OFFSET = 150f;
+    private const float FINGER_OFFSET = 220f;
 
     private RectTransform dragVisualRT;
     private Image dragVisualImage;
