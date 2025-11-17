@@ -446,7 +446,7 @@ public class VisualHintSystem : MonoBehaviour
         if (buttonBar != null)
         {
             Debug.Log("📜 שלב 0/4: גולל לכפתור...");
-            yield return buttonBar.StartCoroutine(buttonBar.ScrollToButton(button, 0.5f));
+            yield return buttonBar.ScrollToButtonCoroutine(button, 0.5f);
             Debug.Log("✅ הגלילה הסתיימה!");
         }
 

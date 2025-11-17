@@ -18,36 +18,18 @@ public class ImageRevealController : MonoBehaviour
     private bool isRevealed = false;
     private Coroutine revealCoroutine;
 
-    // ✅ תיקון: הסתר הכל מיד ב-Awake!
-    // ✅ אל תסתיר ב-Awake - תן ל-Start להחליט!
-    // ✅ הסתר הכל מיד ב-Awake לפני שמישהו רואה!
-    private void Awake()
-    {
-        // ✅ הסתר את הכל כברירת מחדל
-        if (backgroundImage != null)
-        {
-            backgroundImage.color = new Color(1f, 1f, 1f, 0f);
-        }
-
-        if (placeholderImage != null)
-        {
-            placeholderImage.color = new Color(1f, 1f, 1f, 1f); // הסתר גם placeholder!
-        }
-    }
-
 
     private void Start()
     {
         var dropSpot = GetComponent<DropSpot>();
 
-        // ✅ רק עכשיו בדוק אם צריך לגלות
         if (dropSpot != null &&
             GameProgressManager.Instance != null &&
             GameProgressManager.Instance.IsItemPlaced(dropSpot.spotId))
         {
+            // Item already placed - reveal instantly
             dropSpot.IsSettled = true;
 
-            // ✅ גלה מיד ללא אנימציה
             if (placeholderImage != null)
             {
                 placeholderImage.color = new Color(1, 1, 1, 0);
@@ -61,46 +43,20 @@ public class ImageRevealController : MonoBehaviour
 
             isRevealed = true;
         }
-        // ✅ אם לא שמור - כבר מוסתר מ-Awake!
-    }
-
-
-
-
-    private IEnumerator CheckAfterDelay()
-    {
-        // ✅ המתן frame אחד
-        yield return null;
-
-        var dropSpot = GetComponent<DropSpot>();
-
-        if (dropSpot != null &&
-            GameProgressManager.Instance != null &&
-            GameProgressManager.Instance.IsItemPlaced(dropSpot.spotId))
+        else
         {
-            // ✅ הפריט שמור - הצג הכל מיד!
-            dropSpot.IsSettled = true;
-
-            // ✅ הסתר placeholder
-            if (placeholderImage != null)
-            {
-                placeholderImage.color = new Color(1, 1, 1, 0);
-            }
-
-            // ✅ הצג תמונה
+            // Item not placed - hide background
             if (backgroundImage != null)
             {
-                backgroundImage.color = Color.white;
+                backgroundImage.color = new Color(1f, 1f, 1f, 0f);
             }
 
-            isRevealed = true;
-
-            Debug.Log($"[ImageRevealController] {dropSpot.spotId} restored instantly!");
+            if (placeholderImage != null)
+            {
+                placeholderImage.color = Color.white;
+            }
         }
-        // ✅ אם לא שמור - הכל כבר מוסתר מ-Awake, אין צורך לעשות כלום!
     }
-
-    // ✅ מחק את InitializeHiddenState() - לא צריך יותר!
 
     public void Reveal()
     {
@@ -175,6 +131,7 @@ public class ImageRevealController : MonoBehaviour
             yield return null;
         }
 
+        // Finalize
         if (backgroundImage != null)
             backgroundImage.color = targetBgColor;
 
