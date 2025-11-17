@@ -13,6 +13,9 @@ public class DragVisualManager
     private readonly float sizeAnimationDuration;
     private readonly bool debugMode;
 
+    // Offset above finger/cursor (in pixels)
+    private const float FINGER_OFFSET = 150f;
+
     private RectTransform dragVisualRT;
     private Image dragVisualImage;
     private MonoBehaviour coroutineHost;
@@ -128,8 +131,9 @@ public class DragVisualManager
             out worldPos
         );
 
-        // Center the image above the finger/cursor
-        Vector3 offset = new Vector3(0, dragVisualRT.rect.height * 0.5f, 0);
+        // Position the image above the finger/cursor
+        // Center it (half height) + additional offset to keep it above the finger
+        Vector3 offset = new Vector3(0, dragVisualRT.rect.height * 0.5f + FINGER_OFFSET, 0);
         dragVisualRT.position = worldPos + offset;
     }
 
