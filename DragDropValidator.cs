@@ -13,7 +13,7 @@ public class DragDropValidator
     private readonly float dropDistanceThreshold;
     private readonly bool debugMode;
 
-    public DragDropValidator(Canvas canvas, float dropDistanceThreshold = 150f, bool debugMode = false)
+    public DragDropValidator(Canvas canvas, float dropDistanceThreshold = 5f, bool debugMode = false)
     {
         this.canvas = canvas;
         this.dropDistanceThreshold = dropDistanceThreshold;

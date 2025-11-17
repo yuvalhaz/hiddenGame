@@ -47,6 +47,9 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     void Awake()
     {
+        // Force precise drop distance (override any Inspector value)
+        dropDistanceThreshold = 5f;
+
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
 
