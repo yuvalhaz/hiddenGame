@@ -13,7 +13,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 {
     [Header("Settings")]
     [SerializeField] private float dragThreshold = 50f;
-    [SerializeField] private float dropDistanceThreshold = 30f;  // Distance from dragged object to DropSpot - very precise!
+    [SerializeField] private float dropDistanceThreshold = 15f;  // Distance from dragged object to DropSpot - extremely precise!
     [SerializeField] private Canvas topCanvas;
 
     [Header("Animation")]
