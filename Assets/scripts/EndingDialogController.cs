@@ -26,6 +26,12 @@ public class EndingDialogController : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float soundVolume = 1f;
 
+    [Header("🎬 Animator Settings")]
+    [SerializeField] private Animator[] animators; // 4 אנימטורים
+    [Tooltip("Animator 0-2: מופעל כשבועה 0-2 נפתחת. Animator 3: מופעל בסוף")]
+    [SerializeField] private string animationTriggerName = "Play";
+    [Tooltip("שם ה-Trigger באנימטור (למשל: Play, Start, Show)")]
+
     [Header("Settings")]
     [SerializeField] private string sceneToLoad = "MainMenu"; // סצנה לטעון בסוף
     [SerializeField] private bool quitGameInsteadOfLoadScene = false; // לצאת מהמשחק במקום לטעון סצנה
@@ -75,6 +81,9 @@ public class EndingDialogController : MonoBehaviour
 
             // 🔊 Play sound when bubble appears
             PlayBubbleSound();
+
+            // 🎬 Trigger animator for this bubble (0-2)
+            TriggerAnimator(currentDialog);
 
             Debug.Log($"[EndingDialogController] ✅ Bubble {currentDialog} is now popping in! Previous bubbles stay visible.");
         }
@@ -276,6 +285,9 @@ public class EndingDialogController : MonoBehaviour
 
         Debug.Log("[EndingDialogController] ✅ All bubbles shown! Displaying all together...");
 
+        // 🎬 Trigger animator 3 (final animator) - after all 3 bubbles shown
+        TriggerAnimator(3);
+
         // ✅ כל הבועות על המסך - המתן את הזמן שהן נשארות ביחד
         yield return new WaitForSeconds(allBubblesDisplayTime);
 
@@ -284,5 +296,34 @@ public class EndingDialogController : MonoBehaviour
         // סיים את המשחק
         yield return new WaitForSeconds(0.5f);
         EndGame();
+    }
+
+    /// <summary>
+    /// מפעיל אנימטור מסוים
+    /// </summary>
+    /// <param name="index">0-2: בועות 1-3, 3: אנימציה סופית</param>
+    private void TriggerAnimator(int index)
+    {
+        if (animators == null || animators.Length == 0)
+        {
+            Debug.LogWarning("[EndingDialogController] ⚠️ No animators assigned");
+            return;
+        }
+
+        if (index < 0 || index >= animators.Length)
+        {
+            Debug.LogWarning($"[EndingDialogController] ⚠️ Animator index {index} out of bounds (0-{animators.Length - 1})");
+            return;
+        }
+
+        if (animators[index] == null)
+        {
+            Debug.LogWarning($"[EndingDialogController] ⚠️ Animator {index} is null");
+            return;
+        }
+
+        // הפעל את ה-Trigger
+        animators[index].SetTrigger(animationTriggerName);
+        Debug.Log($"[EndingDialogController] 🎬 Triggered animator {index} with trigger '{animationTriggerName}'");
     }
 }
