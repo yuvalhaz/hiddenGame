@@ -20,8 +20,9 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private bool autoAdvance = true; // להעביר אוטומטית בין בועות או לחכות ללחיצה
 
     [Header("Animation Integration")]
-    [SerializeField] private AnimationClip[] levelEndAnimations; // אנימציות שירוצו כשהלבל נגמר (אופציונלי)
-    [SerializeField] private GameObject[] animationTargets; // GameObjects שעליהם האנימציות ירוצו (אופציונלי, אם ריק ירוצו על אובייקט זה)
+    [SerializeField] private Animator[] imageAnimators; // Animator components של התמונות
+    [SerializeField] private string[] animationStateNames; // שמות ה-states/clips להפעיל (אופציונלי - אם ריק ישתמש ב-triggers)
+    [SerializeField] private string animationTriggerName = "Play"; // trigger להפעיל אם לא מוגדרים state names
 
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
@@ -99,33 +100,32 @@ public class EndingDialogController : MonoBehaviour
     /// </summary>
     private void TriggerLevelEndAnimators()
     {
-        if (levelEndAnimations == null || levelEndAnimations.Length == 0)
+        if (imageAnimators == null || imageAnimators.Length == 0)
             return;
 
-        Debug.Log($"[EndingDialogController] 🎬 Playing {levelEndAnimations.Length} level-end animations");
+        Debug.Log($"[EndingDialogController] 🎬 Playing {imageAnimators.Length} level-end animations");
 
-        for (int i = 0; i < levelEndAnimations.Length; i++)
+        for (int i = 0; i < imageAnimators.Length; i++)
         {
-            AnimationClip clip = levelEndAnimations[i];
-            if (clip == null) continue;
+            Animator animator = imageAnimators[i];
+            if (animator == null) continue;
 
-            // Get target GameObject (or use this object if not specified)
-            GameObject target = (animationTargets != null && i < animationTargets.Length && animationTargets[i] != null)
-                ? animationTargets[i]
-                : gameObject;
+            // Check if we have specific state names defined
+            bool hasStateNames = animationStateNames != null && i < animationStateNames.Length && !string.IsNullOrEmpty(animationStateNames[i]);
 
-            // Get or add Animation component
-            Animation anim = target.GetComponent<Animation>();
-            if (anim == null)
+            if (hasStateNames)
             {
-                anim = target.AddComponent<Animation>();
+                // Play specific state/clip by name
+                string stateName = animationStateNames[i];
+                animator.Play(stateName);
+                Debug.Log($"[EndingDialogController] 🎬 Playing state '{stateName}' on '{animator.gameObject.name}'");
             }
-
-            // Add clip and play
-            anim.AddClip(clip, clip.name);
-            anim.Play(clip.name);
-
-            Debug.Log($"[EndingDialogController] 🎬 Playing animation '{clip.name}' on '{target.name}'");
+            else
+            {
+                // Use trigger instead
+                animator.SetTrigger(animationTriggerName);
+                Debug.Log($"[EndingDialogController] 🎬 Triggered '{animationTriggerName}' on '{animator.gameObject.name}'");
+            }
         }
     }
 
