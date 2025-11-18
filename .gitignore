@@ -13,5 +13,8 @@
 !Assets/scripts/
 !Assets/scripts/**
 
+# אל תתעלם מקבצי Markdown
+!*.md
+
 # התעלם מקבצי meta
 *.meta
