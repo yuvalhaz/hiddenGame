@@ -21,8 +21,7 @@ public class EndingDialogController : MonoBehaviour
 
     [Header("Animation Integration")]
     [SerializeField] private Animator[] imageAnimators; // Animator components של התמונות
-    [SerializeField] private string[] animationStateNames; // שמות ה-states/clips להפעיל (אופציונלי - אם ריק ישתמש ב-triggers)
-    [SerializeField] private string animationTriggerName = "Play"; // trigger להפעיל אם לא מוגדרים state names
+    [SerializeField] private string animationTriggerName = "Play"; // trigger להפעיל
 
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
@@ -105,27 +104,13 @@ public class EndingDialogController : MonoBehaviour
 
         Debug.Log($"[EndingDialogController] 🎬 Playing {imageAnimators.Length} level-end animations");
 
-        for (int i = 0; i < imageAnimators.Length; i++)
+        foreach (Animator animator in imageAnimators)
         {
-            Animator animator = imageAnimators[i];
             if (animator == null) continue;
 
-            // Check if we have specific state names defined
-            bool hasStateNames = animationStateNames != null && i < animationStateNames.Length && !string.IsNullOrEmpty(animationStateNames[i]);
-
-            if (hasStateNames)
-            {
-                // Play specific state/clip by name
-                string stateName = animationStateNames[i];
-                animator.Play(stateName);
-                Debug.Log($"[EndingDialogController] 🎬 Playing state '{stateName}' on '{animator.gameObject.name}'");
-            }
-            else
-            {
-                // Use trigger instead
-                animator.SetTrigger(animationTriggerName);
-                Debug.Log($"[EndingDialogController] 🎬 Triggered '{animationTriggerName}' on '{animator.gameObject.name}'");
-            }
+            // Use trigger to start animation
+            animator.SetTrigger(animationTriggerName);
+            Debug.Log($"[EndingDialogController] 🎬 Triggered '{animationTriggerName}' on '{animator.gameObject.name}'");
         }
     }
 
