@@ -20,8 +20,8 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private bool autoAdvance = true; // להעביר אוטומטית בין בועות או לחכות ללחיצה
 
     [Header("Animator Integration")]
-    [SerializeField] private Animator[] bubbleAnimators; // Animators עבור כל בועה (אופציונלי)
-    [SerializeField] private string animationTriggerName = "Show"; // שם ה-trigger ב-Animator
+    [SerializeField] private Animator[] levelEndAnimators; // Animators שירוצו כשהלבל נגמר (אופציונלי)
+    [SerializeField] private string animationTriggerName = "LevelComplete"; // שם ה-trigger ב-Animator
 
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
@@ -77,9 +77,6 @@ public class EndingDialogController : MonoBehaviour
             dialogBubbles[currentDialog].SetActive(true);
             StartCoroutine(AnimateBubblePopIn(dialogBubbles[currentDialog]));
 
-            // 🎬 Trigger Animator if available
-            TriggerBubbleAnimator(currentDialog);
-
             // 🔊 Play sound when bubble appears
             PlayBubbleSound();
 
@@ -98,21 +95,22 @@ public class EndingDialogController : MonoBehaviour
     }
 
     /// <summary>
-    /// Triggers the Animator for the specified bubble index
+    /// Triggers all level-end animators when level completes
     /// </summary>
-    private void TriggerBubbleAnimator(int bubbleIndex)
+    private void TriggerLevelEndAnimators()
     {
-        if (bubbleAnimators == null || bubbleAnimators.Length == 0)
+        if (levelEndAnimators == null || levelEndAnimators.Length == 0)
             return;
 
-        if (bubbleIndex < 0 || bubbleIndex >= bubbleAnimators.Length)
-            return;
+        Debug.Log($"[EndingDialogController] 🎬 Triggering {levelEndAnimators.Length} level-end animators");
 
-        Animator animator = bubbleAnimators[bubbleIndex];
-        if (animator != null)
+        foreach (Animator animator in levelEndAnimators)
         {
-            animator.SetTrigger(animationTriggerName);
-            Debug.Log($"[EndingDialogController] 🎬 Triggered animator for bubble {bubbleIndex} with trigger '{animationTriggerName}'");
+            if (animator != null)
+            {
+                animator.SetTrigger(animationTriggerName);
+                Debug.Log($"[EndingDialogController] 🎬 Triggered animator '{animator.name}' with trigger '{animationTriggerName}'");
+            }
         }
     }
 
@@ -264,6 +262,9 @@ public class EndingDialogController : MonoBehaviour
         Debug.Log($"[EndingDialogController] Dialog bubbles count: {dialogBubbles.Length}");
 
         currentDialog = 0;
+
+        // 🎬 Trigger all level-end animators when dialog starts
+        TriggerLevelEndAnimators();
 
         // אם במצב אוטומטי - הפעל את הקורוטינה האוטומטית
         if (autoAdvance)
