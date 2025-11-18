@@ -20,8 +20,8 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private bool autoAdvance = true; // להעביר אוטומטית בין בועות או לחכות ללחיצה
 
     [Header("Animation Integration")]
-    [SerializeField] private Animator[] imageAnimators; // Animator components של התמונות
-    [SerializeField] private string animationTriggerName = "Play"; // trigger להפעיל
+    [SerializeField] private Animation[] imageAnimations; // Animation components של התמונות
+    [SerializeField] private string[] animationClipNames; // שמות ה-clips להפעיל (אופציונלי - אם ריק ינגן את ה-clip הראשון)
 
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
@@ -115,18 +115,32 @@ public class EndingDialogController : MonoBehaviour
     /// </summary>
     private void TriggerLevelEndAnimators()
     {
-        if (imageAnimators == null || imageAnimators.Length == 0)
+        if (imageAnimations == null || imageAnimations.Length == 0)
             return;
 
-        Debug.Log($"[EndingDialogController] 🎬 Playing {imageAnimators.Length} level-end animations");
+        Debug.Log($"[EndingDialogController] 🎬 Playing {imageAnimations.Length} level-end animations");
 
-        foreach (Animator animator in imageAnimators)
+        for (int i = 0; i < imageAnimations.Length; i++)
         {
-            if (animator == null) continue;
+            Animation anim = imageAnimations[i];
+            if (anim == null) continue;
 
-            // Use trigger to start animation
-            animator.SetTrigger(animationTriggerName);
-            Debug.Log($"[EndingDialogController] 🎬 Triggered '{animationTriggerName}' on '{animator.gameObject.name}'");
+            // Check if we have specific clip names
+            bool hasClipName = animationClipNames != null && i < animationClipNames.Length && !string.IsNullOrEmpty(animationClipNames[i]);
+
+            if (hasClipName)
+            {
+                // Play specific clip by name
+                string clipName = animationClipNames[i];
+                anim.Play(clipName);
+                Debug.Log($"[EndingDialogController] 🎬 Playing clip '{clipName}' on '{anim.gameObject.name}'");
+            }
+            else
+            {
+                // Play default animation
+                anim.Play();
+                Debug.Log($"[EndingDialogController] 🎬 Playing default clip on '{anim.gameObject.name}'");
+            }
         }
     }
 
