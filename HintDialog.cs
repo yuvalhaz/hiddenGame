@@ -13,6 +13,11 @@ public class HintDialog : MonoBehaviour
     [SerializeField] private Button closeButton;
     [SerializeField] private CanvasGroup dialogGroup;
 
+    [Header("Animator Integration")]
+    [SerializeField] private Animator dialogAnimator; // Animator עבור הדיאלוג (אופציונלי)
+    [SerializeField] private string showTriggerName = "Show"; // שם ה-trigger להצגת הדיאלוג
+    [SerializeField] private string hideTriggerName = "Hide"; // שם ה-trigger להסתרת הדיאלוג
+
     [Header("Events")]
     [Tooltip("Invoked when user successfully watches ad and earns hint")]
     public UnityEvent onHintGranted;
@@ -59,6 +64,13 @@ public class HintDialog : MonoBehaviour
     {
         ShowImmediate();
         transform.SetAsLastSibling();
+
+        // 🎬 Trigger show animation
+        if (dialogAnimator != null)
+        {
+            dialogAnimator.SetTrigger(showTriggerName);
+            Debug.Log($"[HintDialog] 🎬 Triggered show animation with trigger '{showTriggerName}'");
+        }
     }
 
     /// <summary>
@@ -70,6 +82,14 @@ public class HintDialog : MonoBehaviour
         if (isClosing) return;
 
         isClosing = true;
+
+        // 🎬 Trigger hide animation
+        if (dialogAnimator != null)
+        {
+            dialogAnimator.SetTrigger(hideTriggerName);
+            Debug.Log($"[HintDialog] 🎬 Triggered hide animation with trigger '{hideTriggerName}'");
+        }
+
         HideImmediate();
         onClosed?.Invoke();
         isClosing = false;

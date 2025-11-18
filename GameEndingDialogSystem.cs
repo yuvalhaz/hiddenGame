@@ -19,6 +19,10 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private float allBubblesDisplayTime = 2.0f; // כמה זמן כל הבועות נשארות על המסך אחרי הבועה האחרונה
     [SerializeField] private bool autoAdvance = true; // להעביר אוטומטית בין בועות או לחכות ללחיצה
 
+    [Header("Animator Integration")]
+    [SerializeField] private Animator[] bubbleAnimators; // Animators עבור כל בועה (אופציונלי)
+    [SerializeField] private string animationTriggerName = "Show"; // שם ה-trigger ב-Animator
+
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip bubblePopSound;
@@ -73,6 +77,9 @@ public class EndingDialogController : MonoBehaviour
             dialogBubbles[currentDialog].SetActive(true);
             StartCoroutine(AnimateBubblePopIn(dialogBubbles[currentDialog]));
 
+            // 🎬 Trigger Animator if available
+            TriggerBubbleAnimator(currentDialog);
+
             // 🔊 Play sound when bubble appears
             PlayBubbleSound();
 
@@ -87,6 +94,25 @@ public class EndingDialogController : MonoBehaviour
         if (!autoAdvance && buttonText != null)
         {
             buttonText.text = (currentDialog == dialogBubbles.Length - 1) ? "סיום" : "המשך";
+        }
+    }
+
+    /// <summary>
+    /// Triggers the Animator for the specified bubble index
+    /// </summary>
+    private void TriggerBubbleAnimator(int bubbleIndex)
+    {
+        if (bubbleAnimators == null || bubbleAnimators.Length == 0)
+            return;
+
+        if (bubbleIndex < 0 || bubbleIndex >= bubbleAnimators.Length)
+            return;
+
+        Animator animator = bubbleAnimators[bubbleIndex];
+        if (animator != null)
+        {
+            animator.SetTrigger(animationTriggerName);
+            Debug.Log($"[EndingDialogController] 🎬 Triggered animator for bubble {bubbleIndex} with trigger '{animationTriggerName}'");
         }
     }
 
