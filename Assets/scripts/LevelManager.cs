@@ -10,6 +10,7 @@ public class LevelManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private GameProgressManager progressManager;
     [SerializeField] private RewardedAdsManager adsManager;
+    [SerializeField] private GameEndingDialogSystem endingDialog;
     
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
@@ -58,6 +59,7 @@ public class LevelManager : MonoBehaviour
         // Find references if not assigned
         if (!progressManager) progressManager = FindObjectOfType<GameProgressManager>();
         if (!adsManager) adsManager = FindObjectOfType<RewardedAdsManager>();
+        if (!endingDialog) endingDialog = FindObjectOfType<GameEndingDialogSystem>();
         
         ValidateLevels();
     }
@@ -210,8 +212,17 @@ public class LevelManager : MonoBehaviour
         {
             if (debugMode)
                 Debug.Log("[LevelManager] All levels completed!");
-            
-            // Could show "game complete" screen here
+
+            // Show game ending dialog
+            if (endingDialog != null)
+            {
+                Debug.Log("[LevelManager] 🎉 Showing game ending dialog!");
+                endingDialog.StartEndingDialog();
+            }
+            else
+            {
+                Debug.LogWarning("[LevelManager] ⚠️ No ending dialog assigned!");
+            }
         }
     }
 
