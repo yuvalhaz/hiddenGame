@@ -34,6 +34,10 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private string sceneToLoad = "MainMenu"; // סצנה לטעון בסוף
     [SerializeField] private bool quitGameInsteadOfLoadScene = false; // לצאת מהמשחק במקום לטעון סצנה
 
+    [Header("🔧 Debug")]
+    [SerializeField] private bool enableDebugKey = true; // אפשר הפעלה ב-F12
+    [SerializeField] private KeyCode debugKey = KeyCode.F12; // מקש לדיבוג
+
     private int currentDialog = 0;
     private Coroutine autoAdvanceCoroutine = null;
 
@@ -58,6 +62,18 @@ public class EndingDialogController : MonoBehaviour
             if (autoAdvance)
                 nextButton.gameObject.SetActive(false);
         }
+    }
+
+    void Update()
+    {
+        // 🔧 Debug: הפעל את הסיום בלחיצת מקש
+        #if UNITY_EDITOR
+        if (enableDebugKey && Input.GetKeyDown(debugKey))
+        {
+            Debug.Log("[EndingDialogController] 🔧 DEBUG KEY PRESSED - Starting ending dialog!");
+            StartEndingDialog();
+        }
+        #endif
     }
 
     void OnDestroy()
