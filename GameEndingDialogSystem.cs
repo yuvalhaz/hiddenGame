@@ -19,9 +19,9 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private float allBubblesDisplayTime = 2.0f; // כמה זמן כל הבועות נשארות על המסך אחרי הבועה האחרונה
     [SerializeField] private bool autoAdvance = true; // להעביר אוטומטית בין בועות או לחכות ללחיצה
 
-    [Header("Animator Integration")]
-    [SerializeField] private Animator[] levelEndAnimators; // Animators שירוצו כשהלבל נגמר (אופציונלי)
-    [SerializeField] private string animationTriggerName = "LevelComplete"; // שם ה-trigger ב-Animator
+    [Header("Animation Integration")]
+    [SerializeField] private AnimationClip[] levelEndAnimations; // אנימציות שירוצו כשהלבל נגמר (אופציונלי)
+    [SerializeField] private GameObject[] animationTargets; // GameObjects שעליהם האנימציות ירוצו (אופציונלי, אם ריק ירוצו על אובייקט זה)
 
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
@@ -95,22 +95,37 @@ public class EndingDialogController : MonoBehaviour
     }
 
     /// <summary>
-    /// Triggers all level-end animators when level completes
+    /// Plays all level-end animations when level completes
     /// </summary>
     private void TriggerLevelEndAnimators()
     {
-        if (levelEndAnimators == null || levelEndAnimators.Length == 0)
+        if (levelEndAnimations == null || levelEndAnimations.Length == 0)
             return;
 
-        Debug.Log($"[EndingDialogController] 🎬 Triggering {levelEndAnimators.Length} level-end animators");
+        Debug.Log($"[EndingDialogController] 🎬 Playing {levelEndAnimations.Length} level-end animations");
 
-        foreach (Animator animator in levelEndAnimators)
+        for (int i = 0; i < levelEndAnimations.Length; i++)
         {
-            if (animator != null)
+            AnimationClip clip = levelEndAnimations[i];
+            if (clip == null) continue;
+
+            // Get target GameObject (or use this object if not specified)
+            GameObject target = (animationTargets != null && i < animationTargets.Length && animationTargets[i] != null)
+                ? animationTargets[i]
+                : gameObject;
+
+            // Get or add Animation component
+            Animation anim = target.GetComponent<Animation>();
+            if (anim == null)
             {
-                animator.SetTrigger(animationTriggerName);
-                Debug.Log($"[EndingDialogController] 🎬 Triggered animator '{animator.name}' with trigger '{animationTriggerName}'");
+                anim = target.AddComponent<Animation>();
             }
+
+            // Add clip and play
+            anim.AddClip(clip, clip.name);
+            anim.Play(clip.name);
+
+            Debug.Log($"[EndingDialogController] 🎬 Playing animation '{clip.name}' on '{target.name}'");
         }
     }
 
