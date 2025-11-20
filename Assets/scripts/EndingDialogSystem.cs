@@ -69,11 +69,30 @@ public class EndingDialogController : MonoBehaviour
         {
             if (animator != null)
             {
-                // הוסף EventTrigger או Button לבועה
+                // הוסף Collider לאובייקט הראשי
                 var collider = animator.GetComponent<Collider2D>();
                 if (collider == null)
                 {
                     collider = animator.gameObject.AddComponent<BoxCollider2D>();
+                }
+
+                // ✅ הוסף Colliders גם לכל הילדים (הבועות עצמן)
+                SpriteRenderer[] childSprites = animator.GetComponentsInChildren<SpriteRenderer>(true);
+                foreach (var sprite in childSprites)
+                {
+                    if (sprite.GetComponent<Collider2D>() == null)
+                    {
+                        var childCollider = sprite.gameObject.AddComponent<BoxCollider2D>();
+                        Debug.Log($"[EndingDialogController] Added collider to child: {sprite.name}");
+                    }
+                }
+
+                // ✅ אם משתמשים ב-UI (Image במקום Sprite)
+                UnityEngine.UI.Image[] childImages = animator.GetComponentsInChildren<UnityEngine.UI.Image>(true);
+                foreach (var image in childImages)
+                {
+                    image.raycastTarget = true; // ודא ש-raycast מופעל
+                    Debug.Log($"[EndingDialogController] Enabled raycast on UI image: {image.name}");
                 }
             }
         }
@@ -91,13 +110,19 @@ public class EndingDialogController : MonoBehaviour
 
                 if (hit.collider != null)
                 {
-                    // בדוק אם לחצו על אחת הבועות
+                    // ✅ בדוק אם לחצו על אחת הבועות או על הילדים שלהן
                     foreach (var animator in imageAnimators)
                     {
-                        if (animator != null && hit.collider.gameObject == animator.gameObject)
+                        if (animator != null)
                         {
-                            OnBubbleClicked();
-                            break;
+                            // בדוק אם הלחיצה הייתה על האובייקט עצמו או על אחד מהילדים שלו
+                            if (hit.collider.gameObject == animator.gameObject ||
+                                hit.collider.transform.IsChildOf(animator.transform))
+                            {
+                                Debug.Log($"[EndingDialogController] Clicked on bubble: {hit.collider.gameObject.name}");
+                                OnBubbleClicked();
+                                break;
+                            }
                         }
                     }
                 }
