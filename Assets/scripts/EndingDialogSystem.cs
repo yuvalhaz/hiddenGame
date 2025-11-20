@@ -116,18 +116,32 @@ public class EndingDialogController : MonoBehaviour
         {
             bool adFinished = false;
 
-            RewardedAdsManager.Instance.ShowRewarded(
-                onClosed: (completed) => { adFinished = true; },
-                onFailed: (error) => { adFinished = true; }
-            );
-
-            float timeout = 60f;
-            float elapsed = 0f;
-
-            while (!adFinished && elapsed < timeout)
+            // בדוק אם הפרסומת מוכנה
+            if (!RewardedAdsManager.Instance.IsReady())
             {
-                elapsed += Time.deltaTime;
-                yield return null;
+                Debug.LogWarning("[EndingDialogController] Ad not ready, skipping");
+                adFinished = true;
+            }
+            else
+            {
+                RewardedAdsManager.Instance.ShowRewarded(
+                    onClosed: (completed) => { adFinished = true; },
+                    onFailed: (error) => { adFinished = true; }
+                );
+
+                float timeout = 60f;
+                float elapsed = 0f;
+
+                while (!adFinished && elapsed < timeout)
+                {
+                    elapsed += Time.deltaTime;
+                    yield return null;
+                }
+
+                if (elapsed >= timeout)
+                {
+                    Debug.LogWarning("[EndingDialogController] Ad timeout!");
+                }
             }
 
             yield return new WaitForSeconds(0.5f);
