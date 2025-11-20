@@ -153,6 +153,13 @@ public class BatchAdController
         // Wait for ad to close if enabled
         if (waitForAdToClose)
         {
+            // בדוק אם הפרסומת בכלל מוכנה
+            if (!RewardedAdsManager.Instance.IsReady())
+            {
+                Debug.LogWarning("[BatchAdController] Ad was not ready, skipping wait");
+                adClosed = true;
+            }
+
             float timeout = 60f;
             float elapsed = 0f;
 

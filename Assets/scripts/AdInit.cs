@@ -7,6 +7,8 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class AdInit : MonoBehaviour
 {
+    public static AdInit Instance;
+
     [Header("References")]
     [SerializeField] private RewardedAdsManager rewardedAds;
     [SerializeField] private AdMobConfig adMobConfig;
@@ -20,6 +22,14 @@ public class AdInit : MonoBehaviour
 
     private void Awake()
     {
+        // Singleton pattern
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         if (dontDestroyOnLoad)
             DontDestroyOnLoad(gameObject);
 
