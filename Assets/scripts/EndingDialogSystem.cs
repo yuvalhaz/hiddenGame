@@ -76,42 +76,50 @@ public class EndingDialogController : MonoBehaviour
             {
                 int bubbleIndex = i; // Capture index for closure
 
-                // הוסף Collider לאובייקט הראשי
-                var collider = imageAnimators[i].GetComponent<Collider2D>();
-                if (collider == null)
-                {
-                    collider = imageAnimators[i].gameObject.AddComponent<BoxCollider2D>();
-                }
+                // הפרנט הוא רק Transform ריק - אל תוסיף לו כלום
+                // הוסף רק לילדים (הבועות עצמן)
 
-                // ✅ הוסף Colliders גם לכל הילדים (הבועות עצמן)
+                // ✅ עבור על כל הילדים - Sprites
                 SpriteRenderer[] childSprites = imageAnimators[i].GetComponentsInChildren<SpriteRenderer>(true);
                 foreach (var sprite in childSprites)
                 {
+                    // הוסף Collider2D אם אין
                     if (sprite.GetComponent<Collider2D>() == null)
                     {
-                        var childCollider = sprite.gameObject.AddComponent<BoxCollider2D>();
-                        Debug.Log($"[EndingDialogController] Added collider to child: {sprite.name}");
+                        sprite.gameObject.AddComponent<BoxCollider2D>();
+                        Debug.Log($"[EndingDialogController] Added collider to sprite: {sprite.name}");
                     }
+
+                    // הוסף Button component ל-Sprite (זה יעבוד רק אם יש EventSystem)
+                    var button = sprite.GetComponent<Button>();
+                    if (button == null)
+                    {
+                        button = sprite.gameObject.AddComponent<Button>();
+                    }
+
+                    button.onClick.RemoveAllListeners();
+                    button.onClick.AddListener(() => OnBubbleClicked(bubbleIndex));
+
+                    Debug.Log($"[EndingDialogController] Added click handler to sprite bubble {bubbleIndex}: {sprite.name}");
                 }
 
-                // ✅ אם משתמשים ב-UI (Image במקום Sprite)
+                // ✅ עבור על כל הילדים - UI Images
                 UnityEngine.UI.Image[] childImages = imageAnimators[i].GetComponentsInChildren<UnityEngine.UI.Image>(true);
                 foreach (var image in childImages)
                 {
                     image.raycastTarget = true; // ודא ש-raycast מופעל
 
-                    // הוסף Button component לכל Image כדי לתפוס לחיצה
+                    // הוסף Button component לכל Image
                     var button = image.GetComponent<Button>();
                     if (button == null)
                     {
                         button = image.gameObject.AddComponent<Button>();
                     }
 
-                    // הוסף listener עם האינדקס הנכון
                     button.onClick.RemoveAllListeners();
                     button.onClick.AddListener(() => OnBubbleClicked(bubbleIndex));
 
-                    Debug.Log($"[EndingDialogController] Added click handler to bubble {bubbleIndex}: {image.name}");
+                    Debug.Log($"[EndingDialogController] Added click handler to UI bubble {bubbleIndex}: {image.name}");
                 }
             }
         }
