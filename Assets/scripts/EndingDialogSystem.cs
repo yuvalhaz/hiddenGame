@@ -15,6 +15,8 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private float delayBetweenBubbles = 0.3f;
     [SerializeField] private float allBubblesDisplayTime = 2.0f;
     [SerializeField] private bool autoAdvance = true;
+    [SerializeField] private bool allowClickToSkip = true;
+    [Tooltip("Allow clicking on bubbles to skip to ad and next scene")]
 
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
@@ -28,6 +30,7 @@ public class EndingDialogController : MonoBehaviour
 
     private int currentDialog = 0;
     private Coroutine autoAdvanceCoroutine = null;
+    private bool skipRequested = false;
 
     void Start()
     {
@@ -52,6 +55,70 @@ public class EndingDialogController : MonoBehaviour
             if (autoAdvance)
                 nextButton.gameObject.SetActive(false);
         }
+
+        // הוסף לחיצה על בועות אם מופעל
+        if (allowClickToSkip)
+        {
+            SetupBubbleClickListeners();
+        }
+    }
+
+    private void SetupBubbleClickListeners()
+    {
+        foreach (var animator in imageAnimators)
+        {
+            if (animator != null)
+            {
+                // הוסף EventTrigger או Button לבועה
+                var collider = animator.GetComponent<Collider2D>();
+                if (collider == null)
+                {
+                    collider = animator.gameObject.AddComponent<BoxCollider2D>();
+                }
+            }
+        }
+    }
+
+    void Update()
+    {
+        // בדוק לחיצה על בועות
+        if (allowClickToSkip && !skipRequested && bubbleMaster != null && bubbleMaster.activeSelf)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
+
+                if (hit.collider != null)
+                {
+                    // בדוק אם לחצו על אחת הבועות
+                    foreach (var animator in imageAnimators)
+                    {
+                        if (animator != null && hit.collider.gameObject == animator.gameObject)
+                        {
+                            OnBubbleClicked();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void OnBubbleClicked()
+    {
+        Debug.Log("[EndingDialogController] Bubble clicked - skipping to ad!");
+        skipRequested = true;
+
+        // עצור את ה-auto advance
+        if (autoAdvanceCoroutine != null)
+        {
+            StopCoroutine(autoAdvanceCoroutine);
+            autoAdvanceCoroutine = null;
+        }
+
+        // קפוץ ישר ל-EndGame (שיריץ פרסומת ויעבור לסצנה הבאה)
+        EndGame();
     }
 
     void OnDestroy()
@@ -164,6 +231,7 @@ public class EndingDialogController : MonoBehaviour
     public void StartEndingDialog()
     {
         currentDialog = 0;
+        skipRequested = false; // אפס את הדגל
 
         // הדלק את BubbleMaster
         if (bubbleMaster != null)
@@ -189,13 +257,36 @@ public class EndingDialogController : MonoBehaviour
     {
         for (int i = 0; i < imageAnimators.Length; i++)
         {
+            if (skipRequested)
+            {
+                Debug.Log("[EndingDialogController] Skip detected in loop, exiting");
+                yield break; // עצור את הלולאה
+            }
+
             currentDialog = i;
             ShowCurrentDialog();
             yield return new WaitForSeconds(delayBetweenBubbles);
         }
 
+        if (skipRequested)
+        {
+            Debug.Log("[EndingDialogController] Skip detected after bubbles, exiting");
+            yield break;
+        }
+
         yield return new WaitForSeconds(allBubblesDisplayTime);
+
+        if (skipRequested)
+        {
+            Debug.Log("[EndingDialogController] Skip detected after display time, exiting");
+            yield break;
+        }
+
         yield return new WaitForSeconds(0.5f);
-        EndGame();
+
+        if (!skipRequested)
+        {
+            EndGame();
+        }
     }
 }
