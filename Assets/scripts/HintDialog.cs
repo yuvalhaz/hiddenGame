@@ -1,225 +1,191 @@
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
-using System.Collections;
 
+/// <summary>
+/// Dialog UI for hint system that offers players a hint in exchange for watching a rewarded ad.
+/// Shows "Watch Ad" and "Close" buttons, handles ad display, and triggers hint logic on reward.
+/// </summary>
 public class HintDialog : MonoBehaviour
 {
-    [Header("UI")]
+    [Header("UI References")]
     [SerializeField] private Button watchAdButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private CanvasGroup dialogGroup;
 
-    [Header("🎯 Hint System")]
-    [SerializeField] private VisualHintSystem hintSystem; // ← חיבור למערכת הרמזים החדשה!
-
-    [Header("🔊 Audio")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip openSound;
-    [Tooltip("Sound to play when dialog opens")]
-    [Range(0f, 1f)]
-    [SerializeField] private float soundVolume = 1f;
-
     [Header("Events")]
+    [Tooltip("Invoked when user successfully watches ad and earns hint")]
     public UnityEvent onHintGranted;
+
+    [Tooltip("Invoked when dialog is closed")]
     public UnityEvent onClosed;
 
-    private Vector2 originalAnchoredPosition;
-    private RectTransform rectTransform;
-    private bool isShowingHint = false; // ✅ דגל שמונע פתיחה בזמן רמז
+    // Prevent infinite recursion if onClosed event is misconfigured
+    private bool isClosing = false;
 
     private void Awake()
     {
-        if (dialogGroup == null) dialogGroup = GetComponent<CanvasGroup>();
-        if (watchAdButton != null) watchAdButton.onClick.AddListener(OnWatchAd);
-        if (closeButton != null)   closeButton.onClick.AddListener(Close);
+        if (dialogGroup == null)
+            dialogGroup = GetComponent<CanvasGroup>();
 
-        // ✅ שמור את ה-RectTransform וה-anchoredPosition המקורי
-        rectTransform = GetComponent<RectTransform>();
-        if (rectTransform != null)
-        {
-            originalAnchoredPosition = rectTransform.anchoredPosition;
-            Debug.Log($"[HintDialog] Saved original anchoredPosition: {originalAnchoredPosition}");
-        }
-        else
-        {
-            Debug.LogError("[HintDialog] ❌ RectTransform not found!");
-        }
+        if (watchAdButton != null)
+            watchAdButton.onClick.AddListener(OnWatchAd);
 
-        // ✅ אם לא מחובר ידנית, נסה למצוא אוטומטית
-        if (hintSystem == null)
-        {
-            hintSystem = FindObjectOfType<VisualHintSystem>();
-            if (hintSystem != null)
-            {
-                Debug.Log("[HintDialog] מצא VisualHintSystem אוטומטית!");
-            }
-            else
-            {
-                Debug.LogWarning("[HintDialog] לא נמצא VisualHintSystem בסצנה!");
-            }
-        }
+        if (closeButton != null)
+            closeButton.onClick.AddListener(Close);
     }
 
     private void OnEnable()
     {
-        // ✅ אל תעשה כלום ב-OnEnable - זה גורם לבעיות!
-        // HideImmediate() ייקרא רק כאשר Close() או OnWatchAd() נקראים
+        HideImmediate();
     }
 
     private void OnDestroy()
     {
-        if (watchAdButton != null) watchAdButton.onClick.RemoveListener(OnWatchAd);
-        if (closeButton != null)   closeButton.onClick.RemoveListener(Close);
+        if (watchAdButton != null)
+            watchAdButton.onClick.RemoveListener(OnWatchAd);
+
+        if (closeButton != null)
+            closeButton.onClick.RemoveListener(Close);
 
         if (RewardedAdsManager.Instance != null)
             RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
     }
 
+    /// <summary>
+    /// Opens the hint dialog and brings it to front.
+    /// </summary>
     public void Open()
     {
-        // ✅ אם הרמז פועל - אל תפתח!
-        if (isShowingHint)
-        {
-            Debug.Log("[HintDialog] 🚫 Cannot open - hint is currently showing!");
-            return;
-        }
-
-        // ✅ בדיקה: האם יש כפתורים זמינים לרמז?
-        if (hintSystem != null && !hintSystem.HasAvailableButtons())
-        {
-            Debug.Log("[HintDialog] אין כפתורים זמינים לרמז - כל הכפתורים כבר הוצבו!");
-            // אופציה: להציג הודעה למשתמש או לא לפתוח את הדיאלוג
-            return;
-        }
-
         ShowImmediate();
         transform.SetAsLastSibling();
     }
 
+    /// <summary>
+    /// Closes the hint dialog and invokes onClosed event.
+    /// </summary>
     public void Close()
     {
+        // Prevent infinite recursion if onClosed is connected to Close()
+        if (isClosing) return;
+
+        isClosing = true;
         HideImmediate();
         onClosed?.Invoke();
+        isClosing = false;
     }
 
+    /// <summary>
+    /// Called when user clicks "Watch Ad" button.
+    /// Hides dialog and shows rewarded ad.
+    /// </summary>
     private void OnWatchAd()
     {
         if (RewardedAdsManager.Instance == null)
         {
-            Debug.LogWarning("[HintDialog] RewardedAdsManager missing in scene.");
+            Debug.LogWarning("[HintDialog] RewardedAdsManager not found in scene.");
             return;
         }
 
-        // ✅ סמן שהרמז מתחיל - זה ימנע מ-Open() לפתוח מחדש!
-        isShowingHint = true;
-        Debug.Log("[HintDialog] 🎯 Hint starting - dialog locked");
+        // לא לאפשר ספאם קליקים בזמן טעינה/הצגה
+        if (watchAdButton != null)
+            watchAdButton.interactable = false;
 
-        HideImmediate();
+        // פונקציה מקומית שממש מציגה את הפרסומת
+        void ShowNow()
+        {
+            HideImmediate();
 
-#if UNITY_EDITOR
-        // ✅ במצב עריכה (Unity Editor) - דלג על הפרסומת ותן רמז מיד!
-        Debug.Log("[HintDialog] 🧪 Unity Editor mode - skipping ad, triggering hint immediately");
-        HandleReward();
-#else
-        // ✅ במכשיר אמיתי - הצג פרסומת
-        RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
-        RewardedAdsManager.Instance.OnRewardGranted += HandleReward;
-        RewardedAdsManager.Instance.ShowRewarded();
-#endif
+            // נרשמים ל-Reward פעם אחת
+            RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
+            RewardedAdsManager.Instance.OnRewardGranted += HandleReward;
+
+            RewardedAdsManager.Instance.ShowRewarded(
+                onReward: null,
+                onClosed: (completed) =>
+                {
+                    if (watchAdButton != null)
+                        watchAdButton.interactable = true;
+                },
+                onFailed: (error) =>
+                {
+                    Debug.LogWarning($"[HintDialog] Failed to show ad: {error}");
+                    if (watchAdButton != null)
+                        watchAdButton.interactable = true;
+                },
+                onOpened: null
+            );
+        }
+
+        // אם יש כבר מודעה טעונה – מציגים מיד
+        if (RewardedAdsManager.Instance.IsReady())
+        {
+            Debug.Log("[HintDialog] Ad ready, showing now.");
+            ShowNow();
+        }
+        else
+        {
+            // אם אין מודעה – טוענים ואז מציגים
+            Debug.Log("[HintDialog] Ad not ready, loading...");
+            RewardedAdsManager.Instance.Preload(success =>
+            {
+                if (success && RewardedAdsManager.Instance.IsReady())
+                {
+                    Debug.Log("[HintDialog] Ad loaded after click, showing now.");
+                    ShowNow();
+                }
+                else
+                {
+                    Debug.LogWarning("[HintDialog] Ad failed to load, cannot show hint.");
+                    if (watchAdButton != null)
+                        watchAdButton.interactable = true;
+                }
+            });
+        }
     }
 
+
+
+    /// <summary>
+    /// Called when user successfully watches rewarded ad.
+    /// Grants hint and triggers onHintGranted event.
+    /// </summary>
     private void HandleReward()
     {
-        Debug.Log("[HintDialog] ✅ הפרסומת הסתיימה - מעניק רמז!");
-
         if (RewardedAdsManager.Instance != null)
             RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
 
         HideImmediate();
+
+        #if UNITY_EDITOR
+        Debug.Log("[HintDialog] Hint reward granted!");
+        #endif
+
+        // Trigger hint logic (connected in Unity Inspector or via VisualHintSystem)
         onHintGranted?.Invoke();
-
-        // ✅ מפעיל את מערכת הרמזים החדשה!
-        if (hintSystem != null)
-        {
-            Debug.Log("[HintDialog] מפעיל VisualHintSystem...");
-            hintSystem.TriggerHint();
-
-            // ✅ אחרי 5 שניות (זמן שהרמז מסתיים), נבטל את הנעילה
-            StartCoroutine(UnlockDialogAfterHint());
-        }
-        else
-        {
-            Debug.LogError("[HintDialog] ❌ VisualHintSystem לא מחובר!");
-            isShowingHint = false; // בטל נעילה אם אין רמז
-        }
     }
 
-    private IEnumerator UnlockDialogAfterHint()
-    {
-        // ✅ חכה 5 שניות (זמן שהרמז רץ)
-        yield return new WaitForSeconds(5f);
-
-        isShowingHint = false;
-        Debug.Log("[HintDialog] 🔓 Hint finished - dialog unlocked");
-    }
-
+    /// <summary>
+    /// Shows the dialog immediately using CanvasGroup.
+    /// </summary>
     private void ShowImmediate()
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🟢 ShowImmediate - enabling all children");
-
-        // ✅ הפעל את כל ה-children
-        for (int i = 0; i < transform.childCount; i++)
-        {
-            transform.GetChild(i).gameObject.SetActive(true);
-        }
-
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
         dialogGroup.blocksRaycasts = true;
-
-        // 🔊 Play open sound
-        PlayOpenSound();
-
-        Debug.Log($"[HintDialog] ✅ All children enabled");
     }
 
-    private void PlayOpenSound()
-    {
-        if (openSound == null) return;
-
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-            {
-                audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.playOnAwake = false;
-            }
-        }
-
-        audioSource.PlayOneShot(openSound, soundVolume);
-        Debug.Log("[HintDialog] 🔊 Playing open sound");
-    }
-
+    /// <summary>
+    /// Hides the dialog immediately using CanvasGroup.
+    /// </summary>
     private void HideImmediate()
     {
         if (dialogGroup == null) return;
 
-        Debug.Log($"[HintDialog] 🔴 HideImmediate - disabling all children");
-
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
-
-        // ✅ כבה את כל ה-children - החלון יעלם לגמרי!
-        for (int i = 0; i < transform.childCount; i++)
-        {
-            transform.GetChild(i).gameObject.SetActive(false);
-        }
-
-        Debug.Log($"[HintDialog] ✅ All {transform.childCount} children disabled");
     }
 }
