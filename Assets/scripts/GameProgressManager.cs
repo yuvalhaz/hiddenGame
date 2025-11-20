@@ -250,16 +250,22 @@ public class GameProgressManager : MonoBehaviour
 
     public void RemoveItemPlacement(string itemId)
     {
+        if (progressData == null || progressData.placedItems == null)
+        {
+            Debug.LogWarning("[GameProgressManager] Cannot remove item - progressData not initialized!");
+            return;
+        }
+
         var itemToRemove = progressData.placedItems.FirstOrDefault(item => item.itemId == itemId);
         if (itemToRemove != null)
         {
             progressData.placedItems.Remove(itemToRemove);
-            
+
             if (debugMode)
                 Debug.Log($"[GameProgressManager] Item placement removed: {itemId}");
-                
+
             OnItemRemoved?.Invoke(itemId);
-            
+
             if (autoSave)
                 SaveProgress();
         }
@@ -267,22 +273,26 @@ public class GameProgressManager : MonoBehaviour
 
     public bool IsItemPlaced(string itemId)
     {
+        // Initialize progressData if null (can happen during OnValidate before Awake)
         if (progressData == null)
         {
-            Debug.LogWarning("[GameProgressManager] IsItemPlaced called but progressData is null!");
-            return false;
+            if (debugMode)
+                Debug.LogWarning("[GameProgressManager] IsItemPlaced called but progressData is null! Initializing now.");
+            InitializeProgress();
         }
 
         if (progressData.placedItems == null)
         {
-            Debug.LogWarning("[GameProgressManager] IsItemPlaced called but placedItems list is null!");
+            if (debugMode)
+                Debug.LogWarning("[GameProgressManager] IsItemPlaced called but placedItems list is null! Initializing now.");
             progressData.placedItems = new List<PlacedItemData>();
             return false;
         }
 
         if (string.IsNullOrEmpty(itemId))
         {
-            Debug.LogWarning("[GameProgressManager] IsItemPlaced called with null or empty itemId!");
+            if (debugMode)
+                Debug.LogWarning("[GameProgressManager] IsItemPlaced called with null or empty itemId!");
             return false;
         }
 
@@ -509,6 +519,10 @@ public class GameProgressManager : MonoBehaviour
 
     public GameProgressData GetProgressData()
     {
+        if (progressData == null)
+        {
+            InitializeProgress();
+        }
         return progressData;
     }
 
@@ -542,11 +556,19 @@ public class GameProgressManager : MonoBehaviour
 
     public int GetTotalItemsPlaced()
     {
+        if (progressData == null)
+        {
+            InitializeProgress();
+        }
         return progressData.totalItemsPlaced;
     }
 
     public int GetCurrentLevelItemsPlaced()
     {
-        return progressData.placedItems.Count;
+        if (progressData == null)
+        {
+            InitializeProgress();
+        }
+        return progressData.placedItems?.Count ?? 0;
     }
 }
