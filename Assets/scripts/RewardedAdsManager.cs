@@ -105,6 +105,7 @@ public class RewardedAdsManager : MonoBehaviour
         if (isAdLoading)
         {
             Debug.LogWarning("[RewardedAdsManager] Ad is already loading");
+            SafeInvoke(onLoaded, false);
             return;
         }
 
@@ -130,48 +131,8 @@ public class RewardedAdsManager : MonoBehaviour
             rewardedAd = ad;
             Debug.Log("[RewardedAdsManager] Ad loaded successfully!");
 
-            // רישום אירועי מחזור חיים של הפרסומת
-            RegisterAdEvents(rewardedAd);
-
             SafeInvoke(onLoaded, true);
         });
-    }
-
-    private void RegisterAdEvents(RewardedAd ad)
-    {
-        ad.OnAdPaid += (AdValue adValue) =>
-        {
-            Debug.Log($"[RewardedAdsManager] Ad paid: {adValue.Value} {adValue.CurrencyCode}");
-        };
-
-        ad.OnAdImpressionRecorded += () =>
-        {
-            Debug.Log("[RewardedAdsManager] Ad impression recorded");
-        };
-
-        ad.OnAdClicked += () =>
-        {
-            Debug.Log("[RewardedAdsManager] Ad clicked");
-        };
-
-        ad.OnAdFullScreenContentOpened += () =>
-        {
-            Debug.Log("[RewardedAdsManager] Ad opened full screen");
-        };
-
-        ad.OnAdFullScreenContentClosed += () =>
-        {
-            Debug.Log("[RewardedAdsManager] Ad closed");
-            // טען פרסומת חדשה אוטומטית
-            Preload();
-        };
-
-        ad.OnAdFullScreenContentFailed += (AdError error) =>
-        {
-            Debug.LogError($"[RewardedAdsManager] Ad failed to show: {error}");
-            // טען פרסומת חדשה אוטומטית
-            Preload();
-        };
     }
 #endif
 
@@ -220,6 +181,11 @@ public class RewardedAdsManager : MonoBehaviour
         }
 
         bool rewardGranted = false;
+
+        // נקה callbacks קודמים כדי למנוע רישום כפול
+        rewardedAd.OnAdFullScreenContentOpened = null;
+        rewardedAd.OnAdFullScreenContentClosed = null;
+        rewardedAd.OnAdFullScreenContentFailed = null;
 
         // רישום callbacks חד-פעמיים
         rewardedAd.OnAdFullScreenContentOpened += () =>
