@@ -31,9 +31,14 @@ public class EndingDialogController : MonoBehaviour
     private int currentDialog = 0;
     private Coroutine autoAdvanceCoroutine = null;
     private bool skipRequested = false;
+    private int bubblesPopped = 0; // כמה בועות כבר נלחצו
+    private bool[] bubbleStates; // מצב כל בועה - פעילה או נעלמה
 
     void Start()
     {
+        // אתחל מערך מצבי הבועות
+        bubbleStates = new bool[imageAnimators.Length];
+
         // כבה את BubbleMaster בהתחלה
         if (bubbleMaster != null)
         {
@@ -65,19 +70,21 @@ public class EndingDialogController : MonoBehaviour
 
     private void SetupBubbleClickListeners()
     {
-        foreach (var animator in imageAnimators)
+        for (int i = 0; i < imageAnimators.Length; i++)
         {
-            if (animator != null)
+            if (imageAnimators[i] != null)
             {
+                int bubbleIndex = i; // Capture index for closure
+
                 // הוסף Collider לאובייקט הראשי
-                var collider = animator.GetComponent<Collider2D>();
+                var collider = imageAnimators[i].GetComponent<Collider2D>();
                 if (collider == null)
                 {
-                    collider = animator.gameObject.AddComponent<BoxCollider2D>();
+                    collider = imageAnimators[i].gameObject.AddComponent<BoxCollider2D>();
                 }
 
                 // ✅ הוסף Colliders גם לכל הילדים (הבועות עצמן)
-                SpriteRenderer[] childSprites = animator.GetComponentsInChildren<SpriteRenderer>(true);
+                SpriteRenderer[] childSprites = imageAnimators[i].GetComponentsInChildren<SpriteRenderer>(true);
                 foreach (var sprite in childSprites)
                 {
                     if (sprite.GetComponent<Collider2D>() == null)
@@ -88,61 +95,108 @@ public class EndingDialogController : MonoBehaviour
                 }
 
                 // ✅ אם משתמשים ב-UI (Image במקום Sprite)
-                UnityEngine.UI.Image[] childImages = animator.GetComponentsInChildren<UnityEngine.UI.Image>(true);
+                UnityEngine.UI.Image[] childImages = imageAnimators[i].GetComponentsInChildren<UnityEngine.UI.Image>(true);
                 foreach (var image in childImages)
                 {
                     image.raycastTarget = true; // ודא ש-raycast מופעל
-                    Debug.Log($"[EndingDialogController] Enabled raycast on UI image: {image.name}");
-                }
-            }
-        }
-    }
 
-    void Update()
-    {
-        // בדוק לחיצה על בועות
-        if (allowClickToSkip && !skipRequested && bubbleMaster != null && bubbleMaster.activeSelf)
-        {
-            if (Input.GetMouseButtonDown(0))
-            {
-                Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
-
-                if (hit.collider != null)
-                {
-                    // ✅ בדוק אם לחצו על אחת הבועות או על הילדים שלהן
-                    foreach (var animator in imageAnimators)
+                    // הוסף Button component לכל Image כדי לתפוס לחיצה
+                    var button = image.GetComponent<Button>();
+                    if (button == null)
                     {
-                        if (animator != null)
-                        {
-                            // בדוק אם הלחיצה הייתה על האובייקט עצמו או על אחד מהילדים שלו
-                            if (hit.collider.gameObject == animator.gameObject ||
-                                hit.collider.transform.IsChildOf(animator.transform))
-                            {
-                                Debug.Log($"[EndingDialogController] Clicked on bubble: {hit.collider.gameObject.name}");
-                                OnBubbleClicked();
-                                break;
-                            }
-                        }
+                        button = image.gameObject.AddComponent<Button>();
                     }
+
+                    // הוסף listener עם האינדקס הנכון
+                    button.onClick.RemoveAllListeners();
+                    button.onClick.AddListener(() => OnBubbleClicked(bubbleIndex));
+
+                    Debug.Log($"[EndingDialogController] Added click handler to bubble {bubbleIndex}: {image.name}");
                 }
             }
         }
     }
 
-    private void OnBubbleClicked()
+    private void OnBubbleClicked(int bubbleIndex)
     {
-        Debug.Log("[EndingDialogController] Bubble clicked - skipping to ad!");
-        skipRequested = true;
-
-        // עצור את ה-auto advance
-        if (autoAdvanceCoroutine != null)
+        // בדוק אם הבועה כבר נלחצה
+        if (bubbleStates[bubbleIndex])
         {
-            StopCoroutine(autoAdvanceCoroutine);
-            autoAdvanceCoroutine = null;
+            Debug.Log($"[EndingDialogController] Bubble {bubbleIndex} already popped!");
+            return;
         }
 
-        // קפוץ ישר ל-EndGame (שיריץ פרסומת ויעבור לסצנה הבאה)
+        Debug.Log($"[EndingDialogController] Bubble {bubbleIndex} clicked!");
+
+        // סמן שהבועה נלחצה
+        bubbleStates[bubbleIndex] = true;
+        bubblesPopped++;
+
+        // הפעל אפקט פופ (אנימציה של היעלמות)
+        StartCoroutine(PopBubble(bubbleIndex));
+
+        // נגן צליל אם קיים
+        PlayBubbleSound();
+
+        // בדוק אם כל הבועות נלחצו
+        if (bubblesPopped >= imageAnimators.Length)
+        {
+            Debug.Log("[EndingDialogController] All bubbles popped! Moving to ad...");
+
+            // עצור את ה-auto advance
+            if (autoAdvanceCoroutine != null)
+            {
+                StopCoroutine(autoAdvanceCoroutine);
+                autoAdvanceCoroutine = null;
+            }
+
+            // המתן קצת ואז עבור לפרסומת
+            StartCoroutine(WaitAndEndGame());
+        }
+    }
+
+    private System.Collections.IEnumerator PopBubble(int bubbleIndex)
+    {
+        if (imageAnimators[bubbleIndex] == null)
+            yield break;
+
+        Transform bubbleTransform = imageAnimators[bubbleIndex].transform;
+        Vector3 originalScale = bubbleTransform.localScale;
+
+        // אנימציה של היעלמות - התכווצות מהירה
+        float duration = 0.3f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float progress = elapsed / duration;
+
+            // קצת קפיצה ואז התכווצות
+            float scale = Mathf.Lerp(1f, 0f, progress);
+            if (progress < 0.3f)
+            {
+                scale = Mathf.Lerp(1f, 1.2f, progress / 0.3f); // קפיצה קלה
+            }
+            else
+            {
+                scale = Mathf.Lerp(1.2f, 0f, (progress - 0.3f) / 0.7f); // התכווצות
+            }
+
+            bubbleTransform.localScale = originalScale * scale;
+            yield return null;
+        }
+
+        // כבה את הבועה לגמרי
+        imageAnimators[bubbleIndex].gameObject.SetActive(false);
+    }
+
+    private System.Collections.IEnumerator WaitAndEndGame()
+    {
+        // המתן קצת אחרי שהבועה האחרונה נעלמה
+        yield return new WaitForSeconds(0.5f);
+
+        // עבור לפרסומת וסצנה הבאה
         EndGame();
     }
 
@@ -256,13 +310,37 @@ public class EndingDialogController : MonoBehaviour
     public void StartEndingDialog()
     {
         currentDialog = 0;
-        skipRequested = false; // אפס את הדגל
+        skipRequested = false;
+        bubblesPopped = 0; // אפס את מונה הבועות
 
-        // הדלק את BubbleMaster
+        // אפס את מצבי הבועות
+        if (bubbleStates == null || bubbleStates.Length != imageAnimators.Length)
+        {
+            bubbleStates = new bool[imageAnimators.Length];
+        }
+        else
+        {
+            for (int i = 0; i < bubbleStates.Length; i++)
+            {
+                bubbleStates[i] = false;
+            }
+        }
+
+        // הדלק את BubbleMaster והבועות
         if (bubbleMaster != null)
         {
             bubbleMaster.SetActive(true);
             Debug.Log("[EndingDialogController] ✅ BubbleMaster activated");
+        }
+
+        // ודא שכל הבועות פעילות
+        foreach (var animator in imageAnimators)
+        {
+            if (animator != null)
+            {
+                animator.gameObject.SetActive(true);
+                animator.transform.localScale = Vector3.one; // החזר לגודל מקורי
+            }
         }
 
         if (autoAdvance)
@@ -280,38 +358,17 @@ public class EndingDialogController : MonoBehaviour
 
     private IEnumerator AutoAdvanceDialogs()
     {
+        // הצג את כל הבועות אחת אחרי השנייה
         for (int i = 0; i < imageAnimators.Length; i++)
         {
-            if (skipRequested)
-            {
-                Debug.Log("[EndingDialogController] Skip detected in loop, exiting");
-                yield break; // עצור את הלולאה
-            }
-
             currentDialog = i;
             ShowCurrentDialog();
             yield return new WaitForSeconds(delayBetweenBubbles);
         }
 
-        if (skipRequested)
-        {
-            Debug.Log("[EndingDialogController] Skip detected after bubbles, exiting");
-            yield break;
-        }
-
-        yield return new WaitForSeconds(allBubblesDisplayTime);
-
-        if (skipRequested)
-        {
-            Debug.Log("[EndingDialogController] Skip detected after display time, exiting");
-            yield break;
-        }
-
-        yield return new WaitForSeconds(0.5f);
-
-        if (!skipRequested)
-        {
-            EndGame();
-        }
+        // עכשיו כל הבועות מוצגות
+        // השחקן צריך ללחוץ עליהן כדי להמשיך
+        // OnBubbleClicked יטפל בכל השאר
+        Debug.Log("[EndingDialogController] All bubbles shown. Waiting for player clicks...");
     }
 }
