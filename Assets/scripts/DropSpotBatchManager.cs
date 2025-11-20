@@ -494,15 +494,22 @@ public class DropSpotBatchManager : MonoBehaviour
         
         if (waitForAdToClose)
         {
+            // בדוק אם הפרסומת בכלל מוכנה
+            if (!RewardedAdsManager.Instance.IsReady())
+            {
+                Debug.LogWarning("📺 Ad was not ready, skipping wait");
+                adClosed = true;
+            }
+
             float timeout = 60f;
             float elapsed = 0f;
-            
+
             while (!adClosed && elapsed < timeout)
             {
                 elapsed += Time.deltaTime;
                 yield return null;
             }
-            
+
             if (elapsed >= timeout)
                 Debug.LogWarning("📺 Ad timeout!");
         }
