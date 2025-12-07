@@ -13,5 +13,8 @@
 !Assets/scripts/
 !Assets/scripts/**
 
+# אל תתעלם מקבצי תיעוד
+!*.md
+
 # התעלם מקבצי meta
 *.meta
