@@ -25,6 +25,10 @@ public class GameProgressData
 
 public class GameProgressManager : MonoBehaviour
 {
+    [Header("Level System")]
+    [SerializeField] private LevelData currentLevelData;
+    [Tooltip("Optional: Assign the current level's LevelData for per-level saving")]
+
     [Header("Save Settings")]
     [SerializeField] private bool autoSave = true;
     [SerializeField] private float autoSaveInterval = 10f; // seconds
@@ -45,6 +49,18 @@ public class GameProgressManager : MonoBehaviour
     public System.Action OnProgressSaved;
 
     private const string SAVE_KEY = "GameProgress";
+
+    /// <summary>
+    /// Get the save key for the current level (if levelData is assigned)
+    /// </summary>
+    private string GetCurrentSaveKey()
+    {
+        if (currentLevelData != null)
+        {
+            return currentLevelData.GetProgressKey();
+        }
+        return SAVE_KEY; // Fallback to global progress
+    }
 
     private void Awake()
     {
@@ -149,16 +165,21 @@ public class GameProgressManager : MonoBehaviour
 
     private void LoadProgress()
     {
-        if (PlayerPrefs.HasKey(SAVE_KEY))
+        string saveKey = GetCurrentSaveKey();
+
+        if (PlayerPrefs.HasKey(saveKey))
         {
             try
             {
-                string jsonData = PlayerPrefs.GetString(SAVE_KEY);
+                string jsonData = PlayerPrefs.GetString(saveKey);
                 progressData = JsonUtility.FromJson<GameProgressData>(jsonData);
-                
+
                 if (debugMode)
-                    Debug.Log($"[GameProgressManager] Progress loaded: {progressData.placedItems.Count} items placed, level {progressData.currentLevel}");
-                    
+                {
+                    string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
+                    Debug.Log($"[GameProgressManager] Progress loaded{levelInfo}: {progressData.placedItems.Count} items placed (Key: {saveKey})");
+                }
+
                 OnProgressLoaded?.Invoke();
             }
             catch (System.Exception e)
@@ -170,7 +191,10 @@ public class GameProgressManager : MonoBehaviour
         else
         {
             if (debugMode)
-                Debug.Log("[GameProgressManager] No save data found, starting fresh");
+            {
+                string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
+                Debug.Log($"[GameProgressManager] No save data found{levelInfo}, starting fresh (Key: {saveKey})");
+            }
             InitializeProgress();
         }
     }
@@ -181,12 +205,18 @@ public class GameProgressManager : MonoBehaviour
         {
             progressData.lastPlayDate = System.DateTime.Now;
             string jsonData = JsonUtility.ToJson(progressData, true);
-            PlayerPrefs.SetString(SAVE_KEY, jsonData);
+
+            // Save to level-specific key if available
+            string saveKey = GetCurrentSaveKey();
+            PlayerPrefs.SetString(saveKey, jsonData);
             PlayerPrefs.Save();
-            
+
             if (debugMode)
-                Debug.Log($"[GameProgressManager] Progress saved: {progressData.placedItems.Count} items");
-                
+            {
+                string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
+                Debug.Log($"[GameProgressManager] Progress saved{levelInfo}: {progressData.placedItems.Count} items (Key: {saveKey})");
+            }
+
             OnProgressSaved?.Invoke();
         }
         catch (System.Exception e)
