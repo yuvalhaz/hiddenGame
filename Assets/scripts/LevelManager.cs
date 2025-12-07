@@ -10,6 +10,7 @@ public class LevelManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private GameProgressManager progressManager;
     [SerializeField] private RewardedAdsManager adsManager;
+    [SerializeField] private LevelCompleteController levelCompleteController;
     
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
@@ -58,6 +59,7 @@ public class LevelManager : MonoBehaviour
         // Find references if not assigned
         if (!progressManager) progressManager = FindObjectOfType<GameProgressManager>();
         if (!adsManager) adsManager = FindObjectOfType<RewardedAdsManager>();
+        if (!levelCompleteController) levelCompleteController = FindObjectOfType<LevelCompleteController>();
         
         ValidateLevels();
     }
@@ -165,6 +167,23 @@ public class LevelManager : MonoBehaviour
 
         // Fire event
         OnLevelCompleted?.Invoke(currentLevelIndex);
+
+        // ✅ NEW: Trigger LevelCompleteController if available
+        if (levelCompleteController != null)
+        {
+            var currentLevelItems = GetCurrentLevelItemIds();
+            int placedCount = 0;
+            if (progressManager != null)
+            {
+                foreach (string itemId in currentLevelItems)
+                {
+                    if (progressManager.IsItemPlaced(itemId))
+                        placedCount++;
+                }
+            }
+
+            levelCompleteController.CheckLevelCompletion(placedCount, currentLevelItems.Count);
+        }
 
         // Show ad if ads manager is available
         if (adsManager != null && adsManager.IsReady())
