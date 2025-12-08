@@ -307,7 +307,8 @@ public class LevelManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Public method to advance to next level - can be called by LevelCompleteController
+    /// Public method to advance to next level - reloads scene to reset everything
+    /// Called by LevelCompleteController after level completion
     /// </summary>
     public void AdvanceToNextLevel()
     {
@@ -315,23 +316,26 @@ public class LevelManager : MonoBehaviour
         {
             currentLevelIndex++;
             SaveCurrentLevel();
-            
+
             Debug.Log($"[LevelManager] ⏭️ Advanced to level {currentLevelIndex}");
-            
+
             OnLevelChanged?.Invoke(currentLevelIndex);
-            
-            // ✅ Clear progress for new level
+
+            // Clear progress for new level
             if (progressManager != null)
             {
                 progressManager.ResetAllProgress();
             }
-            
-            RefreshAvailableItems();
+
+            // Reload scene to reset everything properly (batch manager, drop spots, UI, etc.)
+            UnityEngine.SceneManagement.SceneManager.LoadScene(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
+            );
         }
         else
         {
             Debug.Log("[LevelManager] 🎊 All levels completed!");
-            
+
             // Could show "game complete" screen here
         }
     }
@@ -400,14 +404,32 @@ public class LevelManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Skip to next level (for testing)
+    /// Skip to next level (for testing) - reloads scene to reset everything
     /// </summary>
     [ContextMenu("Skip Level")]
     public void SkipLevel()
     {
         if (currentLevelIndex < levelConfig.Count - 1)
         {
-            AdvanceToNextLevel();
+            currentLevelIndex++;
+            SaveCurrentLevel();
+
+            Debug.Log($"[LevelManager] ⏭️ Skipping to level {currentLevelIndex}");
+
+            // Clear progress for new level
+            if (progressManager != null)
+            {
+                progressManager.ResetAllProgress();
+            }
+
+            // Reload scene to reset everything properly
+            UnityEngine.SceneManagement.SceneManager.LoadScene(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
+            );
+        }
+        else
+        {
+            Debug.Log("[LevelManager] 🎊 Already at last level!");
         }
     }
 
