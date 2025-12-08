@@ -12,8 +12,15 @@ public class LevelManager : MonoBehaviour
     [SerializeField] private RewardedAdsManager adsManager;
     [SerializeField] private DropSpotBatchManager batchManager;
     
+    // ✅ NEW: Reference to level complete controller
+    [Header("Level Complete System")]
+    [SerializeField] private LevelCompleteController levelCompleteController;
+    [Tooltip("Optional: If assigned, will use this for level completion. Otherwise uses built-in system.")]
+    
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
+    [SerializeField] private bool skipAdsInEditor = true;
+    [Tooltip("Skip ads when running in Unity Editor")]
 
     private int currentLevelIndex = 0;
     
@@ -60,6 +67,9 @@ public class LevelManager : MonoBehaviour
         if (!progressManager) progressManager = FindObjectOfType<GameProgressManager>();
         if (!adsManager) adsManager = FindObjectOfType<RewardedAdsManager>();
         if (!batchManager) batchManager = FindObjectOfType<DropSpotBatchManager>();
+        
+        // ✅ NEW: Find LevelCompleteController if not assigned
+        if (!levelCompleteController) levelCompleteController = FindObjectOfType<LevelCompleteController>();
 
         ValidateLevels();
     }
@@ -155,17 +165,39 @@ public class LevelManager : MonoBehaviour
     /// </summary>
     public void OnItemPlaced(string itemId)
     {
-        if (!IsItemAllowedInCurrentLevel(itemId))
+        Debug.Log($"[LevelManager] 🎯 OnItemPlaced called: {itemId}");
+        
+        if (!IsItemValid(itemId))
         {
-            Debug.LogWarning($"[LevelManager] Item {itemId} was placed but doesn't belong to current level!");
+            Debug.Log($"[LevelManager] ❌ {itemId} is NOT valid for current level");
+            if (debugMode)
+            {
+                Debug.Log($"[LevelManager] Ignoring {itemId} - belongs to different level");
+            }
             return;
         }
-
+        
+        Debug.Log($"[LevelManager] ✅ {itemId} is valid! Checking if level complete...");
+        
         // Check if current level is complete
         if (IsCurrentLevelComplete())
         {
+            Debug.Log($"[LevelManager] 🎉🎉🎉 LEVEL COMPLETE!!!");
             CompleteCurrentLevel();
         }
+        else
+        {
+            Debug.Log($"[LevelManager] Level not complete yet. Progress: {GetLevelProgress()}");
+        }
+    }
+
+    /// <summary>
+    /// Check if item belongs to current level
+    /// </summary>
+    private bool IsItemValid(string itemId)
+    {
+        // Use existing levelConfig system
+        return IsItemAllowedInCurrentLevel(itemId);
     }
 
     private bool IsCurrentLevelComplete()
@@ -191,11 +223,23 @@ public class LevelManager : MonoBehaviour
         // Fire event
         OnLevelCompleted?.Invoke(currentLevelIndex);
 
-        // ההודעה "WELL DONE!" כבר הוצגה על ידי DropSpotBatchManager בסיום הבאץ' האחרון
-        // פה רק נטפל בפרסומות ובמעבר לרמה הבאה
-
-        // חכה קצת כדי שההודעה תוצג
-        StartCoroutine(ShowAdAfterDelay());
+        // ✅ NEW: If LevelCompleteController exists, use it!
+        if (levelCompleteController != null)
+        {
+            Debug.Log("[LevelManager] Using LevelCompleteController for completion screen");
+            levelCompleteController.TriggerLevelComplete();
+        }
+        else
+        {
+            // No LevelCompleteController - use built-in system
+            Debug.Log("[LevelManager] No LevelCompleteController, using built-in system");
+            
+            // הודעה "WELL DONE!" כבר הוצגה על ידי DropSpotBatchManager בסיום הבאץ' האחרון
+            // פה רק נטפל בפרסומות ובמעבר לרמה הבאה
+            
+            // חכה קצת כדי שההודעה תוצג
+            StartCoroutine(ShowAdAfterDelay());
+        }
     }
 
     private System.Collections.IEnumerator ShowAdAfterDelay()
@@ -203,58 +247,95 @@ public class LevelManager : MonoBehaviour
         // חכה שההודעה והבועות יסתיימו
         yield return new WaitForSeconds(2.5f);
 
+        // ✅ Check if we should skip ads (in Editor)
+        #if UNITY_EDITOR
+        if (skipAdsInEditor)
+        {
+            Debug.Log("[LevelManager] ⏭️ Skipping ad in Editor");
+            AdvanceToNextLevel();
+            yield break;
+        }
+        #endif
+
         // Show ad if ads manager is available
         if (adsManager != null && adsManager.IsReady())
         {
+            Debug.Log("[LevelManager] 📺 Showing ad...");
+            
+            bool adFinished = false;
+            float adTimeout = 5f; // ✅ Shorter timeout for testing
+            float elapsed = 0f;
+            
             adsManager.ShowRewarded(
                 onReward: () =>
                 {
                     if (debugMode) Debug.Log("[LevelManager] Ad reward received");
+                    adFinished = true;
                 },
                 onClosed: (completed) =>
                 {
-                    AdvanceToNextLevel();
+                    Debug.Log("[LevelManager] Ad closed");
+                    adFinished = true;
                 },
                 onFailed: (error) =>
                 {
                     Debug.LogWarning($"[LevelManager] Ad failed: {error}");
-                    AdvanceToNextLevel(); // Continue anyway
+                    adFinished = true;
                 }
             );
+            
+            // ✅ Wait for ad with timeout
+            while (!adFinished && elapsed < adTimeout)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            if (elapsed >= adTimeout)
+            {
+                Debug.LogWarning("[LevelManager] ⏰ Ad timed out! Continuing anyway...");
+            }
         }
         else
         {
             // No ads or ads not ready - advance immediately
-            AdvanceToNextLevel();
+            Debug.Log("[LevelManager] No ads available, advancing to next level");
         }
+        
+        // ✅ Always advance, regardless of ad status
+        AdvanceToNextLevel();
     }
 
-
-    private void AdvanceToNextLevel()
+    /// <summary>
+    /// Public method to advance to next level - can be called by LevelCompleteController
+    /// </summary>
+    public void AdvanceToNextLevel()
     {
         if (currentLevelIndex < levelConfig.Count - 1)
         {
             currentLevelIndex++;
             SaveCurrentLevel();
             
-            if (debugMode)
-                Debug.Log($"[LevelManager] Advanced to level {currentLevelIndex}");
+            Debug.Log($"[LevelManager] ⏭️ Advanced to level {currentLevelIndex}");
             
             OnLevelChanged?.Invoke(currentLevelIndex);
+            
+            // ✅ Clear progress for new level
+            if (progressManager != null)
+            {
+                progressManager.ResetAllProgress();
+            }
+            
             RefreshAvailableItems();
         }
         else
         {
-            if (debugMode)
-                Debug.Log("[LevelManager] All levels completed!");
+            Debug.Log("[LevelManager] 🎊 All levels completed!");
             
             // Could show "game complete" screen here
         }
     }
 
-    /// <summary>
-    /// Refreshes which items are visible/interactable based on current level
-    /// </summary>
     /// <summary>
     /// Refreshes which items are visible/interactable based on current level
     /// </summary>
@@ -283,7 +364,6 @@ public class LevelManager : MonoBehaviour
                 Debug.Log($"[LevelManager] Made item {buttonID} available for level {currentLevelIndex}");
         }
     }
-
 
     /// <summary>
     /// Reset current level progress (for testing)

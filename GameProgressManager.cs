@@ -25,6 +25,10 @@ public class GameProgressData
 
 public class GameProgressManager : MonoBehaviour
 {
+    [Header("Level System")]
+    [SerializeField] private LevelData currentLevelData;
+    [Tooltip("Optional: Assign the current level's LevelData for per-level saving")]
+
     [Header("Save Settings")]
     [SerializeField] private bool autoSave = true;
     [SerializeField] private float autoSaveInterval = 10f; // seconds
@@ -46,6 +50,18 @@ public class GameProgressManager : MonoBehaviour
 
     private const string SAVE_KEY = "GameProgress";
 
+    /// <summary>
+    /// Get the save key for the current level (if levelData is assigned)
+    /// </summary>
+    private string GetCurrentSaveKey()
+    {
+        if (currentLevelData != null)
+        {
+            return currentLevelData.GetProgressKey();
+        }
+        return SAVE_KEY; // Fallback to global progress
+    }
+
     private void Awake()
     {
         if (Instance == null)
@@ -54,7 +70,6 @@ public class GameProgressManager : MonoBehaviour
             DontDestroyOnLoad(gameObject);
             InitializeProgress();
 
-            // ✅ הוסף את זה!
             if (!resetOnStart)
             {
                 LoadProgress();
@@ -75,7 +90,6 @@ public class GameProgressManager : MonoBehaviour
         }
         else
         {
-            // LoadProgress כבר רץ ב-Awake
             StartCoroutine(DelayedApplyProgress());
         }
     }
@@ -87,7 +101,7 @@ public class GameProgressManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.R) && debugMode)
         {
             Debug.Log("🔄 R pressed - Resetting game!");
-            ResetAllProgress();
+            ResetCurrentLevelOnly();
         }
 
         if (autoSave)
@@ -123,18 +137,12 @@ public class GameProgressManager : MonoBehaviour
         }
 
         Debug.Log("========================================");
-
-        // בדוק ספציפית את spot03
-        bool spot03Saved = progressData.placedItems.Any(item => item.itemId == "spot03");
-        Debug.Log($"🔍 Is spot03 saved? {(spot03Saved ? "YES ✅" : "NO ❌")}");
-
-        Debug.Log("========================================");
     }
 
 
     private IEnumerator DelayedApplyProgress()
     {
-        yield return null; // ✅ רק frame אחד מספיק!
+        yield return null;
 
         Debug.Log($"[GameProgressManager] === STARTING APPLY PROGRESS ===");
         ApplyProgressToScene();
@@ -149,28 +157,36 @@ public class GameProgressManager : MonoBehaviour
 
     private void LoadProgress()
     {
-        if (PlayerPrefs.HasKey(SAVE_KEY))
+        string saveKey = GetCurrentSaveKey();
+
+        if (PlayerPrefs.HasKey(saveKey))
         {
             try
             {
-                string jsonData = PlayerPrefs.GetString(SAVE_KEY);
+                string jsonData = PlayerPrefs.GetString(saveKey);
                 progressData = JsonUtility.FromJson<GameProgressData>(jsonData);
-                
+
                 if (debugMode)
-                    Debug.Log($"[GameProgressManager] Progress loaded: {progressData.placedItems.Count} items placed, level {progressData.currentLevel}");
-                    
+                {
+                    string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
+                    Debug.Log($"[GameProgressManager] Progress loaded{levelInfo}: {progressData.placedItems.Count} items placed (Key: {saveKey})");
+                }
+
                 OnProgressLoaded?.Invoke();
             }
             catch (System.Exception e)
             {
                 Debug.LogError($"[GameProgressManager] Failed to load progress: {e.Message}");
-                InitializeProgress(); // Reset to default
+                InitializeProgress();
             }
         }
         else
         {
             if (debugMode)
-                Debug.Log("[GameProgressManager] No save data found, starting fresh");
+            {
+                string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
+                Debug.Log($"[GameProgressManager] No save data found{levelInfo}, starting fresh (Key: {saveKey})");
+            }
             InitializeProgress();
         }
     }
@@ -181,12 +197,17 @@ public class GameProgressManager : MonoBehaviour
         {
             progressData.lastPlayDate = System.DateTime.Now;
             string jsonData = JsonUtility.ToJson(progressData, true);
-            PlayerPrefs.SetString(SAVE_KEY, jsonData);
+
+            string saveKey = GetCurrentSaveKey();
+            PlayerPrefs.SetString(saveKey, jsonData);
             PlayerPrefs.Save();
-            
+
             if (debugMode)
-                Debug.Log($"[GameProgressManager] Progress saved: {progressData.placedItems.Count} items");
-                
+            {
+                string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
+                Debug.Log($"[GameProgressManager] Progress saved{levelInfo}: {progressData.placedItems.Count} items (Key: {saveKey})");
+            }
+
             OnProgressSaved?.Invoke();
         }
         catch (System.Exception e)
@@ -215,7 +236,6 @@ public class GameProgressManager : MonoBehaviour
             progressData.placedItems = new List<PlacedItemData>();
         }
 
-        // Check if already exists
         if (progressData.placedItems.Any(item => item.itemId == itemId))
         {
             if (debugMode)
@@ -223,45 +243,36 @@ public class GameProgressManager : MonoBehaviour
             return;
         }
 
-        var placedItem = new PlacedItemData
+        PlacedItemData newItem = new PlacedItemData
         {
             itemId = itemId,
-            spriteName = itemSprite ? itemSprite.name : ""
+            spriteName = itemSprite != null ? itemSprite.name : ""
         };
-
-        progressData.placedItems.Add(placedItem);
+        
+        progressData.placedItems.Add(newItem);
         progressData.totalItemsPlaced++;
-
+        
         if (debugMode)
-            Debug.Log($"[GameProgressManager] Item marked as placed: {itemId}");
-
-        try
-        {
-            OnItemPlaced?.Invoke(itemId);
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogWarning($"[GameProgressManager] OnItemPlaced event error: {e.Message}");
-        }
-
-        if (autoSave)
-            SaveProgress();
+            Debug.Log($"[GameProgressManager] ✅ Marked item as placed: {itemId}");
+        
+        OnItemPlaced?.Invoke(itemId);
+        SaveProgress();
     }
 
     public void RemoveItemPlacement(string itemId)
     {
+        if (progressData.placedItems == null)
+            return;
+            
         var itemToRemove = progressData.placedItems.FirstOrDefault(item => item.itemId == itemId);
         if (itemToRemove != null)
         {
             progressData.placedItems.Remove(itemToRemove);
+            OnItemRemoved?.Invoke(itemId);
+            SaveProgress();
             
             if (debugMode)
-                Debug.Log($"[GameProgressManager] Item placement removed: {itemId}");
-                
-            OnItemRemoved?.Invoke(itemId);
-            
-            if (autoSave)
-                SaveProgress();
+                Debug.Log($"[GameProgressManager] Removed item placement: {itemId}");
         }
     }
 
@@ -270,34 +281,23 @@ public class GameProgressManager : MonoBehaviour
         if (progressData == null)
         {
             Debug.LogWarning("[GameProgressManager] IsItemPlaced called but progressData is null!");
+            InitializeProgress();
             return false;
         }
-
+        
         if (progressData.placedItems == null)
         {
-            Debug.LogWarning("[GameProgressManager] IsItemPlaced called but placedItems list is null!");
-            progressData.placedItems = new List<PlacedItemData>();
             return false;
         }
-
-        if (string.IsNullOrEmpty(itemId))
-        {
-            Debug.LogWarning("[GameProgressManager] IsItemPlaced called with null or empty itemId!");
-            return false;
-        }
-
+        
         return progressData.placedItems.Any(item => item.itemId == itemId);
     }
 
-    // ✅ UPDATED: Works with DraggableButton instead of SimpleDragFromBar
     private void ApplyProgressToScene()
     {
-        Debug.Log($"=== APPLY PROGRESS START ===");
-        Debug.Log($"[GameProgressManager] Items to restore: {progressData.placedItems.Count}");
-
-        if (progressData.placedItems.Count == 0)
+        if (progressData == null || progressData.placedItems == null || progressData.placedItems.Count == 0)
         {
-            Debug.Log("[GameProgressManager] No items to restore");
+            Debug.Log("[GameProgressManager] No progress to apply");
             return;
         }
 
@@ -306,7 +306,6 @@ public class GameProgressManager : MonoBehaviour
 
         Debug.Log($"[GameProgressManager] Found {allDragButtons.Length} buttons, {allDropSpots.Length} spots");
 
-        // ✅ שמור את כל ה-bars
         var allBars = new System.Collections.Generic.HashSet<ScrollableButtonBar>();
 
         foreach (var placedItem in progressData.placedItems)
@@ -322,7 +321,6 @@ public class GameProgressManager : MonoBehaviour
 
                 if (dragButton != null)
                 {
-                    // ✅ שמור את ה-bar לפני המחיקה
                     var bar = dragButton.GetComponentInParent<ScrollableButtonBar>();
                     if (bar != null)
                     {
@@ -348,7 +346,6 @@ public class GameProgressManager : MonoBehaviour
             }
         }
 
-        // ✅ עדכן את כל ה-bars
         if (allBars.Count > 0)
         {
             StartCoroutine(RefreshAllBars(allBars));
@@ -362,16 +359,13 @@ public class GameProgressManager : MonoBehaviour
     {
         Debug.Log("=== FULL RESET START ===");
 
-        // 1. מחק את כל השמירה
         PlayerPrefs.DeleteAll();
         PlayerPrefs.Save();
         Debug.Log("✅ PlayerPrefs deleted");
 
-        // 2. אפס את המידע בזיכרון
         progressData = new GameProgressData();
         Debug.Log("✅ Progress data reset");
 
-        // 3. אפס את כל ה-DropSpots
         DropSpot[] allDropSpots = FindObjectsOfType<DropSpot>(true);
         foreach (DropSpot spot in allDropSpots)
         {
@@ -385,7 +379,6 @@ public class GameProgressManager : MonoBehaviour
         }
         Debug.Log($"✅ Reset {allDropSpots.Length} DropSpots");
 
-        // 4. הצג את כל הכפתורים
         DraggableButton[] allButtons = FindObjectsOfType<DraggableButton>(true);
         foreach (DraggableButton btn in allButtons)
         {
@@ -394,13 +387,12 @@ public class GameProgressManager : MonoBehaviour
         Debug.Log($"✅ Showed {allButtons.Length} buttons");
 
         Debug.Log("=== ✅ FULL RESET COMPLETE ===");
-        Debug.Log("⚠️ Press PLAY to see the changes!");
+        Debug.Log("⚠️ Reload the scene to see changes!");
     }
 
-    // ✅ פונקציה חדשה
     private IEnumerator RefreshAllBars(System.Collections.Generic.HashSet<ScrollableButtonBar> bars)
     {
-        yield return null; // המתן frame אחד כדי שהכפתורים יימחקו
+        yield return null;
 
         Debug.Log($"[GameProgressManager] Refreshing {bars.Count} button bars");
 
@@ -413,23 +405,17 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
-
-
-    // ✅ UPDATED: Works with DraggableButton
     private void ApplyItemPlacement(DraggableButton dragButton, DropSpot dropSpot)
     {
         Debug.Log($"[GameProgressManager] Applying placement for: {dropSpot.spotId}");
 
-        // ✅ שמור את ה-ScrollableButtonBar לפני שמוחקים
         ScrollableButtonBar buttonBar = null;
         int buttonIndex = -1;
 
         if (dragButton != null)
         {
-            // ✅ קבל את הפרטים לפני המחיקה
             buttonBar = dragButton.GetComponentInParent<ScrollableButtonBar>();
 
-            // ✅ מצא את האינדקס של הכפתור
             if (buttonBar != null)
             {
                 var allButtons = buttonBar.GetComponentsInChildren<DraggableButton>(true);
@@ -447,17 +433,13 @@ public class GameProgressManager : MonoBehaviour
             Destroy(dragButton.gameObject);
         }
 
-        // ✅ עדכן את ה-bar אחרי המחיקה
         if (buttonBar != null && buttonIndex >= 0)
         {
-            // המתן frame אחד כדי שהכפתור באמת יימחק
             StartCoroutine(UpdateBarAfterDestroy(buttonBar, buttonIndex));
         }
 
-        // סמן את ה-spot כמושם
         dropSpot.IsSettled = true;
 
-        // הצג את התמונה
         var revealController = dropSpot.GetComponent<ImageRevealController>();
         if (revealController != null)
         {
@@ -470,17 +452,14 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
-
-    // ✅ פונקציה חדשה
     private IEnumerator UpdateBarAfterDestroy(ScrollableButtonBar bar, int index)
     {
-        yield return null; // המתן frame אחד
+        yield return null;
 
         if (bar != null)
         {
             Debug.Log($"[GameProgressManager] Updating bar after button {index} destroyed");
 
-            // ✅ סמן את הכפתור כלא פעיל ב-bar
             var barScript = bar.GetType();
             var buttonStatesField = barScript.GetField("buttonStates",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -494,7 +473,6 @@ public class GameProgressManager : MonoBehaviour
                 }
             }
 
-            // ✅ קרא ל-RecalculateAllPositions
             var method = barScript.GetMethod("RecalculateAllPositions",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
@@ -506,33 +484,106 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
-
     public GameProgressData GetProgressData()
     {
         return progressData;
     }
 
-    // ✅ UPDATED: Works with DraggableButton
-    public void ResetAllProgress()
+    /// <summary>
+    /// Reset ONLY the current level's progress (not all levels)
+    /// </summary>
+    [ContextMenu("🔄 Reset Current Level Only")]
+    public void ResetCurrentLevelOnly()
     {
-        progressData = new GameProgressData();
-        PlayerPrefs.DeleteKey(SAVE_KEY);
+        Debug.Log("[GameProgressManager] 🔄 Resetting current level only...");
         
-        if (debugMode)
-            Debug.Log("[GameProgressManager] All progress reset");
-            
+        // 1. Reset in-memory data
+        progressData = new GameProgressData();
+        
+        // 2. Delete current level-specific key
+        string currentKey = GetCurrentSaveKey();
+        PlayerPrefs.DeleteKey(currentKey);
+        PlayerPrefs.Save();
+        Debug.Log($"[GameProgressManager] ✅ Deleted key: {currentKey}");
+        
+        // 3. Reset all DropSpots in scene
         DropSpot[] allDropSpots = FindObjectsOfType<DropSpot>();
         foreach (DropSpot spot in allDropSpots)
         {
             spot.ResetSpot();
         }
+        Debug.Log($"[GameProgressManager] ✅ Reset {allDropSpots.Length} drop spots");
         
-        // ✅ Find DraggableButton instead of SimpleDragFromBar
+        // 4. Show all DraggableButtons
         DraggableButton[] allDragButtons = FindObjectsOfType<DraggableButton>();
         foreach (DraggableButton button in allDragButtons)
         {
             button.gameObject.SetActive(true);
         }
+        Debug.Log($"[GameProgressManager] ✅ Showed {allDragButtons.Length} buttons");
+        
+        Debug.Log("[GameProgressManager] 🎉 CURRENT LEVEL RESET COMPLETE!");
+    }
+
+    /// <summary>
+    /// Reset ALL progress for ALL levels
+    /// </summary>
+    [ContextMenu("🗑️ Reset ALL Levels Progress")]
+    public void ResetAllProgress()
+    {
+        Debug.Log("[GameProgressManager] 🔄 Starting FULL reset...");
+        
+        // 1. Reset in-memory data
+        progressData = new GameProgressData();
+        
+        // 2. Delete global save key
+        PlayerPrefs.DeleteKey(SAVE_KEY);
+        Debug.Log($"[GameProgressManager] ✅ Deleted global key: {SAVE_KEY}");
+        
+        // 3. Delete current level-specific key
+        string currentKey = GetCurrentSaveKey();
+        if (currentKey != SAVE_KEY)
+        {
+            PlayerPrefs.DeleteKey(currentKey);
+            Debug.Log($"[GameProgressManager] ✅ Deleted level key: {currentKey}");
+        }
+        
+        // 4. Delete all possible level keys (Level_0_Progress through Level_19_Progress)
+        int deletedCount = 0;
+        for (int i = 0; i < 20; i++)
+        {
+            string levelKey = $"Level_{i}_Progress";
+            if (PlayerPrefs.HasKey(levelKey))
+            {
+                PlayerPrefs.DeleteKey(levelKey);
+                deletedCount++;
+                Debug.Log($"[GameProgressManager] ✅ Deleted key: {levelKey}");
+            }
+        }
+        Debug.Log($"[GameProgressManager] Deleted {deletedCount} level-specific keys");
+        
+        PlayerPrefs.Save();
+        
+        if (debugMode)
+            Debug.Log("[GameProgressManager] All PlayerPrefs deleted");
+            
+        // 5. Reset all DropSpots in scene
+        DropSpot[] allDropSpots = FindObjectsOfType<DropSpot>();
+        foreach (DropSpot spot in allDropSpots)
+        {
+            spot.ResetSpot();
+        }
+        Debug.Log($"[GameProgressManager] ✅ Reset {allDropSpots.Length} drop spots");
+        
+        // 6. Show all DraggableButtons
+        DraggableButton[] allDragButtons = FindObjectsOfType<DraggableButton>();
+        foreach (DraggableButton button in allDragButtons)
+        {
+            button.gameObject.SetActive(true);
+        }
+        Debug.Log($"[GameProgressManager] ✅ Showed {allDragButtons.Length} buttons");
+        
+        Debug.Log("[GameProgressManager] 🎉 FULL RESET COMPLETE!");
     }
 
     public void ForceSave()

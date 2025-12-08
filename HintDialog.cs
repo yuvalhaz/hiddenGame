@@ -87,15 +87,64 @@ public class HintDialog : MonoBehaviour
             return;
         }
 
-        HideImmediate();
+        // לא לאפשר ספאם קליקים בזמן טעינה/הצגה
+        if (watchAdButton != null)
+            watchAdButton.interactable = false;
 
-        // Subscribe to reward event
-        RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
-        RewardedAdsManager.Instance.OnRewardGranted += HandleReward;
+        // פונקציה מקומית שממש מציגה את הפרסומת
+        void ShowNow()
+        {
+            HideImmediate();
 
-        // Show rewarded ad
-        RewardedAdsManager.Instance.ShowRewarded();
+            // נרשמים ל-Reward פעם אחת
+            RewardedAdsManager.Instance.OnRewardGranted -= HandleReward;
+            RewardedAdsManager.Instance.OnRewardGranted += HandleReward;
+
+            RewardedAdsManager.Instance.ShowRewarded(
+                onReward: null,
+                onClosed: (completed) =>
+                {
+                    if (watchAdButton != null)
+                        watchAdButton.interactable = true;
+                },
+                onFailed: (error) =>
+                {
+                    Debug.LogWarning($"[HintDialog] Failed to show ad: {error}");
+                    if (watchAdButton != null)
+                        watchAdButton.interactable = true;
+                },
+                onOpened: null
+            );
+        }
+
+        // אם יש כבר מודעה טעונה – מציגים מיד
+        if (RewardedAdsManager.Instance.IsReady())
+        {
+            Debug.Log("[HintDialog] Ad ready, showing now.");
+            ShowNow();
+        }
+        else
+        {
+            // אם אין מודעה – טוענים ואז מציגים
+            Debug.Log("[HintDialog] Ad not ready, loading...");
+            RewardedAdsManager.Instance.Preload(success =>
+            {
+                if (success && RewardedAdsManager.Instance.IsReady())
+                {
+                    Debug.Log("[HintDialog] Ad loaded after click, showing now.");
+                    ShowNow();
+                }
+                else
+                {
+                    Debug.LogWarning("[HintDialog] Ad failed to load, cannot show hint.");
+                    if (watchAdButton != null)
+                        watchAdButton.interactable = true;
+                }
+            });
+        }
     }
+
+
 
     /// <summary>
     /// Called when user successfully watches rewarded ad.
