@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 
 /// <summary>
 /// 🛠️ UNIFIED TESTING & DEBUG TOOL
@@ -27,6 +28,7 @@ public class GameDebugTools : MonoBehaviour
     [SerializeField] private KeyCode showHintKey = KeyCode.H;
     [SerializeField] private KeyCode testMessageKey = KeyCode.M;
     [SerializeField] private KeyCode testAdKey = KeyCode.A;
+    [SerializeField] private KeyCode placeAllExceptLastKey = KeyCode.L;
 
     [Header("📊 Status Display")]
     [SerializeField] private bool showDebugGUI = true;
@@ -110,6 +112,12 @@ public class GameDebugTools : MonoBehaviour
         {
             TestAd();
         }
+
+        // L - Place all items except last one
+        if (Input.GetKeyDown(placeAllExceptLastKey))
+        {
+            PlaceAllExceptLastItem();
+        }
     }
 
     private void OnGUI()
@@ -180,6 +188,11 @@ public class GameDebugTools : MonoBehaviour
 
         // === TESTING ===
         GUILayout.Label("=== TESTING ===");
+        if (GUILayout.Button("📦 Place All EXCEPT Last Item"))
+        {
+            PlaceAllExceptLastItem();
+        }
+
         if (GUILayout.Button("💬 Test Completion Message"))
         {
             TestCompletionMessage();
@@ -210,6 +223,7 @@ public class GameDebugTools : MonoBehaviour
         GUILayout.Label($"H - Show Hint");
         GUILayout.Label($"M - Test Message");
         GUILayout.Label($"A - Test Ad");
+        GUILayout.Label($"L - Place All Except Last");
 
         GUILayout.EndArea();
     }
@@ -491,5 +505,60 @@ public class GameDebugTools : MonoBehaviour
         }
 
         Debug.Log("========================================");
+    }
+
+    // ===== TESTING HELPERS =====
+
+    [ContextMenu("📦 Place All Items EXCEPT Last One")]
+    public void PlaceAllExceptLastItem()
+    {
+        Debug.Log("════════════════════════════════════════");
+        Debug.Log("📦 PLACING ALL ITEMS EXCEPT THE LAST ONE");
+        Debug.Log("════════════════════════════════════════");
+
+        if (levelManager == null)
+        {
+            Debug.LogError("❌ LevelManager not found!");
+            return;
+        }
+
+        if (progressManager == null)
+        {
+            Debug.LogError("❌ GameProgressManager not found!");
+            return;
+        }
+
+        // Get all items for current level
+        List<string> levelItems = levelManager.GetCurrentLevelItemIds();
+
+        if (levelItems == null || levelItems.Count == 0)
+        {
+            Debug.LogWarning("❌ No items found for current level!");
+            return;
+        }
+
+        if (levelItems.Count == 1)
+        {
+            Debug.LogWarning("⚠️ Only one item in level - nothing to place!");
+            return;
+        }
+
+        // Place all items EXCEPT the last one
+        int itemsToPlace = levelItems.Count - 1;
+
+        Debug.Log($"📊 Total items: {levelItems.Count}");
+        Debug.Log($"📦 Placing {itemsToPlace} items (leaving last one for manual placement)");
+
+        for (int i = 0; i < itemsToPlace; i++)
+        {
+            string itemId = levelItems[i];
+            progressManager.MarkItemAsPlaced(itemId);
+            Debug.Log($"  ✅ Placed: {itemId}");
+        }
+
+        string lastItem = levelItems[levelItems.Count - 1];
+        Debug.Log($"🎯 LAST ITEM (not placed): {lastItem}");
+        Debug.Log($"💡 Now place '{lastItem}' manually to test level completion!");
+        Debug.Log("════════════════════════════════════════");
     }
 }
