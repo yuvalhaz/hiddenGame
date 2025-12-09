@@ -523,9 +523,9 @@ public class GameDebugTools : MonoBehaviour
         Debug.Log("📦 (Across ALL batches in the entire level!)");
         Debug.Log("════════════════════════════════════════");
 
-        if (levelManager == null)
+        if (batchManager == null)
         {
-            Debug.LogError("❌ LevelManager not found!");
+            Debug.LogError("❌ DropSpotBatchManager not found!");
             yield break;
         }
 
@@ -535,52 +535,63 @@ public class GameDebugTools : MonoBehaviour
             yield break;
         }
 
-        // Get ALL items for current level (across all batches!)
-        List<string> levelItems = levelManager.GetCurrentLevelItemIds();
+        // Get ALL drop spots in batch order from DropSpotBatchManager
+        List<DropSpot> allSpots = batchManager.GetAllDropSpots();
 
-        if (levelItems == null || levelItems.Count == 0)
+        if (allSpots == null || allSpots.Count == 0)
         {
-            Debug.LogWarning("❌ No items found for current level!");
+            Debug.LogWarning("❌ No drop spots found!");
             yield break;
         }
 
-        if (levelItems.Count == 1)
+        if (allSpots.Count == 1)
         {
-            Debug.LogWarning("⚠️ Only one item in level - nothing to place!");
+            Debug.LogWarning("⚠️ Only one spot - nothing to place!");
             yield break;
         }
 
-        // Show batch info if available
-        if (batchManager != null)
-        {
-            int totalBatches = batchManager.GetTotalBatches();
-            Debug.Log($"🎯 Level has {totalBatches} batches");
-        }
+        int totalBatches = batchManager.GetTotalBatches();
+        int totalSpots = allSpots.Count;
+        int spotsToPlace = totalSpots - 1;
 
-        // Place all items EXCEPT the last one
-        int itemsToPlace = levelItems.Count - 1;
-
-        Debug.Log($"📊 Total items in ENTIRE level: {levelItems.Count}");
-        Debug.Log($"📦 Placing {itemsToPlace} items across ALL batches (with delays for batch progression)");
-        Debug.Log($"🎯 This should complete all batches except leaving ONE item in the final batch");
+        Debug.Log($"🎯 Level has {totalBatches} batches");
+        Debug.Log($"📊 Total spots in ENTIRE level: {totalSpots}");
+        Debug.Log($"📦 Placing {spotsToPlace} spots in BATCH ORDER (with delays for batch progression)");
+        Debug.Log($"🎯 This should complete all batches except leaving ONE spot in the final batch");
         Debug.Log("");
 
-        // Place items one by one with delays to allow batch system to process
-        for (int i = 0; i < itemsToPlace; i++)
+        // Place spots one by one in batch order with delays
+        for (int i = 0; i < spotsToPlace; i++)
         {
-            string itemId = levelItems[i];
-            progressManager.MarkItemAsPlaced(itemId);
-            Debug.Log($"  ✅ [{i + 1}/{itemsToPlace}] Placed: {itemId}");
+            DropSpot spot = allSpots[i];
+            if (spot == null) continue;
 
-            // Wait a bit to allow batch completion messages/animations to play
-            // Longer delay if this might complete a batch (to allow messages to show)
+            string spotId = spot.spotId;
+
+            // Which batch is this spot in?
+            int batchNum = 0;
+            for (int b = 0; b < totalBatches; b++)
+            {
+                int start = batchManager.GetBatchStartIndex(b);
+                int size = batchManager.GetBatchSize(b);
+                if (i >= start && i < start + size)
+                {
+                    batchNum = b;
+                    break;
+                }
+            }
+
+            progressManager.MarkItemAsPlaced(spotId);
+            Debug.Log($"  ✅ [{i + 1}/{spotsToPlace}] Batch {batchNum}: Placed spot '{spotId}'");
+
+            // Wait to allow batch completion messages/animations
             yield return new WaitForSeconds(0.8f);
         }
 
         Debug.Log("");
-        string lastItem = levelItems[levelItems.Count - 1];
-        Debug.Log($"🎯 LAST ITEM (not placed): {lastItem}");
-        Debug.Log($"💡 Now drag '{lastItem}' manually to complete the FINAL batch and trigger level completion!");
+        DropSpot lastSpot = allSpots[totalSpots - 1];
+        Debug.Log($"🎯 LAST SPOT (not placed): {lastSpot.spotId}");
+        Debug.Log($"💡 Now drag '{lastSpot.spotId}' manually to complete the FINAL batch and trigger level completion!");
         Debug.Log("════════════════════════════════════════");
     }
 }

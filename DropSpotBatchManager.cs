@@ -452,6 +452,11 @@ public class DropSpotBatchManager : MonoBehaviour
         }
     }
 
+    public List<DropSpot> GetAllDropSpots()
+    {
+        return allDropSpots;
+    }
+
     // ===== DEBUG/TESTING =====
 
     [ContextMenu("📊 Show Status")]
