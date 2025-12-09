@@ -31,6 +31,10 @@ public class GameDebugTools : MonoBehaviour
     [Header("📊 Status Display")]
     [SerializeField] private bool showDebugGUI = true;
     [SerializeField] private Vector2 guiPosition = new Vector2(10, 10);
+    [SerializeField] private int fontSize = 16;
+    [Tooltip("Font size for debug GUI (default: 16)")]
+    [SerializeField] private int panelWidth = 400;
+    [Tooltip("Width of debug panel (default: 400)")]
 
     private void Awake()
     {
@@ -115,7 +119,16 @@ public class GameDebugTools : MonoBehaviour
     {
         if (!showDebugGUI) return;
 
-        GUILayout.BeginArea(new Rect(guiPosition.x, guiPosition.y, 300, 500));
+        // Set larger font size for readability
+        int originalFontSize = GUI.skin.label.fontSize;
+        int originalButtonFontSize = GUI.skin.button.fontSize;
+        int originalBoxFontSize = GUI.skin.box.fontSize;
+
+        GUI.skin.label.fontSize = fontSize;
+        GUI.skin.button.fontSize = fontSize;
+        GUI.skin.box.fontSize = fontSize + 2;
+
+        GUILayout.BeginArea(new Rect(guiPosition.x, guiPosition.y, panelWidth, 700));
         GUILayout.Box("🛠️ GAME DEBUG TOOLS");
 
         // === PROGRESS INFO ===
@@ -208,6 +221,11 @@ public class GameDebugTools : MonoBehaviour
         GUILayout.Label($"A - Test Ad");
 
         GUILayout.EndArea();
+
+        // Restore original font sizes
+        GUI.skin.label.fontSize = originalFontSize;
+        GUI.skin.button.fontSize = originalButtonFontSize;
+        GUI.skin.box.fontSize = originalBoxFontSize;
     }
 
     // ===== RESET FUNCTIONS =====
