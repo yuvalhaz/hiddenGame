@@ -11,6 +11,7 @@ public class GameDebugTools : MonoBehaviour
     [Tooltip("These will be found automatically if not assigned")]
     [SerializeField] private GameProgressManager progressManager;
     [SerializeField] private LevelManager levelManager;
+    [SerializeField] private LevelCompleteController levelCompleteController;
     [SerializeField] private DropSpotBatchManager batchManager;
     [SerializeField] private BatchMessageController messageController;
     [SerializeField] private BatchAdController adController;
@@ -22,6 +23,7 @@ public class GameDebugTools : MonoBehaviour
     [SerializeField] private bool enableKeyboardShortcuts = true;
     [SerializeField] private KeyCode resetCurrentLevelKey = KeyCode.R;
     [SerializeField] private KeyCode skipLevelKey = KeyCode.N;
+    [SerializeField] private KeyCode completeLevelKey = KeyCode.C;
     [SerializeField] private KeyCode showHintKey = KeyCode.H;
     [SerializeField] private KeyCode testMessageKey = KeyCode.M;
     [SerializeField] private KeyCode testAdKey = KeyCode.A;
@@ -43,6 +45,9 @@ public class GameDebugTools : MonoBehaviour
 
         if (levelManager == null)
             levelManager = FindObjectOfType<LevelManager>();
+
+        if (levelCompleteController == null)
+            levelCompleteController = FindObjectOfType<LevelCompleteController>();
 
         if (batchManager == null)
             batchManager = FindObjectOfType<DropSpotBatchManager>();
@@ -79,6 +84,12 @@ public class GameDebugTools : MonoBehaviour
         if (Input.GetKeyDown(skipLevelKey))
         {
             SkipToNextLevel();
+        }
+
+        // C - Complete level (trigger level complete)
+        if (Input.GetKeyDown(completeLevelKey))
+        {
+            TriggerLevelComplete();
         }
 
         // H - Show hint
@@ -146,6 +157,11 @@ public class GameDebugTools : MonoBehaviour
 
         // === LEVEL PROGRESSION ===
         GUILayout.Label("=== LEVEL CONTROL ===");
+        if (GUILayout.Button("🎉 Complete Level (Test)"))
+        {
+            TriggerLevelComplete();
+        }
+
         if (GUILayout.Button("⏭️ Skip to Next Level"))
         {
             SkipToNextLevel();
@@ -185,7 +201,8 @@ public class GameDebugTools : MonoBehaviour
         // === INFO ===
         GUILayout.Label("=== KEYBOARD SHORTCUTS ===");
         GUILayout.Label($"R - Reset Level");
-        GUILayout.Label($"N - Next Level");
+        GUILayout.Label($"N - Skip to Next Level");
+        GUILayout.Label($"C - Complete Level");
         GUILayout.Label($"H - Show Hint");
         GUILayout.Label($"M - Test Message");
         GUILayout.Label($"A - Test Ad");
@@ -265,6 +282,33 @@ public class GameDebugTools : MonoBehaviour
         else
         {
             Debug.LogWarning("❌ LevelManager not found!");
+        }
+    }
+
+    [ContextMenu("🎉 Complete Level (Test)")]
+    public void TriggerLevelComplete()
+    {
+        Debug.Log("🎉 Triggering level complete for testing...");
+
+        if (levelCompleteController != null)
+        {
+            levelCompleteController.TriggerLevelComplete();
+            Debug.Log("✅ Level complete triggered! Watch for WELL DONE message, ads, and level progression.");
+        }
+        else
+        {
+            Debug.LogWarning("❌ LevelCompleteController not found!");
+            Debug.LogWarning("💡 Trying alternative method via LevelManager...");
+
+            // Alternative: trigger via LevelManager if it exists
+            if (levelManager != null)
+            {
+                levelManager.AdvanceToNextLevel();
+            }
+            else
+            {
+                Debug.LogError("❌ No level progression system found!");
+            }
         }
     }
 
