@@ -7,9 +7,18 @@ using System.Collections.Generic;
 /// <summary>
 /// UI לבחירת Levels - מציג רשימת levels, נועל/פותח לפי התקדמות
 /// עם עיצוב גרפי יפה, לוגו, ואנימציות
+/// Supports custom positioning for buttons on map backgrounds
 /// </summary>
 public class LevelSelectionUI : MonoBehaviour
 {
+    [System.Serializable]
+    public class LevelButtonPosition
+    {
+        public int levelNumber = 1;
+        public Vector2 position = Vector2.zero;
+        [Tooltip("Position on the map (anchored position)")]
+    }
+
     [Header("🎨 Visual Settings")]
     [SerializeField] private Image gameLogo;
     [Tooltip("לוגו המשחק בראש המסך")]
@@ -29,10 +38,17 @@ public class LevelSelectionUI : MonoBehaviour
 
     [Header("UI References")]
     [SerializeField] private Transform levelButtonContainer;
-    [Tooltip("Parent transform for level buttons (usually a GridLayoutGroup)")]
+    [Tooltip("Parent transform for level buttons - should be a RectTransform for custom positioning")]
 
     [SerializeField] private GameObject levelButtonPrefab;
     [Tooltip("Prefab for level button - should have Image, Text, Button")]
+
+    [Header("🗺️ Custom Button Positions")]
+    [SerializeField] private bool useCustomPositions = false;
+    [Tooltip("Enable to position buttons manually on the map. Disable to use automatic layout.")]
+
+    [SerializeField] private List<LevelButtonPosition> customButtonPositions = new List<LevelButtonPosition>();
+    [Tooltip("Define custom X,Y positions for each level button on your map")]
 
     [Header("🎨 Button Styling")]
     [SerializeField] private Sprite lockedIcon;
@@ -109,6 +125,12 @@ public class LevelSelectionUI : MonoBehaviour
         GameObject buttonObj = Instantiate(levelButtonPrefab, levelButtonContainer);
         buttonObj.name = $"LevelButton_{levelNumber}";
 
+        // Apply custom position if enabled
+        if (useCustomPositions)
+        {
+            ApplyCustomPosition(buttonObj, levelNumber);
+        }
+
         // Hide initially for animation
         if (animateButtonsOnStart)
         {
@@ -178,6 +200,37 @@ public class LevelSelectionUI : MonoBehaviour
         {
             string status = isCompleted ? "Completed" : (isUnlocked ? "Unlocked" : "Locked");
             Debug.Log($"[LevelSelectionUI] Level {levelNumber} - {status}");
+        }
+    }
+
+    private void ApplyCustomPosition(GameObject buttonObj, int levelNumber)
+    {
+        RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            Debug.LogWarning($"[LevelSelectionUI] Button {levelNumber} doesn't have RectTransform!");
+            return;
+        }
+
+        // Find position for this level
+        LevelButtonPosition positionData = customButtonPositions.Find(p => p.levelNumber == levelNumber);
+
+        if (positionData != null)
+        {
+            // Set anchors to center for consistent positioning
+            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+
+            // Apply custom position
+            rectTransform.anchoredPosition = positionData.position;
+
+            if (debugMode)
+                Debug.Log($"[LevelSelectionUI] Level {levelNumber} positioned at {positionData.position}");
+        }
+        else
+        {
+            Debug.LogWarning($"[LevelSelectionUI] No custom position defined for Level {levelNumber}!");
         }
     }
 
@@ -333,5 +386,23 @@ public class LevelSelectionUI : MonoBehaviour
         PlayerPrefs.Save();
         RefreshButtons();
         Debug.Log($"[LevelSelectionUI] Level {levelNumber} unlocked!");
+    }
+
+    /// <summary>
+    /// Initialize custom position list with default values (for setup)
+    /// </summary>
+    [ContextMenu("Initialize Position List")]
+    private void InitializePositionList()
+    {
+        customButtonPositions.Clear();
+        for (int i = 1; i <= totalLevels; i++)
+        {
+            customButtonPositions.Add(new LevelButtonPosition
+            {
+                levelNumber = i,
+                position = Vector2.zero // You'll need to set these manually
+            });
+        }
+        Debug.Log($"[LevelSelectionUI] Initialized {totalLevels} position entries. Set custom positions in inspector!");
     }
 }
