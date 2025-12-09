@@ -14,10 +14,8 @@ public class LevelSelectionUI : MonoBehaviour
     [System.Serializable]
     public class LevelButtonPosition
     {
-        public int levelNumber = 1;
-
-        [Tooltip("Position on the map (anchored position)")]
-        public Vector2 position = Vector2.zero;
+        public int levelNumber;
+        public Vector2 position;
     }
 
     [Header("🎨 Visual Settings")]
