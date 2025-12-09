@@ -512,6 +512,12 @@ public class GameDebugTools : MonoBehaviour
     [ContextMenu("📦 Place All Items EXCEPT Last One")]
     public void PlaceAllExceptLastItem()
     {
+        // Start coroutine to place items with delays
+        StartCoroutine(PlaceAllExceptLastCoroutine());
+    }
+
+    private System.Collections.IEnumerator PlaceAllExceptLastCoroutine()
+    {
         Debug.Log("════════════════════════════════════════");
         Debug.Log("📦 PLACING ALL ITEMS EXCEPT THE LAST ONE");
         Debug.Log("📦 (Across ALL batches in the entire level!)");
@@ -520,13 +526,13 @@ public class GameDebugTools : MonoBehaviour
         if (levelManager == null)
         {
             Debug.LogError("❌ LevelManager not found!");
-            return;
+            yield break;
         }
 
         if (progressManager == null)
         {
             Debug.LogError("❌ GameProgressManager not found!");
-            return;
+            yield break;
         }
 
         // Get ALL items for current level (across all batches!)
@@ -535,13 +541,13 @@ public class GameDebugTools : MonoBehaviour
         if (levelItems == null || levelItems.Count == 0)
         {
             Debug.LogWarning("❌ No items found for current level!");
-            return;
+            yield break;
         }
 
         if (levelItems.Count == 1)
         {
             Debug.LogWarning("⚠️ Only one item in level - nothing to place!");
-            return;
+            yield break;
         }
 
         // Show batch info if available
@@ -555,15 +561,20 @@ public class GameDebugTools : MonoBehaviour
         int itemsToPlace = levelItems.Count - 1;
 
         Debug.Log($"📊 Total items in ENTIRE level: {levelItems.Count}");
-        Debug.Log($"📦 Placing {itemsToPlace} items across ALL batches");
+        Debug.Log($"📦 Placing {itemsToPlace} items across ALL batches (with delays for batch progression)");
         Debug.Log($"🎯 This should complete all batches except leaving ONE item in the final batch");
         Debug.Log("");
 
+        // Place items one by one with delays to allow batch system to process
         for (int i = 0; i < itemsToPlace; i++)
         {
             string itemId = levelItems[i];
             progressManager.MarkItemAsPlaced(itemId);
             Debug.Log($"  ✅ [{i + 1}/{itemsToPlace}] Placed: {itemId}");
+
+            // Wait a bit to allow batch completion messages/animations to play
+            // Longer delay if this might complete a batch (to allow messages to show)
+            yield return new WaitForSeconds(0.8f);
         }
 
         Debug.Log("");
