@@ -15,8 +15,9 @@ public class LevelSelectionUI : MonoBehaviour
     public class LevelButtonPosition
     {
         public int levelNumber = 1;
-        public Vector2 position = Vector2.zero;
+
         [Tooltip("Position on the map (anchored position)")]
+        public Vector2 position = Vector2.zero;
     }
 
     [Header("🎨 Visual Settings")]
