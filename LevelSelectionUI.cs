@@ -52,6 +52,9 @@ public class LevelSelectionUI : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
+    [SerializeField] private bool showDebugGUI = true;
+    [SerializeField] private float guiScale = 2.5f;
+    [SerializeField] private Vector2 guiPosition = new Vector2(10, 10);
 
     private List<Button> levelButtons = new List<Button>();
 
@@ -70,6 +73,87 @@ public class LevelSelectionUI : MonoBehaviour
         {
             StartCoroutine(AnimateButtonsSequence());
         }
+    }
+
+    private void OnGUI()
+    {
+        if (!showDebugGUI) return;
+
+        // Scale GUI to make it bigger and more readable
+        GUI.matrix = Matrix4x4.Scale(new Vector3(guiScale, guiScale, 1f));
+
+        GUILayout.BeginArea(new Rect(guiPosition.x, guiPosition.y, 400, 600));
+        GUILayout.Box("🎮 LEVEL SELECTION DEBUG");
+
+        GUILayout.Space(10);
+
+        // === LEVEL STATUS ===
+        GUILayout.Label("=== LEVEL STATUS ===");
+        for (int i = 1; i <= Mathf.Min(totalLevels, 5); i++)
+        {
+            bool completed = IsLevelCompleted(i);
+            bool unlocked = IsLevelUnlocked(i);
+            string status = completed ? "✅ Completed" : (unlocked ? "🔓 Unlocked" : "🔒 Locked");
+            GUILayout.Label($"Level {i}: {status}");
+        }
+        if (totalLevels > 5)
+        {
+            GUILayout.Label($"... ({totalLevels} total levels)");
+        }
+
+        GUILayout.Space(10);
+
+        // === ACTIONS ===
+        GUILayout.Label("=== ACTIONS ===");
+
+        if (GUILayout.Button("🔄 Refresh Buttons"))
+        {
+            RefreshButtons();
+        }
+
+        if (GUILayout.Button("🔓 Unlock All Levels"))
+        {
+            UnlockAllLevels();
+        }
+
+        if (GUILayout.Button("🔒 Lock All Levels"))
+        {
+            LockAllLevels();
+        }
+
+        if (GUILayout.Button("🗑️ Reset All Progress"))
+        {
+            ResetAllProgress();
+        }
+
+        GUILayout.Space(10);
+
+        // === SPECIFIC LEVEL UNLOCK ===
+        GUILayout.Label("=== QUICK UNLOCK ===");
+
+        if (GUILayout.Button("Unlock Level 1"))
+        {
+            UnlockLevel(1);
+        }
+
+        if (GUILayout.Button("Unlock Levels 1-3"))
+        {
+            for (int i = 1; i <= 3; i++) UnlockLevel(i);
+        }
+
+        if (GUILayout.Button("Unlock Levels 1-5"))
+        {
+            for (int i = 1; i <= 5; i++) UnlockLevel(i);
+        }
+
+        GUILayout.Space(10);
+
+        // === INFO ===
+        GUILayout.Label("=== INFO ===");
+        GUILayout.Label($"Total Levels: {totalLevels}");
+        GUILayout.Label($"Buttons Created: {levelButtons.Count}");
+
+        GUILayout.EndArea();
     }
 
     private void GenerateLevelButtons()
@@ -295,5 +379,39 @@ public class LevelSelectionUI : MonoBehaviour
         PlayerPrefs.Save();
         RefreshButtons();
         Debug.Log("[LevelSelectionUI] All progress reset!");
+    }
+
+    /// <summary>
+    /// Lock all levels except level 1 (for testing)
+    /// </summary>
+    [ContextMenu("Lock All Levels")]
+    public void LockAllLevels()
+    {
+        for (int i = 2; i <= totalLevels; i++)
+        {
+            PlayerPrefs.DeleteKey($"Level_{i}_Completed");
+            PlayerPrefs.DeleteKey($"Level_{i}_Unlocked");
+        }
+        PlayerPrefs.Save();
+        RefreshButtons();
+        Debug.Log("[LevelSelectionUI] All levels locked (except Level 1)!");
+    }
+
+    /// <summary>
+    /// Unlock specific level (for testing)
+    /// </summary>
+    public void UnlockLevel(int levelNumber)
+    {
+        if (levelNumber <= 1)
+        {
+            Debug.Log($"[LevelSelectionUI] Level {levelNumber} is always unlocked");
+            return;
+        }
+
+        // Mark previous level as completed to unlock this one
+        PlayerPrefs.SetInt($"Level_{levelNumber - 1}_Completed", 1);
+        PlayerPrefs.Save();
+        RefreshButtons();
+        Debug.Log($"[LevelSelectionUI] Level {levelNumber} unlocked!");
     }
 }
