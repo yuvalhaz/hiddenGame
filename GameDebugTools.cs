@@ -514,6 +514,7 @@ public class GameDebugTools : MonoBehaviour
     {
         Debug.Log("════════════════════════════════════════");
         Debug.Log("📦 PLACING ALL ITEMS EXCEPT THE LAST ONE");
+        Debug.Log("📦 (Across ALL batches in the entire level!)");
         Debug.Log("════════════════════════════════════════");
 
         if (levelManager == null)
@@ -528,7 +529,7 @@ public class GameDebugTools : MonoBehaviour
             return;
         }
 
-        // Get all items for current level
+        // Get ALL items for current level (across all batches!)
         List<string> levelItems = levelManager.GetCurrentLevelItemIds();
 
         if (levelItems == null || levelItems.Count == 0)
@@ -543,22 +544,32 @@ public class GameDebugTools : MonoBehaviour
             return;
         }
 
+        // Show batch info if available
+        if (batchManager != null)
+        {
+            int totalBatches = batchManager.GetTotalBatches();
+            Debug.Log($"🎯 Level has {totalBatches} batches");
+        }
+
         // Place all items EXCEPT the last one
         int itemsToPlace = levelItems.Count - 1;
 
-        Debug.Log($"📊 Total items: {levelItems.Count}");
-        Debug.Log($"📦 Placing {itemsToPlace} items (leaving last one for manual placement)");
+        Debug.Log($"📊 Total items in ENTIRE level: {levelItems.Count}");
+        Debug.Log($"📦 Placing {itemsToPlace} items across ALL batches");
+        Debug.Log($"🎯 This should complete all batches except leaving ONE item in the final batch");
+        Debug.Log("");
 
         for (int i = 0; i < itemsToPlace; i++)
         {
             string itemId = levelItems[i];
             progressManager.MarkItemAsPlaced(itemId);
-            Debug.Log($"  ✅ Placed: {itemId}");
+            Debug.Log($"  ✅ [{i + 1}/{itemsToPlace}] Placed: {itemId}");
         }
 
+        Debug.Log("");
         string lastItem = levelItems[levelItems.Count - 1];
         Debug.Log($"🎯 LAST ITEM (not placed): {lastItem}");
-        Debug.Log($"💡 Now place '{lastItem}' manually to test level completion!");
+        Debug.Log($"💡 Now drag '{lastItem}' manually to complete the FINAL batch and trigger level completion!");
         Debug.Log("════════════════════════════════════════");
     }
 }
