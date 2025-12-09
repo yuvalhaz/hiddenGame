@@ -314,6 +314,15 @@ public class LevelManager : MonoBehaviour
     {
         if (currentLevelIndex < levelConfig.Count - 1)
         {
+            // ✅ CRITICAL FIX: Mark current level as completed BEFORE advancing
+            // LevelManager uses 0-based indices (0, 1, 2...)
+            // LevelSelectionUI uses 1-based level numbers (1, 2, 3...)
+            // So currentLevelIndex 0 = Level 1, index 1 = Level 2, etc.
+            int completedLevelNumber = currentLevelIndex + 1;
+            PlayerPrefs.SetInt($"Level_{completedLevelNumber}_Completed", 1);
+            PlayerPrefs.Save();
+            Debug.Log($"[LevelManager] ✅ Marked Level {completedLevelNumber} as completed!");
+
             currentLevelIndex++;
             SaveCurrentLevel();
 
@@ -411,6 +420,13 @@ public class LevelManager : MonoBehaviour
     {
         if (currentLevelIndex < levelConfig.Count - 1)
         {
+            // ✅ CRITICAL FIX: Mark current level as completed when skipping
+            // This ensures the level selection UI shows the level as unlocked
+            int completedLevelNumber = currentLevelIndex + 1;
+            PlayerPrefs.SetInt($"Level_{completedLevelNumber}_Completed", 1);
+            PlayerPrefs.Save();
+            Debug.Log($"[LevelManager] ✅ Marked Level {completedLevelNumber} as completed (skipped)!");
+
             currentLevelIndex++;
             SaveCurrentLevel();
 
