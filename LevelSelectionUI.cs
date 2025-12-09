@@ -54,9 +54,55 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private bool debugMode = false;
     [SerializeField] private bool showDebugGUI = true;
     [SerializeField] private float guiScale = 2.5f;
-    [SerializeField] private Vector2 guiPosition = new Vector2(10, 10);
+
+    [Header("Debug GUI Position")]
+    [SerializeField] private DebugGUIPosition debugPosition = DebugGUIPosition.TopLeft;
+    [Tooltip("Choose preset position or use Custom to set manual coordinates")]
+    [SerializeField] private Vector2 customGuiPosition = new Vector2(10, 10);
+    [Tooltip("Only used when debugPosition is set to Custom")]
+
+    private enum DebugGUIPosition
+    {
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+        Center,
+        Custom
+    }
 
     private List<Button> levelButtons = new List<Button>();
+
+    private Vector2 GetGUIPosition()
+    {
+        float panelWidth = 400;
+        float panelHeight = 600;
+        float margin = 10;
+
+        switch (debugPosition)
+        {
+            case DebugGUIPosition.TopLeft:
+                return new Vector2(margin, margin);
+
+            case DebugGUIPosition.TopRight:
+                return new Vector2((Screen.width / guiScale) - panelWidth - margin, margin);
+
+            case DebugGUIPosition.BottomLeft:
+                return new Vector2(margin, (Screen.height / guiScale) - panelHeight - margin);
+
+            case DebugGUIPosition.BottomRight:
+                return new Vector2((Screen.width / guiScale) - panelWidth - margin,
+                                   (Screen.height / guiScale) - panelHeight - margin);
+
+            case DebugGUIPosition.Center:
+                return new Vector2(((Screen.width / guiScale) - panelWidth) / 2,
+                                   ((Screen.height / guiScale) - panelHeight) / 2);
+
+            case DebugGUIPosition.Custom:
+            default:
+                return customGuiPosition;
+        }
+    }
 
     private void Start()
     {
@@ -82,7 +128,8 @@ public class LevelSelectionUI : MonoBehaviour
         // Scale GUI to make it bigger and more readable
         GUI.matrix = Matrix4x4.Scale(new Vector3(guiScale, guiScale, 1f));
 
-        GUILayout.BeginArea(new Rect(guiPosition.x, guiPosition.y, 400, 600));
+        Vector2 position = GetGUIPosition();
+        GUILayout.BeginArea(new Rect(position.x, position.y, 400, 600));
         GUILayout.Box("🎮 LEVEL SELECTION DEBUG");
 
         GUILayout.Space(10);
