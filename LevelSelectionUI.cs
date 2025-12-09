@@ -61,6 +61,18 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private Vector2 customGuiPosition = new Vector2(10, 10);
     [Tooltip("Only used when debugPosition is set to Custom")]
 
+    [Header("Debug UI Buttons (Optional)")]
+    [Tooltip("Assign your own UI buttons here to use instead of OnGUI. Position them wherever you want in the scene!")]
+    [SerializeField] private Button debugRefreshButton;
+    [SerializeField] private Button debugUnlockAllButton;
+    [SerializeField] private Button debugLockAllButton;
+    [SerializeField] private Button debugResetAllButton;
+    [SerializeField] private Button debugUnlockLevel1Button;
+    [SerializeField] private Button debugUnlockLevels1to3Button;
+    [SerializeField] private Button debugUnlockLevels1to5Button;
+    [SerializeField] private Text debugStatusText;
+    [Tooltip("Optional text field to show level status")]
+
     private enum DebugGUIPosition
     {
         TopLeft,
@@ -119,6 +131,87 @@ public class LevelSelectionUI : MonoBehaviour
         {
             StartCoroutine(AnimateButtonsSequence());
         }
+
+        // Connect debug UI buttons if assigned
+        SetupDebugButtons();
+    }
+
+    private void Update()
+    {
+        // Update status text if assigned
+        if (debugStatusText != null)
+        {
+            UpdateDebugStatusText();
+        }
+    }
+
+    private void SetupDebugButtons()
+    {
+        if (debugRefreshButton != null)
+        {
+            debugRefreshButton.onClick.RemoveAllListeners();
+            debugRefreshButton.onClick.AddListener(RefreshButtons);
+        }
+
+        if (debugUnlockAllButton != null)
+        {
+            debugUnlockAllButton.onClick.RemoveAllListeners();
+            debugUnlockAllButton.onClick.AddListener(UnlockAllLevels);
+        }
+
+        if (debugLockAllButton != null)
+        {
+            debugLockAllButton.onClick.RemoveAllListeners();
+            debugLockAllButton.onClick.AddListener(LockAllLevels);
+        }
+
+        if (debugResetAllButton != null)
+        {
+            debugResetAllButton.onClick.RemoveAllListeners();
+            debugResetAllButton.onClick.AddListener(ResetAllProgress);
+        }
+
+        if (debugUnlockLevel1Button != null)
+        {
+            debugUnlockLevel1Button.onClick.RemoveAllListeners();
+            debugUnlockLevel1Button.onClick.AddListener(() => UnlockLevel(1));
+        }
+
+        if (debugUnlockLevels1to3Button != null)
+        {
+            debugUnlockLevels1to3Button.onClick.RemoveAllListeners();
+            debugUnlockLevels1to3Button.onClick.AddListener(() => {
+                for (int i = 1; i <= 3; i++) UnlockLevel(i);
+            });
+        }
+
+        if (debugUnlockLevels1to5Button != null)
+        {
+            debugUnlockLevels1to5Button.onClick.RemoveAllListeners();
+            debugUnlockLevels1to5Button.onClick.AddListener(() => {
+                for (int i = 1; i <= 5; i++) UnlockLevel(i);
+            });
+        }
+    }
+
+    private void UpdateDebugStatusText()
+    {
+        string status = "=== LEVEL STATUS ===\n";
+        for (int i = 1; i <= Mathf.Min(totalLevels, 5); i++)
+        {
+            bool completed = IsLevelCompleted(i);
+            bool unlocked = IsLevelUnlocked(i);
+            string levelStatus = completed ? "✅ Completed" : (unlocked ? "🔓 Unlocked" : "🔒 Locked");
+            status += $"Level {i}: {levelStatus}\n";
+        }
+        if (totalLevels > 5)
+        {
+            status += $"... ({totalLevels} total levels)\n";
+        }
+        status += $"\nTotal Levels: {totalLevels}\n";
+        status += $"Buttons: {levelButtons.Count}";
+
+        debugStatusText.text = status;
     }
 
     private void OnGUI()
