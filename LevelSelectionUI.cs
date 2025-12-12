@@ -8,33 +8,37 @@ using System.Text;
 /// <summary>
 /// UI לבחירת Levels - מציג רשימת levels, נועל/פותח לפי התקדמות
 /// עם עיצוב גרפי יפה, לוגו, ואנימציות
+/// Supports both manual button placement and automatic generation
 /// NOW WITH COMPREHENSIVE DEBUG TOOLS!
 /// </summary>
 public class LevelSelectionUI : MonoBehaviour
 {
+    public enum ButtonMode
+    {
+        ManualButtons,      // Connect pre-placed buttons from scene
+        AutoGenerate        // Generate buttons automatically
+    }
+
+    [Header("🎮 Button Mode")]
+    [SerializeField] private ButtonMode buttonMode = ButtonMode.ManualButtons;
+    [Tooltip("Manual: Connect your own buttons. Auto: Generate buttons automatically")]
+
     [Header("🎨 Visual Settings")]
     [SerializeField] private Image gameLogo;
-    [Tooltip("לוגו המשחק בראש המסך")]
-
     [SerializeField] private Text titleText;
-    [Tooltip("כותרת המסך (לדוגמה: 'בחר שלב')")]
-
     [SerializeField] private Image backgroundImage;
-    [Tooltip("תמונת רקע למסך")]
 
     [Header("Level Configuration")]
     [SerializeField] private int totalLevels = 10;
-    [Tooltip("מספר ה-levels במשחק")]
-
     [SerializeField] private string levelScenePrefix = "Level";
-    [Tooltip("קידומת שם ה-scene (Level1, Level2, וכו')")]
 
-    [Header("UI References")]
+    [Header("📌 Manual Buttons (if using Manual Mode)")]
+    [SerializeField] private List<Button> manualLevelButtons = new List<Button>();
+    [Tooltip("Drag your pre-placed buttons here in order (Level 1, Level 2, etc.)")]
+
+    [Header("🤖 Auto-Generate Settings (if using Auto Mode)")]
     [SerializeField] private Transform levelButtonContainer;
-    [Tooltip("Parent transform for level buttons (usually a GridLayoutGroup)")]
-
     [SerializeField] private GameObject levelButtonPrefab;
-    [Tooltip("Prefab for level button - should have Image, Text, Button")]
 
     [Header("🎨 Button Styling")]
     [SerializeField] private Sprite lockedIcon;
@@ -47,8 +51,6 @@ public class LevelSelectionUI : MonoBehaviour
     [Header("✨ Animation Settings")]
     [SerializeField] private bool animateButtonsOnStart = true;
     [SerializeField] private float buttonAnimationDelay = 0.05f;
-    [Tooltip("עיכוב בין כל כפתור באנימציה")]
-
     [SerializeField] private float buttonPopDuration = 0.3f;
     [SerializeField] private AnimationCurve buttonPopCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
@@ -81,15 +83,20 @@ public class LevelSelectionUI : MonoBehaviour
 
     private void Start()
     {
-        // Set title if available
         if (titleText != null)
         {
             titleText.text = "בחר שלב";
         }
 
-        GenerateLevelButtons();
+        if (buttonMode == ButtonMode.ManualButtons)
+        {
+            SetupManualButtons();
+        }
+        else
+        {
+            GenerateLevelButtons();
+        }
 
-        // Animate buttons on start
         if (animateButtonsOnStart)
         {
             StartCoroutine(AnimateButtonsSequence());
@@ -103,11 +110,57 @@ public class LevelSelectionUI : MonoBehaviour
         HandleDebugInput();
     }
 
+    /// <summary>
+    /// Setup manually placed buttons from the scene
+    /// </summary>
+    private void SetupManualButtons()
+    {
+        levelButtons.Clear();
+
+        if (manualLevelButtons.Count == 0)
+        {
+            DebugLogError("No manual buttons assigned! Drag your buttons into the Manual Level Buttons list.");
+            return;
+        }
+
+        // Hide buttons initially for animation
+        if (animateButtonsOnStart)
+        {
+            foreach (Button btn in manualLevelButtons)
+            {
+                if (btn != null)
+                {
+                    btn.transform.localScale = Vector3.zero;
+                }
+            }
+        }
+
+        // Setup each button
+        for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
+        {
+            Button button = manualLevelButtons[i];
+            if (button == null)
+            {
+                DebugLogWarning($"Button {i + 1} is null!");
+                continue;
+            }
+
+            int levelNumber = i + 1;
+            SetupButton(button, levelNumber);
+            levelButtons.Add(button);
+        }
+
+        DebugLog($"Setup {levelButtons.Count} manual buttons");
+    }
+
+    /// <summary>
+    /// Generate buttons automatically (old method)
+    /// </summary>
     private void GenerateLevelButtons()
     {
         if (levelButtonPrefab == null || levelButtonContainer == null)
         {
-            DebugLogError("Missing prefab or container!");
+            DebugLogError("Missing prefab or container for auto-generation!");
             return;
         }
 
@@ -118,7 +171,7 @@ public class LevelSelectionUI : MonoBehaviour
         }
         levelButtons.Clear();
 
-        // Create button for each level (1-10)
+        // Create button for each level
         for (int i = 0; i < totalLevels; i++)
         {
             CreateLevelButton(i);
@@ -129,30 +182,35 @@ public class LevelSelectionUI : MonoBehaviour
 
     private void CreateLevelButton(int levelIndex)
     {
-        int levelNumber = levelIndex + 1; // 1-10
+        int levelNumber = levelIndex + 1;
 
-        // Instantiate button
         GameObject buttonObj = Instantiate(levelButtonPrefab, levelButtonContainer);
         buttonObj.name = $"LevelButton_{levelNumber}";
 
-        // Hide initially for animation
         if (animateButtonsOnStart)
         {
             buttonObj.transform.localScale = Vector3.zero;
         }
 
-        // Get components
         Button button = buttonObj.GetComponent<Button>();
-        Image buttonImage = buttonObj.GetComponent<Image>();
-        Text buttonText = buttonObj.GetComponentInChildren<Text>();
-
         if (button == null)
         {
             DebugLogError($"Button component missing on prefab!");
             return;
         }
 
-        // Check unlock status
+        SetupButton(button, levelNumber);
+        levelButtons.Add(button);
+    }
+
+    /// <summary>
+    /// Setup a button's appearance and click handler
+    /// </summary>
+    private void SetupButton(Button button, int levelNumber)
+    {
+        Image buttonImage = button.GetComponent<Image>();
+        Text buttonText = button.GetComponentInChildren<Text>();
+
         bool isUnlocked = IsLevelUnlocked(levelNumber);
         bool isCompleted = IsLevelCompleted(levelNumber);
 
@@ -198,10 +256,12 @@ public class LevelSelectionUI : MonoBehaviour
 
         // Setup button click
         button.interactable = isUnlocked;
+
+        // Remove old listeners to prevent duplicates
+        button.onClick.RemoveAllListeners();
+
         int capturedLevelNum = levelNumber;
         button.onClick.AddListener(() => OnLevelButtonClicked(capturedLevelNum));
-
-        levelButtons.Add(button);
 
         string status = isCompleted ? "Completed" : (isUnlocked ? "Unlocked" : "Locked");
         DebugLog($"Level {levelNumber} - {status}");
@@ -209,11 +269,9 @@ public class LevelSelectionUI : MonoBehaviour
 
     private bool IsLevelUnlocked(int levelNumber)
     {
-        // Level 1 is always unlocked
         if (levelNumber == 1)
             return true;
 
-        // Check if previous level is completed
         return IsLevelCompleted(levelNumber - 1);
     }
 
@@ -245,9 +303,7 @@ public class LevelSelectionUI : MonoBehaviour
     private void LoadLevel(int levelNumber)
     {
         string sceneName = $"{levelScenePrefix}{levelNumber}";
-
-        // Save which level we're loading
-        PlayerPrefs.SetInt("CurrentLevel", levelNumber - 1); // 0-based for LevelManager
+        PlayerPrefs.SetInt("CurrentLevel", levelNumber - 1);
         PlayerPrefs.Save();
 
         if (logStateChanges)
@@ -255,13 +311,9 @@ public class LevelSelectionUI : MonoBehaviour
             DebugLog($"Saved CurrentLevel = {levelNumber - 1}, Loading scene: {sceneName}");
         }
 
-        // Load the scene
         SceneManager.LoadScene(sceneName);
     }
 
-    /// <summary>
-    /// אנימציה של הכפתורים - pop-in אחד אחרי השני
-    /// </summary>
     private IEnumerator AnimateButtonsSequence()
     {
         for (int i = 0; i < levelButtons.Count; i++)
@@ -271,13 +323,11 @@ public class LevelSelectionUI : MonoBehaviour
                 StartCoroutine(AnimateButtonPopIn(levelButtons[i].transform, i * buttonAnimationDelay));
             }
         }
-
         yield return null;
     }
 
     private IEnumerator AnimateButtonPopIn(Transform buttonTransform, float delay)
     {
-        // Wait for delay
         yield return new WaitForSeconds(delay);
 
         float elapsed = 0f;
@@ -289,7 +339,6 @@ public class LevelSelectionUI : MonoBehaviour
             float t = elapsed / buttonPopDuration;
             float curveValue = buttonPopCurve.Evaluate(t);
 
-            // Add bounce effect
             float bounce = 1f + Mathf.Sin(t * Mathf.PI) * 0.2f;
             buttonTransform.localScale = targetScale * curveValue * bounce;
 
@@ -301,21 +350,24 @@ public class LevelSelectionUI : MonoBehaviour
 
     #region Context Menu Commands
 
-    /// <summary>
-    /// Refresh all buttons (call this after completing a level)
-    /// </summary>
     [ContextMenu("Refresh Buttons")]
     public void RefreshButtons()
     {
         lastRefreshTime = Time.time;
         refreshCount++;
-        GenerateLevelButtons();
+
+        if (buttonMode == ButtonMode.ManualButtons)
+        {
+            SetupManualButtons();
+        }
+        else
+        {
+            GenerateLevelButtons();
+        }
+
         DebugLog($"Buttons refreshed (count: {refreshCount})");
     }
 
-    /// <summary>
-    /// Unlock all levels (for testing)
-    /// </summary>
     [ContextMenu("Unlock All Levels")]
     public void UnlockAllLevels()
     {
@@ -328,9 +380,6 @@ public class LevelSelectionUI : MonoBehaviour
         DebugLog("All levels unlocked!");
     }
 
-    /// <summary>
-    /// Reset all progress (for testing)
-    /// </summary>
     [ContextMenu("Reset All Progress")]
     public void ResetAllProgress()
     {
@@ -363,6 +412,7 @@ public class LevelSelectionUI : MonoBehaviour
         StringBuilder report = new StringBuilder();
         report.AppendLine("=== LEVEL SELECTION DEBUG REPORT ===");
         report.AppendLine($"Total Levels: {totalLevels}");
+        report.AppendLine($"Button Mode: {buttonMode}");
         report.AppendLine($"Buttons Created: {levelButtons.Count}");
         report.AppendLine($"Refresh Count: {refreshCount}");
         report.AppendLine();
@@ -537,7 +587,7 @@ public class LevelSelectionUI : MonoBehaviour
         GUILayout.Label("🐛 LEVEL SELECTION DEBUG PANEL", GUI.skin.box);
 
         GUILayout.Space(5);
-        GUILayout.Label($"Buttons: {levelButtons.Count}/{totalLevels}");
+        GUILayout.Label($"Mode: {buttonMode} | Buttons: {levelButtons.Count}/{totalLevels}");
         GUILayout.Label($"Refreshes: {refreshCount} | Last: {(Time.time - lastRefreshTime):F1}s ago");
 
         if (showPerformanceMetrics)
