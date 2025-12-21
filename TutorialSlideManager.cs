@@ -9,6 +9,7 @@ public class TutorialSlideManager : MonoBehaviour
     [SerializeField] private GameObject stage1Slide;
     [SerializeField] private GameObject stage2Slide;
     [SerializeField] private GameObject stage3Slide;
+    [SerializeField] private GameObject stage4Slide; // "Click the hint button"
 
     [Header("Timing Settings")]
     [SerializeField] private float delayBeforeFirstSlide = 3f;
@@ -19,6 +20,7 @@ public class TutorialSlideManager : MonoBehaviour
 
     private int currentStage = 0;
     private bool isTransitioning = false;
+    private bool hintClickedInStage4 = false; // Track if hint was clicked during stage 4
     
     void Awake()
     {
@@ -54,7 +56,7 @@ public class TutorialSlideManager : MonoBehaviour
         int settledCount = CountSettledItems();
         int startStage = settledCount + 1; // If 0 settled → stage 1, if 1 settled → stage 2, etc.
 
-        if (startStage > 3)
+        if (startStage > 4)
         {
             Debug.Log("[TutorialSlideManager] All items already placed - completing tutorial");
             CompleteTutorial();
@@ -159,7 +161,22 @@ public class TutorialSlideManager : MonoBehaviour
                     CompleteTutorial();
                 }
                 break;
-                
+
+            case 4:
+                // Stage 4: Teach player to use hint button
+                if (stage4Slide != null)
+                {
+                    stage4Slide.SetActive(true);
+                    hintClickedInStage4 = false; // Reset hint click flag
+                    Debug.Log("[TutorialSlideManager] Showing Stage 4: Click the hint button");
+                }
+                else
+                {
+                    Debug.LogWarning("[TutorialSlideManager] Stage 4 slide is not assigned - completing tutorial");
+                    CompleteTutorial();
+                }
+                break;
+
             default:
                 // הטוטוריאל הסתיים!
                 CompleteTutorial();
@@ -174,12 +191,37 @@ public class TutorialSlideManager : MonoBehaviour
     {
         Debug.Log($"[TutorialSlideManager] Correct drop detected: {itemName} (Current stage: {currentStage})");
 
+        // Special handling for stage 4: Must click hint first
+        if (currentStage == 4 && !hintClickedInStage4)
+        {
+            Debug.LogWarning("[TutorialSlideManager] Stage 4: Player placed item without clicking hint first!");
+            // Item is already placed, but we should have required hint click first
+            // Continue anyway but log the warning
+        }
+
         // Immediately hide current slide
         HideAllSlides();
 
         // Wait 3 seconds before showing next stage
         int nextStage = currentStage + 1;
         StartCoroutine(ShowStageAfterDelay(nextStage, delayBetweenSlides));
+    }
+
+    /// <summary>
+    /// Called from HintButton when hint button is clicked.
+    /// Hook this up to the HintButton's onPressed event in the Unity Inspector.
+    /// </summary>
+    public void OnHintButtonClicked()
+    {
+        Debug.Log($"[TutorialSlideManager] Hint button clicked (Current stage: {currentStage})");
+
+        // Special handling for stage 4: Hide the tutorial slide when hint is clicked
+        if (currentStage == 4 && !hintClickedInStage4)
+        {
+            hintClickedInStage4 = true;
+            HideAllSlides();
+            Debug.Log("[TutorialSlideManager] ✅ Stage 4: Hint button clicked! Player can now place the item.");
+        }
     }
     
     /// <summary>
@@ -190,6 +232,7 @@ public class TutorialSlideManager : MonoBehaviour
         if (stage1Slide != null) stage1Slide.SetActive(false);
         if (stage2Slide != null) stage2Slide.SetActive(false);
         if (stage3Slide != null) stage3Slide.SetActive(false);
+        if (stage4Slide != null) stage4Slide.SetActive(false);
     }
     
     /// <summary>
