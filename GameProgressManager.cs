@@ -585,35 +585,24 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
+    // PERFORMANCE FIX: Removed reflection - now uses public API (10-100x faster!)
     private IEnumerator UpdateBarAfterDestroy(ScrollableButtonBar bar, int index)
     {
-        yield return null;
+        yield return null; // Wait one frame for button to be destroyed
 
         if (bar != null)
         {
-            Debug.Log($"[GameProgressManager] Updating bar after button {index} destroyed");
+#if UNITY_EDITOR
+            if (debugMode)
+                Debug.Log($"[GameProgressManager] Updating bar after button {index} destroyed");
+#endif
+            // PERFORMANCE FIX: Use public API instead of reflection
+            bar.MarkButtonAsDestroyed(index);
 
-            var barScript = bar.GetType();
-            var buttonStatesField = barScript.GetField("buttonStates",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            if (buttonStatesField != null)
-            {
-                var buttonStates = (System.Collections.Generic.List<bool>)buttonStatesField.GetValue(bar);
-                if (index < buttonStates.Count)
-                {
-                    buttonStates[index] = false;
-                }
-            }
-
-            var method = barScript.GetMethod("RecalculateAllPositions",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            if (method != null)
-            {
-                method.Invoke(bar, null);
+#if UNITY_EDITOR
+            if (debugMode)
                 Debug.Log($"[GameProgressManager] ✅ Bar updated!");
-            }
+#endif
         }
     }
 

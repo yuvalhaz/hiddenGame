@@ -20,6 +20,9 @@ public class DragVisualManager
     private Image dragVisualImage;
     private MonoBehaviour coroutineHost;
 
+    // PERFORMANCE FIX: Cache canvas to avoid FindObjectsOfType in hot path
+    private Canvas cachedCanvas;
+
     public bool IsActive => dragVisualRT != null;
     public RectTransform DragVisual => dragVisualRT;
 
@@ -29,6 +32,9 @@ public class DragVisualManager
         this.topCanvas = topCanvas;
         this.sizeAnimationDuration = sizeAnimationDuration;
         this.debugMode = debugMode;
+
+        // PERFORMANCE FIX: Cache canvas once during initialization
+        cachedCanvas = FindTopCanvas();
     }
 
     /// <summary>
@@ -44,8 +50,8 @@ public class DragVisualManager
 
         coroutineHost = host;
 
-        Canvas canvas = FindTopCanvas();
-        if (canvas == null)
+        // PERFORMANCE FIX: Use cached canvas
+        if (cachedCanvas == null)
         {
             Debug.LogError("[DragVisualManager] No canvas found!");
             return;
@@ -58,7 +64,7 @@ public class DragVisualManager
         go.AddComponent<Image>();
 
         dragVisualRT = go.GetComponent<RectTransform>();
-        dragVisualRT.SetParent(canvas.transform, false);
+        dragVisualRT.SetParent(cachedCanvas.transform, false);
 
         dragVisualImage = go.GetComponent<Image>();
 
@@ -115,17 +121,18 @@ public class DragVisualManager
 
     /// <summary>
     /// Update the position of the drag visual - follows finger with offset above.
+    /// PERFORMANCE: This is called 60 times per second during drag - must be fast!
     /// </summary>
     public void UpdatePosition(PointerEventData eventData)
     {
         if (dragVisualRT == null) return;
 
-        Canvas canvas = FindTopCanvas();
-        if (canvas == null) return;
+        // PERFORMANCE FIX: Use cached canvas instead of FindTopCanvas()
+        if (cachedCanvas == null) return;
 
         Vector3 worldPos;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(
-            (RectTransform)canvas.transform,
+            (RectTransform)cachedCanvas.transform,
             eventData.position,
             eventData.pressEventCamera,
             out worldPos

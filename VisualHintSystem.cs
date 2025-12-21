@@ -42,8 +42,7 @@ public class VisualHintSystem : MonoBehaviour
     private GameObject currentGhostImage;
     private AudioSource audioSource;
 
-    // ✅ Cache של DropSpots
-    private static Dictionary<string, DropSpot> dropSpotCache;
+    // PERFORMANCE FIX: Removed local cache - now uses global DropSpotCache instead
 
     void Awake()
     {
@@ -84,9 +83,7 @@ public class VisualHintSystem : MonoBehaviour
             Debug.Log("✅ [VisualHintSystem] AudioSource נוסף אוטומטית");
         }
 
-        // ✅ רענן את ה-cache
-        RefreshDropSpotCache();
-
+        // PERFORMANCE FIX: Using global DropSpotCache - no need to refresh here
         Debug.Log("═══════════════════════════════════════════\n");
     }
 
@@ -116,51 +113,11 @@ public class VisualHintSystem : MonoBehaviour
         }
     }
 
-    // ✅ רענון Cache של DropSpots
-    private void RefreshDropSpotCache()
-    {
-        Debug.Log($"[VisualHintSystem] === REFRESH CACHE START ===");
-
-        if (dropSpotCache == null)
-        {
-            dropSpotCache = new Dictionary<string, DropSpot>();
-        }
-
-        dropSpotCache.Clear();
-
-        // ✅ מצא את כל ה-DropSpots (כולל לא פעילים)
-        var allDropSpots = FindObjectsOfType<DropSpot>(true);
-
-        Debug.Log($"[VisualHintSystem] Found {allDropSpots.Length} DropSpots in scene");
-
-        foreach (var spot in allDropSpots)
-        {
-            if (!string.IsNullOrEmpty(spot.spotId))
-            {
-                if (!dropSpotCache.ContainsKey(spot.spotId))
-                {
-                    dropSpotCache[spot.spotId] = spot;
-                    Debug.Log($"[VisualHintSystem] ✅ Cached: '{spot.spotId}'");
-                }
-                else
-                {
-                    Debug.LogWarning($"[VisualHintSystem] ⚠️ Duplicate spotId: '{spot.spotId}'");
-                }
-            }
-        }
-
-        Debug.Log($"[VisualHintSystem] === CACHE END === Total: {dropSpotCache.Count}");
-    }
-
-    // ✅ קבלת תמונה אמיתית מה-DropSpot
+    // PERFORMANCE FIX: Now uses global DropSpotCache instead of local cache
     private Sprite GetRealPhotoFromDropSpot(string buttonID)
     {
-        if (dropSpotCache == null || dropSpotCache.Count == 0)
-        {
-            RefreshDropSpotCache();
-        }
-
-        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
+        DropSpot spot = DropSpotCache.Get(buttonID);
+        if (spot != null)
         {
             var revealController = spot.GetComponent<ImageRevealController>();
             if (revealController != null)
@@ -179,15 +136,11 @@ public class VisualHintSystem : MonoBehaviour
         return null;
     }
 
-    // ✅ קבלת גודל התמונה האמיתית
+    // PERFORMANCE FIX: Now uses global DropSpotCache
     private Vector2 GetRealPhotoSizeFromDropSpot(string buttonID)
     {
-        if (dropSpotCache == null || dropSpotCache.Count == 0)
-        {
-            RefreshDropSpotCache();
-        }
-
-        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
+        DropSpot spot = DropSpotCache.Get(buttonID);
+        if (spot != null)
         {
             var revealController = spot.GetComponent<ImageRevealController>();
             if (revealController != null)
@@ -273,8 +226,7 @@ public class VisualHintSystem : MonoBehaviour
 
         Debug.Log("✅ [VisualHintSystem] כל הבדיקות עברו - מחפש כפתורים זמינים...");
 
-        // ✅ רענן cache
-        RefreshDropSpotCache();
+        // PERFORMANCE FIX: Global cache is always up to date - no need to refresh
 
         // ✅ מציאת כפתורים זמינים לפי ה-Batch הנוכחי!
         List<DraggableButton> availableButtons;
@@ -327,14 +279,6 @@ public class VisualHintSystem : MonoBehaviour
         if (targetSpot == null)
         {
             Debug.LogError($"❌ [VisualHintSystem] לא נמצא DropSpot עבור {buttonID}");
-
-            // ✅ הדפס מה יש ב-cache
-            Debug.Log($"[VisualHintSystem] Available spots in cache:");
-            foreach (var key in dropSpotCache.Keys)
-            {
-                Debug.Log($"  - '{key}'");
-            }
-
             Debug.Log("───────────────────────────────────────────\n");
             return;
         }
@@ -412,20 +356,13 @@ public class VisualHintSystem : MonoBehaviour
         return available;
     }
 
-    // ✅ משתמש ב-cache
+    // PERFORMANCE FIX: Now uses global DropSpotCache
     private DropSpot FindMatchingDropSpot(string buttonID)
     {
-        if (dropSpotCache == null || dropSpotCache.Count == 0)
+        DropSpot spot = DropSpotCache.Get(buttonID);
+        if (spot != null && spot.gameObject.activeInHierarchy && !spot.IsSettled)
         {
-            RefreshDropSpotCache();
-        }
-
-        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
-        {
-            if (spot.gameObject.activeInHierarchy && !spot.IsSettled)
-            {
-                return spot;
-            }
+            return spot;
         }
 
         return null;

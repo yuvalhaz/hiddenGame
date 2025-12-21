@@ -526,4 +526,17 @@ public class ScrollableButtonBar : MonoBehaviour
 
         scrollRect.horizontalNormalizedPosition = targetNormalizedPos;
     }
+
+    /// <summary>
+    /// PERFORMANCE FIX: Public API to replace reflection usage in GameProgressManager.
+    /// Mark a button as destroyed and recalculate positions.
+    /// </summary>
+    public void MarkButtonAsDestroyed(int index)
+    {
+        if (index >= 0 && index < buttonStates.Count)
+        {
+            buttonStates[index] = false;
+            RecalculateAllPositions();
+        }
+    }
 }
