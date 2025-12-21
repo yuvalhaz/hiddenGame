@@ -1,18 +1,24 @@
 using UnityEngine;
+using System.Collections;
 
 public class TutorialSlideManager : MonoBehaviour
 {
     public static TutorialSlideManager Instance;
-    
+
     [Header("Tutorial Slides")]
     [SerializeField] private GameObject stage1Slide;
     [SerializeField] private GameObject stage2Slide;
     [SerializeField] private GameObject stage3Slide;
-    
+
+    [Header("Timing Settings")]
+    [SerializeField] private float delayBeforeFirstSlide = 3f;
+    [SerializeField] private float delayBetweenSlides = 3f;
+
     [Header("Settings")]
     [SerializeField] private bool skipIfCompleted = true;
-    
+
     private int currentStage = 0;
+    private bool isTransitioning = false;
     
     void Awake()
     {
@@ -30,29 +36,50 @@ public class TutorialSlideManager : MonoBehaviour
     
     void Start()
     {
-        // בדוק אם השחקן כבר עבר את הטוטוריאל
+        // Check if tutorial already completed
         if (skipIfCompleted)
         {
             bool tutorialCompleted = PlayerPrefs.GetInt("TutorialCompleted", 0) == 1;
-            
+
             if (tutorialCompleted)
             {
-                // כבר עבר - הסתר הכל ואל תתחיל
                 Debug.Log("[TutorialSlideManager] Tutorial already completed - skipping");
                 HideAllSlides();
-                enabled = false; // כבה את הסקריפט
+                enabled = false;
                 return;
             }
         }
-        
-        // פעם ראשונה - הצג שלב 1
-        ShowStage(1);
+
+        // First time - wait 3 seconds then show stage 1
+        StartCoroutine(ShowStageAfterDelay(1, delayBeforeFirstSlide));
+    }
+
+    /// <summary>
+    /// Show slide after delay (coroutine)
+    /// </summary>
+    private IEnumerator ShowStageAfterDelay(int stageNumber, float delay)
+    {
+        isTransitioning = true;
+
+        Debug.Log($"[TutorialSlideManager] Waiting {delay} seconds before showing stage {stageNumber}...");
+        yield return new WaitForSeconds(delay);
+
+        ShowStageImmediate(stageNumber);
+        isTransitioning = false;
     }
     
     /// <summary>
-    /// הצג שקופית לפי מספר שלב
+    /// Show slide immediately (no delay)
     /// </summary>
     public void ShowStage(int stageNumber)
+    {
+        ShowStageImmediate(stageNumber);
+    }
+
+    /// <summary>
+    /// Internal method to show slide immediately
+    /// </summary>
+    private void ShowStageImmediate(int stageNumber)
     {
         currentStage = stageNumber;
         
@@ -108,14 +135,18 @@ public class TutorialSlideManager : MonoBehaviour
     }
     
     /// <summary>
-    /// נקרא מ-DropSpot כשפריט נכון הונח
+    /// Called from DropSpot when correct item is placed
     /// </summary>
     public void OnCorrectDrop(string itemName)
     {
         Debug.Log($"[TutorialSlideManager] Correct drop detected: {itemName} (Current stage: {currentStage})");
-        
-        // עבור לשלב הבא
-        ShowStage(currentStage + 1);
+
+        // Immediately hide current slide
+        HideAllSlides();
+
+        // Wait 3 seconds before showing next stage
+        int nextStage = currentStage + 1;
+        StartCoroutine(ShowStageAfterDelay(nextStage, delayBetweenSlides));
     }
     
     /// <summary>
