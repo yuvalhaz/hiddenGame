@@ -11,6 +11,10 @@ public class TutorialSlideManager : MonoBehaviour
     [SerializeField] private GameObject stage3Slide;
     [SerializeField] private GameObject stage4Slide; // "Click the hint button"
 
+    [Header("Hint Button Control")]
+    [Tooltip("The hint button GameObject - will be shown only from stage 4")]
+    [SerializeField] private GameObject hintButtonObject;
+
     [Header("Timing Settings")]
     [SerializeField] private float delayBeforeFirstSlide = 3f;
     [SerializeField] private float delayBetweenSlides = 3f;
@@ -34,6 +38,13 @@ public class TutorialSlideManager : MonoBehaviour
             Debug.LogWarning("[TutorialSlideManager] Multiple instances detected!");
             Destroy(gameObject);
         }
+
+        // Hide hint button initially - will be shown in stage 4
+        if (hintButtonObject != null)
+        {
+            hintButtonObject.SetActive(false);
+            Debug.Log("[TutorialSlideManager] Hint button hidden - will appear in stage 4");
+        }
     }
     
     void Start()
@@ -47,6 +58,11 @@ public class TutorialSlideManager : MonoBehaviour
             {
                 Debug.Log("[TutorialSlideManager] Tutorial already completed - skipping");
                 HideAllSlides();
+                // Show hint button since tutorial is complete
+                if (hintButtonObject != null)
+                {
+                    hintButtonObject.SetActive(true);
+                }
                 enabled = false;
                 return;
             }
@@ -61,6 +77,13 @@ public class TutorialSlideManager : MonoBehaviour
             Debug.Log("[TutorialSlideManager] All items already placed - completing tutorial");
             CompleteTutorial();
             return;
+        }
+
+        // If starting from stage 4 or later, show hint button immediately
+        if (startStage >= 4 && hintButtonObject != null)
+        {
+            hintButtonObject.SetActive(true);
+            Debug.Log("[TutorialSlideManager] Starting from stage 4+ - hint button visible");
         }
 
         Debug.Log($"[TutorialSlideManager] Found {settledCount} items already placed - starting from stage {startStage}");
@@ -164,6 +187,13 @@ public class TutorialSlideManager : MonoBehaviour
 
             case 4:
                 // Stage 4: Teach player to use hint button
+                // IMPORTANT: Show the hint button for the first time!
+                if (hintButtonObject != null)
+                {
+                    hintButtonObject.SetActive(true);
+                    Debug.Log("[TutorialSlideManager] 💡 Hint button now visible!");
+                }
+
                 if (stage4Slide != null)
                 {
                     stage4Slide.SetActive(true);
@@ -241,13 +271,20 @@ public class TutorialSlideManager : MonoBehaviour
     void CompleteTutorial()
     {
         Debug.Log("[TutorialSlideManager] ✅ Tutorial completed!");
-        
+
         // שמור שהטוטוריאל הושלם
         PlayerPrefs.SetInt("TutorialCompleted", 1);
         PlayerPrefs.Save();
-        
+
         HideAllSlides();
-        
+
+        // Make sure hint button stays visible after tutorial
+        if (hintButtonObject != null)
+        {
+            hintButtonObject.SetActive(true);
+            Debug.Log("[TutorialSlideManager] Hint button will remain visible");
+        }
+
         // כבה את הסקריפט
         enabled = false;
     }
