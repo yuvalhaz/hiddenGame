@@ -83,13 +83,16 @@ public class GameProgressManager : MonoBehaviour
 
     void Update()
     {
-        // ✅ לחץ R במקלדת כדי לאפס בזמן Play (לבדיקות)
+#if UNITY_EDITOR
+        // Debug hotkey - R to reset (only in editor builds)
         if (Input.GetKeyDown(KeyCode.R) && debugMode)
         {
-            Debug.Log("🔄 R pressed - Resetting game!");
+            Debug.Log("R pressed - Resetting game!");
             ResetAllProgress();
         }
+#endif
 
+        // PERFORMANCE NOTE: Consider using InvokeRepeating instead of Update for auto-save
         if (autoSave)
         {
             autoSaveTimer += Time.deltaTime;
@@ -134,11 +137,17 @@ public class GameProgressManager : MonoBehaviour
 
     private IEnumerator DelayedApplyProgress()
     {
-        yield return null; // ✅ רק frame אחד מספיק!
+        yield return null; // Wait one frame for scene to be fully initialized
 
-        Debug.Log($"[GameProgressManager] === STARTING APPLY PROGRESS ===");
+#if UNITY_EDITOR
+        if (debugMode)
+            Debug.Log($"[GameProgressManager] Starting apply progress");
+#endif
         ApplyProgressToScene();
-        Debug.Log($"[GameProgressManager] === FINISHED APPLY PROGRESS ===");
+#if UNITY_EDITOR
+        if (debugMode)
+            Debug.Log($"[GameProgressManager] Finished apply progress");
+#endif
     }
 
 
@@ -289,47 +298,38 @@ public class GameProgressManager : MonoBehaviour
         return progressData.placedItems.Any(item => item.itemId == itemId);
     }
 
-    // ✅ UPDATED: Works with DraggableButton instead of SimpleDragFromBar
     private void ApplyProgressToScene()
     {
-        Debug.Log($"=== APPLY PROGRESS START ===");
-        Debug.Log($"[GameProgressManager] Items to restore: {progressData.placedItems.Count}");
+#if UNITY_EDITOR
+        if (debugMode)
+            Debug.Log($"[GameProgressManager] Items to restore: {progressData.placedItems.Count}");
+#endif
 
         if (progressData.placedItems.Count == 0)
         {
-            Debug.Log("[GameProgressManager] No items to restore");
             return;
         }
 
         DraggableButton[] allDragButtons = FindObjectsOfType<DraggableButton>(true);
         DropSpot[] allDropSpots = FindObjectsOfType<DropSpot>(true);
 
-        Debug.Log($"[GameProgressManager] Found {allDragButtons.Length} buttons, {allDropSpots.Length} spots");
-
-        // ✅ שמור את כל ה-bars
         var allBars = new System.Collections.Generic.HashSet<ScrollableButtonBar>();
 
         foreach (var placedItem in progressData.placedItems)
         {
-            Debug.Log($"[GameProgressManager] 🔄 Restoring: {placedItem.itemId}");
-
             DraggableButton dragButton = System.Array.Find(allDragButtons, btn => btn.GetButtonID() == placedItem.itemId);
             DropSpot dropSpot = System.Array.Find(allDropSpots, spot => spot.spotId == placedItem.itemId);
 
             if (dropSpot != null)
             {
-                Debug.Log($"[GameProgressManager] ✅ Found spot: {placedItem.itemId}");
-
                 if (dragButton != null)
                 {
-                    // ✅ שמור את ה-bar לפני המחיקה
                     var bar = dragButton.GetComponentInParent<ScrollableButtonBar>();
                     if (bar != null)
                     {
                         allBars.Add(bar);
                     }
 
-                    Debug.Log($"[GameProgressManager] 🗑️ Destroying button: {placedItem.itemId}");
                     Destroy(dragButton.gameObject);
                 }
 
@@ -339,22 +339,18 @@ public class GameProgressManager : MonoBehaviour
                 if (revealController != null)
                 {
                     revealController.RevealInstant();
-                    Debug.Log($"[GameProgressManager] ✅ Revealed: {placedItem.itemId}");
                 }
             }
             else
             {
-                Debug.LogWarning($"[GameProgressManager] ❌ Spot not found: {placedItem.itemId}");
+                Debug.LogWarning($"[GameProgressManager] Spot not found: {placedItem.itemId}");
             }
         }
 
-        // ✅ עדכן את כל ה-bars
         if (allBars.Count > 0)
         {
             StartCoroutine(RefreshAllBars(allBars));
         }
-
-        Debug.Log($"=== APPLY PROGRESS END ===");
     }
 
     [ContextMenu("🔴 FULL RESET - Delete Everything")]
@@ -471,38 +467,19 @@ public class GameProgressManager : MonoBehaviour
     }
 
 
-    // ✅ פונקציה חדשה
+    // PERFORMANCE FIX: Removed reflection - now uses public API
     private IEnumerator UpdateBarAfterDestroy(ScrollableButtonBar bar, int index)
     {
-        yield return null; // המתן frame אחד
+        yield return null; // Wait one frame for button to be destroyed
 
         if (bar != null)
         {
-            Debug.Log($"[GameProgressManager] Updating bar after button {index} destroyed");
-
-            // ✅ סמן את הכפתור כלא פעיל ב-bar
-            var barScript = bar.GetType();
-            var buttonStatesField = barScript.GetField("buttonStates",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            if (buttonStatesField != null)
-            {
-                var buttonStates = (System.Collections.Generic.List<bool>)buttonStatesField.GetValue(bar);
-                if (index < buttonStates.Count)
-                {
-                    buttonStates[index] = false;
-                }
-            }
-
-            // ✅ קרא ל-RecalculateAllPositions
-            var method = barScript.GetMethod("RecalculateAllPositions",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            if (method != null)
-            {
-                method.Invoke(bar, null);
-                Debug.Log($"[GameProgressManager] ✅ Bar updated!");
-            }
+#if UNITY_EDITOR
+            if (debugMode)
+                Debug.Log($"[GameProgressManager] Updating bar after button {index} destroyed");
+#endif
+            // PERFORMANCE FIX: Use public API instead of reflection (10-100x faster)
+            bar.MarkButtonAsDestroyed(index);
         }
     }
 

@@ -116,26 +116,20 @@ public class ScrollableButtonBar : MonoBehaviour
         }
     }
 
-    // ✅ פונקציה ציבורית שיכולה להיקרא מבחוץ
+    // Public method that can be called externally to refresh the bar
     public void RefreshBar()
     {
-        Debug.Log("[ScrollableButtonBar] RefreshBar called");
-
-        // ✅ עבור על כל הכפתורים ובדוק אם הם קיימים
+        // Check all buttons and mark destroyed ones as inactive
         for (int i = 0; i < buttons.Count; i++)
         {
             if (buttons[i] == null)
             {
-                // הכפתור נמחק - סמן אותו כלא פעיל
                 buttonStates[i] = false;
-                Debug.Log($"[ScrollableButtonBar] Button {i} is null - marking inactive");
             }
         }
 
-        // ✅ חשב מחדש את כל המיקומים
+        // Recalculate all positions
         RecalculateAllPositions();
-
-        Debug.Log("[ScrollableButtonBar] ✅ Bar refreshed!");
     }
 
 
@@ -196,26 +190,19 @@ public class ScrollableButtonBar : MonoBehaviour
 
     public void OnButtonDragStarted(DraggableButton button, int index)
     {
-        Debug.Log("OnButtonDragStarted נקרא לכפתור: " + index);
-        
-        // ✅ רק עוצר אנימציות - לא משנה מצבים ולא מחשב מחדש!
+        // Stop any ongoing animations for this button
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null && buttonsAnimating.ContainsKey(rect))
         {
             buttonsAnimating.Remove(rect);
         }
-        
-        // ✅ זהו! לא עושים כלום אחר כאן
     }
 
     public void OnButtonDraggedOut(DraggableButton button, int index)
     {
-        Debug.Log("OnButtonDraggedOut נקרא לכפתור: " + index);
-        
-        // ✅ רק כאן משנים מצב וממקמים מחדש - פעם אחת בלבד!
+        // Update state and recalculate positions only once
         if (index >= 0 && index < buttonStates.Count)
         {
-            // מוודא שלא נקרא פעמיים
             if (buttonStates[index] == true)
             {
                 buttonStates[index] = false;
@@ -239,40 +226,34 @@ public class ScrollableButtonBar : MonoBehaviour
 
     public void OnButtonSuccessfullyPlaced(DraggableButton button, int index)
     {
-        Debug.Log($"OnButtonSuccessfullyPlaced נקרא לכפתור {index}");
-        
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null && buttonsAnimating.ContainsKey(rect))
         {
             buttonsAnimating.Remove(rect);
         }
-        
+
         if (index >= 0 && index < buttonStates.Count)
         {
             buttonStates[index] = false;
         }
-        
+
         RecalculateAllPositions();
     }
 
     void RecalculateAllPositions()
     {
-        Debug.Log("RecalculateAllPositions נקרא");
-        
         int positionIndex = 0;
-        
+
         for (int i = 0; i < buttons.Count; i++)
         {
             if (buttonStates[i])
             {
                 float xPos = buttonSpacing + (positionIndex * (buttonWidth + buttonSpacing));
                 Vector2 newTarget = new Vector2(xPos, 0);
-                
+
                 targetPositions[i] = newTarget;
-                
-                Debug.Log($"כפתור {i}: מיקום יעד חדש = {xPos}");
-                
-                // ✅ פשוט עדכן את המיקום היעד - Update יטפל בשאר
+
+                // Update target position - Update loop will handle animation
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
                     RectTransform rect = buttons[i].GetComponent<RectTransform>();
@@ -281,11 +262,11 @@ public class ScrollableButtonBar : MonoBehaviour
                         buttonsAnimating[rect] = true;
                     }
                 }
-                
+
                 positionIndex++;
             }
         }
-        
+
         UpdateContentSize();
     }
 
@@ -318,7 +299,7 @@ public class ScrollableButtonBar : MonoBehaviour
         if (index >= 0 && index < buttonDataList.Count && index < buttons.Count)
         {
             buttonDataList[index].buttonSprite = sprite;
-            
+
             GameObject buttonObj = buttons[index].gameObject;
             if (buttonObj != null)
             {
@@ -328,6 +309,16 @@ public class ScrollableButtonBar : MonoBehaviour
                     img.sprite = sprite;
                 }
             }
+        }
+    }
+
+    // PERFORMANCE FIX: Public API to replace reflection usage
+    public void MarkButtonAsDestroyed(int index)
+    {
+        if (index >= 0 && index < buttonStates.Count)
+        {
+            buttonStates[index] = false;
+            RecalculateAllPositions();
         }
     }
 }

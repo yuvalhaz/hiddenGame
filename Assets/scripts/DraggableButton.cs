@@ -13,11 +13,11 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     [SerializeField] private bool debugMode = false;
     [SerializeField] private bool animateSizeChange = true;
     [SerializeField] private float sizeAnimationDuration = 0.5f;
-    
+
     [Header("Success Effects")]
     [SerializeField] private bool showConfettiOnSuccess = true;
     [SerializeField] private int confettiCount = 50;
-    
+
     private ScrollableButtonBar buttonBar;
     private RectTransform rectTransform;
     private Canvas canvas;
@@ -27,41 +27,76 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private CanvasGroup canvasGroup;
     private string buttonID;
     private bool isDragging = false;
-    
+
     private RectTransform activeDragRT;
     private Image activeDragImage;
-    
-    private static Dictionary<string, DropSpot> dropSpotCache;
-    
+
+    // PERFORMANCE FIX: Instance-based cache to prevent memory leaks across scenes
+    private Dictionary<string, DropSpot> dropSpotCache;
+
     private bool wasSuccessfullyPlaced = false;
-    
-    // ✅ הוספה: שמירת ההפניה ל-ScrollRect כדי להשבית אותו
+
     private ScrollRect parentScrollRect;
+
+    // PERFORMANCE FIX: Cached canvas reference to avoid repeated FindObjectsOfType calls
+    private Canvas cachedCanvas;
 
     void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
         canvas = GetComponentInParent<Canvas>();
         canvasGroup = GetComponent<CanvasGroup>();
-        
+
         if (canvasGroup == null)
         {
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
-        
-        // ✅ מצא את ה-ScrollRect ההורה
+
         parentScrollRect = GetComponentInParent<ScrollRect>();
+
+        // PERFORMANCE FIX: Cache canvas once at startup instead of during drag
+        cachedCanvas = GetOrCacheCanvas();
+
+        // PERFORMANCE FIX: Initialize instance-based cache
+        if (dropSpotCache == null)
+        {
+            dropSpotCache = new Dictionary<string, DropSpot>();
+        }
     }
 
     void OnDestroy()
     {
         if (activeDragRT != null)
         {
-            Debug.Log($"[DraggableButton] OnDestroy - מנקה activeDragRT");
+#if UNITY_EDITOR
+            if (debugMode)
+                Debug.Log($"[DraggableButton] OnDestroy - cleaning activeDragRT");
+#endif
             Destroy(activeDragRT.gameObject);
             activeDragRT = null;
             activeDragImage = null;
         }
+
+        // Clear cache to prevent memory leaks
+        dropSpotCache?.Clear();
+    }
+
+    // PERFORMANCE FIX: Get canvas without expensive FindObjectsOfType in hot paths
+    private Canvas GetOrCacheCanvas()
+    {
+        if (topCanvas != null) return topCanvas;
+        if (cachedCanvas != null) return cachedCanvas;
+
+        // Only search scene once during initialization
+        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        foreach (var c in canvases)
+        {
+            if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
+            {
+                return c;
+            }
+        }
+        return canvas; // Fallback to parent canvas
     }
 
     public void SetButtonBar(ScrollableButtonBar bar, int index)
@@ -234,29 +269,23 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     
     private void CreateDragVisual()
     {
-        // ✅ אם כבר יש drag visual - אל תיצור עוד אחד!
         if (activeDragRT != null)
         {
-            Debug.LogWarning($"[DraggableButton] Drag visual already exists! Skipping creation.");
+#if UNITY_EDITOR
+            if (debugMode)
+                Debug.LogWarning($"[DraggableButton] Drag visual already exists! Skipping creation.");
+#endif
             return;
         }
-        
-        Debug.Log($"[DraggableButton] === CREATE DRAG VISUAL START === buttonID: {buttonID}");
-        
-        Canvas host = topCanvas;
-        if (host == null)
-        {
-            Canvas[] canvases = FindObjectsOfType<Canvas>();
-            foreach (var c in canvases)
-            {
-                if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
-                {
-                    host = c;
-                    break;
-                }
-            }
-        }
-        
+
+#if UNITY_EDITOR
+        if (debugMode)
+            Debug.Log($"[DraggableButton] Creating drag visual for {buttonID}");
+#endif
+
+        // PERFORMANCE FIX: Use cached canvas instead of FindObjectsOfType
+        Canvas host = cachedCanvas;
+
         if (host == null)
         {
             Debug.LogError("[DraggableButton] No canvas found!");
@@ -272,17 +301,12 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         activeDragRT.SetParent(host.transform, false);
         
         activeDragImage = go.GetComponent<Image>();
-        
-        Debug.Log($"[DraggableButton] Created GameObject, now getting photo...");
-        
+
         Sprite realPhoto = GetRealPhotoFromDropSpot();
-        
-        Debug.Log($"[DraggableButton] GetRealPhotoFromDropSpot returned: {(realPhoto != null ? realPhoto.name : "NULL")}");
-        
+
         if (realPhoto != null)
         {
             activeDragImage.sprite = realPhoto;
-            Debug.Log($"[DraggableButton] ✅ SET SPRITE TO: {realPhoto.name}");
         }
         else
         {
@@ -290,7 +314,6 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             if (myImage != null)
             {
                 activeDragImage.sprite = myImage.sprite;
-                Debug.Log($"[DraggableButton] ⚠️ Using button sprite: {(myImage.sprite != null ? myImage.sprite.name : "NULL")}");
             }
         }
         
@@ -305,171 +328,105 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         
         Vector2 targetSize = GetRealPhotoSizeFromDropSpot();
         Vector2 startSize = targetSize * 0.3f;
-        
-        Debug.Log($"[DraggableButton] 📏 Animating size from {startSize} to {targetSize}");
-        
+
         activeDragRT.sizeDelta = startSize;
         StartCoroutine(AnimateSizeCoroutine(activeDragRT, startSize, targetSize, sizeAnimationDuration));
-        
+
         activeDragRT.SetAsLastSibling();
-        
-        // ✅ מקם את התמונה במיקום הנוכחי של הכפתור המקורי
+
+        // Position image at button's current location
         activeDragRT.position = rectTransform.position;
-        
-        Debug.Log($"[DraggableButton] === CREATE DRAG VISUAL END ===");
     }
     
     private void UpdateDragPosition(PointerEventData eventData)
     {
-        // ✅ אם אין drag visual - אל תעשה כלום!
-        if (activeDragRT == null)
-        {
-            if (debugMode)
-                Debug.LogWarning($"[DraggableButton] UpdateDragPosition called but activeDragRT is null!");
-            return;
-        }
-        
-        Canvas host = topCanvas;
-        if (host == null)
-        {
-            Canvas[] canvases = FindObjectsOfType<Canvas>();
-            foreach (var c in canvases)
-            {
-                if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
-                {
-                    host = c;
-                    break;
-                }
-            }
-        }
-        
+        // PERFORMANCE FIX: This runs every frame during drag - must be fast!
+        if (activeDragRT == null) return;
+
+        // PERFORMANCE FIX: Use cached canvas
+        Canvas host = cachedCanvas;
         if (host == null) return;
-        
-        // ✅ חישוב מיקום מדויק יותר
+
+        // Calculate accurate position
         Vector3 worldPos;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(
-            (RectTransform)host.transform, 
-            eventData.position, 
-            eventData.pressEventCamera, 
+            (RectTransform)host.transform,
+            eventData.position,
+            eventData.pressEventCamera,
             out worldPos
         );
-        
-        // ✅ אופסט מדויק - התמונה ממורכזת מעל האצבע
+
+        // Center image above finger
         Vector3 offset = new Vector3(0, activeDragRT.rect.height * 0.5f, 0);
         activeDragRT.position = worldPos + offset;
-        
-        if (debugMode)
-        {
-            Debug.Log($"[DraggableButton] UpdateDragPosition: screen={eventData.position}, world={worldPos}, final={activeDragRT.position}");
-        }
     }
 
     // ===== DropSpot Cache =====
 
-    private static void RefreshDropSpotCache()
+    // PERFORMANCE FIX: Changed from static to instance method (cache is now instance-based)
+    private void RefreshDropSpotCache()
     {
-        Debug.Log($"[DraggableButton] === REFRESH CACHE START ===");
+#if UNITY_EDITOR
+        if (debugMode)
+            Debug.Log($"[DraggableButton] Refreshing cache");
+#endif
 
         if (dropSpotCache == null)
         {
             dropSpotCache = new Dictionary<string, DropSpot>();
-            Debug.Log($"[DraggableButton] Created new cache dictionary");
         }
 
         dropSpotCache.Clear();
 
-        // ✅ תיקון: מצא גם objects לא פעילים!
-        var allDropSpots = FindObjectsOfType<DropSpot>(true); // ← הוסף true!
+        // Find all DropSpots including inactive ones
+        var allDropSpots = FindObjectsOfType<DropSpot>(true);
 
-        Debug.Log($"[DraggableButton] Found {allDropSpots.Length} DropSpots in scene");
+#if UNITY_EDITOR
+        if (debugMode)
+            Debug.Log($"[DraggableButton] Found {allDropSpots.Length} DropSpots in scene");
+#endif
 
         foreach (var spot in allDropSpots)
         {
-            Debug.Log($"[DraggableButton] Checking spot: spotId='{spot.spotId}', isEmpty={string.IsNullOrEmpty(spot.spotId)}");
-
             if (!string.IsNullOrEmpty(spot.spotId))
             {
                 if (!dropSpotCache.ContainsKey(spot.spotId))
                 {
                     dropSpotCache[spot.spotId] = spot;
-                    Debug.Log($"[DraggableButton] ✅ Cached: '{spot.spotId}'");
                 }
                 else
                 {
-                    Debug.LogWarning($"[DraggableButton] ⚠️ Duplicate spotId: '{spot.spotId}'");
+                    Debug.LogWarning($"[DraggableButton] Duplicate spotId: '{spot.spotId}'");
                 }
             }
-            else
-            {
-                Debug.LogWarning($"[DraggableButton] ⚠️ Spot has empty spotId!");
-            }
         }
-
-        Debug.Log($"[DraggableButton] === REFRESH CACHE END === Total cached: {dropSpotCache.Count}");
     }
     
     private Sprite GetRealPhotoFromDropSpot()
     {
-        Debug.Log($"[DraggableButton] === GET REAL PHOTO START === buttonID: '{buttonID}'");
-        
         if (dropSpotCache == null || dropSpotCache.Count == 0)
         {
-            Debug.Log($"[DraggableButton] Cache is empty, refreshing...");
             RefreshDropSpotCache();
         }
-        else
-        {
-            Debug.Log($"[DraggableButton] Cache already has {dropSpotCache.Count} items");
-        }
-
-        Debug.Log($"[DraggableButton] Searching for buttonID: '{buttonID}' in cache...");
 
         if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
         {
-            Debug.Log($"[DraggableButton] ✅ FOUND DropSpot in cache: '{spot.spotId}'");
-            
             var revealController = spot.GetComponent<ImageRevealController>();
             if (revealController != null)
             {
-                Debug.Log($"[DraggableButton] ✅ Found ImageRevealController");
-                
                 var backgroundImage = revealController.GetBackgroundImage();
-                
-                if (backgroundImage != null)
+                if (backgroundImage != null && backgroundImage.sprite != null)
                 {
-                    Debug.Log($"[DraggableButton] ✅ backgroundImage component exists");
-                    
-                    if (backgroundImage.sprite != null)
-                    {
-                        Debug.Log($"[DraggableButton] 🎉 SUCCESS! sprite name: '{backgroundImage.sprite.name}'");
-                        return backgroundImage.sprite;
-                    }
-                    else
-                    {
-                        Debug.LogError($"[DraggableButton] ❌ backgroundImage.sprite is NULL!");
-                    }
+                    return backgroundImage.sprite;
                 }
-                else
-                {
-                    Debug.LogError($"[DraggableButton] ❌ GetBackgroundImage() returned NULL!");
-                }
-            }
-            else
-            {
-                Debug.LogError($"[DraggableButton] ❌ No ImageRevealController component found!");
-            }
-        }
-        else
-        {
-            Debug.LogError($"[DraggableButton] ❌ buttonID '{buttonID}' NOT FOUND in cache!");
-            Debug.Log($"[DraggableButton] Available keys in cache:");
-            foreach (var key in dropSpotCache.Keys)
-            {
-                Debug.Log($"  - '{key}'");
             }
         }
 
-        Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
+#if UNITY_EDITOR
+        if (debugMode)
+            Debug.LogWarning($"[DraggableButton] Could not find sprite for '{buttonID}'");
+#endif
+
         return null;
     }
     
@@ -552,21 +509,8 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             yield break;
         }
 
-        Debug.Log($"[DraggableButton] 🔙 Starting return animation");
-
-        Canvas host = topCanvas;
-        if (host == null)
-        {
-            Canvas[] canvases = FindObjectsOfType<Canvas>();
-            foreach (var c in canvases)
-            {
-                if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
-                {
-                    host = c;
-                    break;
-                }
-            }
-        }
+        // PERFORMANCE FIX: Use cached canvas
+        Canvas host = cachedCanvas;
 
         Vector3 startPos = activeDragRT.position;
         Vector2 startSize = activeDragRT.sizeDelta;
@@ -630,23 +574,11 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     }
     
     // ===== Raycast & Drop =====
-    
+
     private DropSpot RaycastForDropSpot(PointerEventData eventData)
     {
-        Canvas host = topCanvas;
-        if (host == null)
-        {
-            Canvas[] canvases = FindObjectsOfType<Canvas>();
-            foreach (var c in canvases)
-            {
-                if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
-                {
-                    host = c;
-                    break;
-                }
-            }
-        }
-        
+        // PERFORMANCE FIX: Use cached canvas
+        Canvas host = cachedCanvas;
         if (host == null) return null;
         
         var gr = host.GetComponent<GraphicRaycaster>();
@@ -703,9 +635,6 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     private void HandleSuccessfulPlacement(DropSpot hitSpot)
     {
-        Debug.Log($"[DraggableButton] 🎉 HandleSuccessfulPlacement for {buttonID}");
-
-        // ✅ קבל את התמונה
         var revealController = hitSpot.GetComponent<ImageRevealController>();
         Sprite itemSprite = null;
 
@@ -715,26 +644,20 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             if (bgImage != null && bgImage.sprite != null)
             {
                 itemSprite = bgImage.sprite;
-                Debug.Log($"[DraggableButton] Found sprite: {bgImage.sprite.name}");
             }
         }
 
-        // ✅✅✅ שמור לפני כל דבר אחר!
+        // Save progress before anything else
         if (GameProgressManager.Instance != null)
         {
             GameProgressManager.Instance.MarkItemAsPlaced(buttonID, itemSprite);
-            Debug.Log($"[DraggableButton] ✅ SAVED: {buttonID}");
-
-            // ✅ שמור מיד (לא מחכים ל-autosave)
             GameProgressManager.Instance.ForceSave();
-            Debug.Log($"[DraggableButton] ✅ FORCE SAVED!");
         }
         else
         {
-            Debug.LogError($"[DraggableButton] ❌ GameProgressManager is NULL!");
+            Debug.LogError($"[DraggableButton] GameProgressManager is NULL!");
         }
 
-        // עכשיו תעשה את שאר הדברים
         hitSpot.SettleItem(activeDragRT);
 
         if (showConfettiOnSuccess && topCanvas && activeDragRT != null)
