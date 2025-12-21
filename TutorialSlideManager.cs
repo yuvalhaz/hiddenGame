@@ -50,8 +50,41 @@ public class TutorialSlideManager : MonoBehaviour
             }
         }
 
-        // First time - wait 3 seconds then show stage 1
-        StartCoroutine(ShowStageAfterDelay(1, delayBeforeFirstSlide));
+        // Check how many items are already placed and start from appropriate stage
+        int settledCount = CountSettledItems();
+        int startStage = settledCount + 1; // If 0 settled → stage 1, if 1 settled → stage 2, etc.
+
+        if (startStage > 3)
+        {
+            Debug.Log("[TutorialSlideManager] All items already placed - completing tutorial");
+            CompleteTutorial();
+            return;
+        }
+
+        Debug.Log($"[TutorialSlideManager] Found {settledCount} items already placed - starting from stage {startStage}");
+
+        // Wait 3 seconds then show the appropriate stage
+        StartCoroutine(ShowStageAfterDelay(startStage, delayBeforeFirstSlide));
+    }
+
+    /// <summary>
+    /// Count how many items are already settled/placed
+    /// </summary>
+    private int CountSettledItems()
+    {
+        int count = 0;
+        DropSpot[] allDropSpots = DropSpotCache.GetAll();
+
+        foreach (DropSpot spot in allDropSpots)
+        {
+            if (spot != null && spot.IsSettled)
+            {
+                count++;
+                Debug.Log($"[TutorialSlideManager] Found settled item: {spot.spotId}");
+            }
+        }
+
+        return count;
     }
 
     /// <summary>
