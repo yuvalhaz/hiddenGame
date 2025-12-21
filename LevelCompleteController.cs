@@ -93,11 +93,21 @@ public class LevelCompleteController : MonoBehaviour
     {
         Debug.Log("[LevelCompleteController] Playing ending dialog...");
 
+        // ✅ השלם את הלבל כאן - לפני הבועות!
+        if (LevelManager.Instance != null)
+        {
+            Debug.Log("[LevelCompleteController] ✅ Completing level and advancing pointer...");
+            LevelManager.Instance.CompleteCurrentLevelAndAdvancePointer();
+        }
+        else
+        {
+            Debug.LogError("[LevelCompleteController] ❌ LevelManager is NULL!");
+        }
+
         // Start ending dialog
         endingDialog.StartEndingDialog();
 
-        // Wait for dialog to finish
-        // EndingDialogController will handle ads and scene loading
+        // EndingDialogController will just load LevelSelection when bubble is clicked
         yield break;
     }
 

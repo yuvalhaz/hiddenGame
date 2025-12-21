@@ -18,15 +18,19 @@ public class EndingDialogController : MonoBehaviour
     [SerializeField] private bool allowClickToSkip = true;
     [Tooltip("Allow clicking on bubbles to skip to ad and next scene")]
 
-    [Header("📊 Audio Settings")]
+    [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip bubblePopSound;
     [Range(0f, 1f)]
     [SerializeField] private float soundVolume = 1f;
 
     [Header("Settings")]
-    [SerializeField] private string sceneToLoad = "MainMenu";
+    [SerializeField] private string levelSelectionScene = "LevelSelection";
     [SerializeField] private bool quitGameInsteadOfLoadScene = false;
+    
+    [Header("🎓 Tutorial Mode")]
+    [SerializeField] private bool isTutorialMode = false;
+    [Tooltip("Enable this for Level0 - skips all ads and goes straight to LevelSelection")]
     
     [Header("🎬 Ad Settings")]
     [SerializeField] private bool showAdAfterDialog = true;
@@ -37,12 +41,13 @@ public class EndingDialogController : MonoBehaviour
     private int currentDialog = 0;
     private Coroutine autoAdvanceCoroutine = null;
     private bool skipRequested = false;
-    private int bubblesPopped = 0;
-    private bool[] bubbleStates;
 
     void Start()
     {
-        bubbleStates = new bool[imageAnimators.Length];
+        if (isTutorialMode)
+        {
+            Debug.Log("[EndingDialogController] 🎓 TUTORIAL MODE - No ads will be shown");
+        }
 
         if (bubbleMaster != null)
         {
@@ -77,114 +82,46 @@ public class EndingDialogController : MonoBehaviour
             if (imageAnimators[i] != null)
             {
                 int bubbleIndex = i;
-
-                SpriteRenderer[] childSprites = imageAnimators[i].GetComponentsInChildren<SpriteRenderer>(true);
-                foreach (var sprite in childSprites)
+                GameObject bubbleObject = imageAnimators[i].gameObject;
+                
+                // מטפל רק ב-UI Buttons
+                var button = bubbleObject.GetComponent<Button>();
+                if (button == null)
                 {
-                    if (sprite.GetComponent<Collider2D>() == null)
-                    {
-                        sprite.gameObject.AddComponent<BoxCollider2D>();
-                        Debug.Log($"[EndingDialogController] Added collider to sprite: {sprite.name}");
-                    }
-
-                    var button = sprite.GetComponent<Button>();
-                    if (button == null)
-                    {
-                        button = sprite.gameObject.AddComponent<Button>();
-                    }
-
-                    button.onClick.RemoveAllListeners();
-                    button.onClick.AddListener(() => OnBubbleClicked(bubbleIndex));
-
-                    Debug.Log($"[EndingDialogController] Added click handler to sprite bubble {bubbleIndex}: {sprite.name}");
+                    button = bubbleObject.AddComponent<Button>();
+                    Debug.Log($"[EndingDialogController] Added Button to bubble {bubbleIndex}");
                 }
-
-                UnityEngine.UI.Image[] childImages = imageAnimators[i].GetComponentsInChildren<UnityEngine.UI.Image>(true);
-                foreach (var image in childImages)
+                
+                // בדוק אם יש Image ו-set raycast target
+                var image = bubbleObject.GetComponent<UnityEngine.UI.Image>();
+                if (image != null)
                 {
                     image.raycastTarget = true;
-
-                    var button = image.GetComponent<Button>();
-                    if (button == null)
-                    {
-                        button = image.gameObject.AddComponent<Button>();
-                    }
-
-                    button.onClick.RemoveAllListeners();
-                    button.onClick.AddListener(() => OnBubbleClicked(bubbleIndex));
-
-                    Debug.Log($"[EndingDialogController] Added click handler to UI bubble {bubbleIndex}: {image.name}");
                 }
+                
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(() => OnBubbleClicked(bubbleIndex));
+                
+                Debug.Log($"[EndingDialogController] ✅ Added click handler to bubble {bubbleIndex}: {bubbleObject.name}");
             }
         }
     }
 
-    private void OnBubbleClicked(int bubbleIndex)
+    public void OnBubbleClicked(int bubbleIndex)
     {
-        if (bubbleStates[bubbleIndex])
+        Debug.Log($"[EndingDialogController] 🎯 Bubble {bubbleIndex} clicked! Completing level and returning to menu...");
+        
+        // עצור כל קורוטינות
+        if (autoAdvanceCoroutine != null)
         {
-            Debug.Log($"[EndingDialogController] Bubble {bubbleIndex} already popped!");
-            return;
+            StopCoroutine(autoAdvanceCoroutine);
+            autoAdvanceCoroutine = null;
         }
-
-        Debug.Log($"[EndingDialogController] Bubble {bubbleIndex} clicked!");
-
-        bubbleStates[bubbleIndex] = true;
-        bubblesPopped++;
-
-        StartCoroutine(PopBubble(bubbleIndex));
+        
+        // נגן צליל
         PlayBubbleSound();
-
-        if (bubblesPopped >= imageAnimators.Length)
-        {
-            Debug.Log("[EndingDialogController] 🎉 All bubbles popped! Moving to next scene...");
-
-            if (autoAdvanceCoroutine != null)
-            {
-                StopCoroutine(autoAdvanceCoroutine);
-                autoAdvanceCoroutine = null;
-            }
-
-            StartCoroutine(WaitAndEndGame());
-        }
-    }
-
-    private System.Collections.IEnumerator PopBubble(int bubbleIndex)
-    {
-        if (imageAnimators[bubbleIndex] == null)
-            yield break;
-
-        Transform bubbleTransform = imageAnimators[bubbleIndex].transform;
-        Vector3 originalScale = bubbleTransform.localScale;
-
-        float duration = 0.3f;
-        float elapsed = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float progress = elapsed / duration;
-
-            float scale = Mathf.Lerp(1f, 0f, progress);
-            if (progress < 0.3f)
-            {
-                scale = Mathf.Lerp(1f, 1.2f, progress / 0.3f);
-            }
-            else
-            {
-                scale = Mathf.Lerp(1.2f, 0f, (progress - 0.3f) / 0.7f);
-            }
-
-            bubbleTransform.localScale = originalScale * scale;
-            yield return null;
-        }
-
-        imageAnimators[bubbleIndex].gameObject.SetActive(false);
-    }
-
-    private System.Collections.IEnumerator WaitAndEndGame()
-    {
-        yield return new WaitForSeconds(0.5f);
+        
+        // השלם את הלבל וחזור לתפריט
         EndGame();
     }
 
@@ -248,11 +185,18 @@ public class EndingDialogController : MonoBehaviour
 
         bool shouldShowAd = showAdAfterDialog;
         
+        // ✅ TUTORIAL MODE - Skip all ads
+        if (isTutorialMode)
+        {
+            Debug.Log("[EndingDialogController] 🎓 Tutorial mode - skipping ads completely");
+            shouldShowAd = false;
+        }
+        
         // ✅ Skip ads in Editor if enabled
         #if UNITY_EDITOR
         if (skipAdsInEditor)
         {
-            Debug.Log("[EndingDialogController] ⏭️ Skipping ad in Editor");
+            Debug.Log("[EndingDialogController] ⭐️ Skipping ad in Editor");
             shouldShowAd = false;
         }
         #endif
@@ -287,7 +231,7 @@ public class EndingDialogController : MonoBehaviour
                 );
 
                 // ✅ Wait for ad with shorter timeout
-                float timeout = 5f; // Much shorter timeout
+                float timeout = 5f;
                 float elapsed = 0f;
 
                 while (!adFinished && elapsed < timeout)
@@ -312,11 +256,23 @@ public class EndingDialogController : MonoBehaviour
         }
         else
         {
-            Debug.Log("[EndingDialogController] No ads to show, proceeding to next scene");
+            if (isTutorialMode)
+            {
+                Debug.Log("[EndingDialogController] 🎓 Tutorial completed - going to LevelSelection");
+                
+                // ✅ Mark tutorial as completed so it won't show again
+                PlayerPrefs.SetInt("IsFirstTime", 0);
+                PlayerPrefs.Save();
+                Debug.Log("[EndingDialogController] ✅ Marked IsFirstTime = 0");
+            }
+            else
+            {
+                Debug.Log("[EndingDialogController] No ads to show, proceeding to complete level");
+            }
         }
 
-        // ✅ ALWAYS load next scene or quit
-        Debug.Log("[EndingDialogController] 🚀 Loading next scene/quitting...");
+        // ✅ רק טוען LevelSelection - הלבל כבר הושלם!
+        Debug.Log("[EndingDialogController] 🔙 Loading LevelSelection scene...");
         
         if (quitGameInsteadOfLoadScene)
         {
@@ -329,19 +285,8 @@ public class EndingDialogController : MonoBehaviour
         }
         else
         {
-            Debug.Log($"[EndingDialogController] Loading scene: {sceneToLoad}");
-            
-            // ✅ Use LevelManager if available
-            if (LevelManager.Instance != null)
-            {
-                Debug.Log("[EndingDialogController] Using LevelManager to advance");
-                LevelManager.Instance.AdvanceToNextLevel();
-            }
-            else
-            {
-                // Fallback: Load scene directly
-                SceneManager.LoadScene(sceneToLoad);
-            }
+            yield return new WaitForSeconds(0.5f);
+            SceneManager.LoadScene(levelSelectionScene);
         }
     }
 
@@ -349,21 +294,13 @@ public class EndingDialogController : MonoBehaviour
     {
         Debug.Log("[EndingDialogController] ✅ StartEndingDialog called!");
         
+        if (isTutorialMode)
+        {
+            Debug.Log("[EndingDialogController] 🎓 Starting tutorial ending dialog");
+        }
+        
         currentDialog = 0;
         skipRequested = false;
-        bubblesPopped = 0;
-
-        if (bubbleStates == null || bubbleStates.Length != imageAnimators.Length)
-        {
-            bubbleStates = new bool[imageAnimators.Length];
-        }
-        else
-        {
-            for (int i = 0; i < bubbleStates.Length; i++)
-            {
-                bubbleStates[i] = false;
-            }
-        }
 
         if (bubbleMaster != null)
         {

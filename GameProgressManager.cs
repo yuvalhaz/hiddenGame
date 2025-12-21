@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 [System.Serializable]
 public class PlacedItemData
@@ -51,15 +52,37 @@ public class GameProgressManager : MonoBehaviour
     private const string SAVE_KEY = "GameProgress";
 
     /// <summary>
-    /// Get the save key for the current level (if levelData is assigned)
+    /// Get the save key for the current level (using scene name)
     /// </summary>
     private string GetCurrentSaveKey()
     {
+        // Use the active scene name - most reliable!
+        string sceneName = SceneManager.GetActiveScene().name;
+        string lowerSceneName = sceneName.ToLower();
+        
+        // If it's a level scene (level1, Level1, level_1, etc.), use scene-specific key
+        if (lowerSceneName.StartsWith("level") && lowerSceneName.Length > 5)
+        {
+            string numberPart = lowerSceneName.Substring(5);
+            // Remove underscores and other non-digit characters
+            numberPart = new string(numberPart.Where(char.IsDigit).ToArray());
+            
+            if (!string.IsNullOrEmpty(numberPart) && int.TryParse(numberPart, out int levelNum))
+            {
+                // Always use "Level_X_Progress" format regardless of original case
+                return $"Level_{levelNum}_Progress";
+            }
+        }
+        
+        // Fallback: try to use currentLevelData if assigned
         if (currentLevelData != null)
         {
             return currentLevelData.GetProgressKey();
         }
-        return SAVE_KEY; // Fallback to global progress
+        
+        // Last resort: use global key
+        Debug.LogWarning($"[GameProgressManager] Scene '{sceneName}' is not a level scene, using global save key!");
+        return SAVE_KEY;
     }
 
     private void Awake()
@@ -81,6 +104,110 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    /// <summary>
+    /// Called every time a new scene is loaded - reloads progress for the new level
+    /// </summary>
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Debug.Log($"[GameProgressManager] ========================================");
+        Debug.Log($"[GameProgressManager] Scene loaded: {scene.name}");
+        
+        // Skip level selection and menu scenes
+        if (scene.name == "LevelSelection" || scene.name == "MainMenu")
+        {
+            Debug.Log($"[GameProgressManager] Skipping progress load for menu scene");
+            Debug.Log($"[GameProgressManager] ========================================");
+            return;
+        }
+        
+        // Reload progress for the new level
+        Debug.Log($"[GameProgressManager] Reloading progress for: {scene.name}");
+        LoadProgress();
+        
+        // Apply progress after a short delay (wait for scene initialization)
+        StartCoroutine(DelayedApplyProgress());
+        
+        // ✅ Check if this level was already completed
+        StartCoroutine(CheckAndShowEndingDialogIfCompleted());
+        
+        Debug.Log($"[GameProgressManager] ========================================");
+    }
+    
+    /// <summary>
+    /// If the level is already completed, show the ending dialog bubbles
+    /// so the player can exit to level selection
+    /// </summary>
+    private IEnumerator CheckAndShowEndingDialogIfCompleted()
+    {
+        // Wait for scene to fully initialize
+        yield return new WaitForSeconds(0.5f);
+        
+        // Try to extract level number from scene name (e.g., "Level1" or "level1" -> 1)
+        string sceneName = SceneManager.GetActiveScene().name;
+        
+        // Make it case-insensitive by converting to lowercase
+        string lowerSceneName = sceneName.ToLower();
+        
+        if (lowerSceneName.StartsWith("level") && lowerSceneName.Length > 5)
+        {
+            string numberPart = lowerSceneName.Substring(5); // Get everything after "level"
+            // Remove underscores and other non-digit characters (support both "Level0" and "Level_0")
+            numberPart = new string(numberPart.Where(char.IsDigit).ToArray());
+            
+            if (!string.IsNullOrEmpty(numberPart) && int.TryParse(numberPart, out int levelNumber))
+            {
+                Debug.Log($"[GameProgressManager] Checking if Level {levelNumber} is completed...");
+                
+                // Check if this level is marked as completed in PlayerPrefs
+                string completedKey = $"Level_{levelNumber}_Completed";
+                bool isCompleted = PlayerPrefs.GetInt(completedKey, 0) == 1;
+                
+                Debug.Log($"[GameProgressManager] Key: {completedKey}, Value: {PlayerPrefs.GetInt(completedKey, 0)}, IsCompleted: {isCompleted}");
+                
+                if (isCompleted)
+                {
+                    Debug.Log($"[GameProgressManager] 🎉 Level {levelNumber} is already completed!");
+                    Debug.Log($"[GameProgressManager] Looking for EndingDialogController to show exit bubbles...");
+                    
+                    // Find the EndingDialogController in the scene
+                    EndingDialogController dialogController = FindObjectOfType<EndingDialogController>();
+                    
+                    if (dialogController != null)
+                    {
+                        Debug.Log($"[GameProgressManager] ✅ Found EndingDialogController! Showing bubbles...");
+                        dialogController.StartEndingDialog();
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[GameProgressManager] ⚠️ EndingDialogController not found in scene!");
+                    }
+                }
+                else
+                {
+                    Debug.Log($"[GameProgressManager] Level {levelNumber} not completed yet - playing normally");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[GameProgressManager] Could not parse level number from scene name: {sceneName}");
+            }
+        }
+        else
+        {
+            Debug.Log($"[GameProgressManager] Scene '{sceneName}' is not a level scene, skipping completion check");
+        }
+    }
+
 
     private void Start()
     {
@@ -88,10 +215,7 @@ public class GameProgressManager : MonoBehaviour
         {
             ResetAllProgress();
         }
-        else
-        {
-            StartCoroutine(DelayedApplyProgress());
-        }
+        // Removed duplicate DelayedApplyProgress call - OnSceneLoaded handles it
     }
 
 
@@ -158,6 +282,9 @@ public class GameProgressManager : MonoBehaviour
     private void LoadProgress()
     {
         string saveKey = GetCurrentSaveKey();
+        string sceneName = SceneManager.GetActiveScene().name;
+
+        Debug.Log($"[GameProgressManager] 📂 LOAD - Scene: {sceneName}, Key: {saveKey}");
 
         if (PlayerPrefs.HasKey(saveKey))
         {
@@ -166,10 +293,14 @@ public class GameProgressManager : MonoBehaviour
                 string jsonData = PlayerPrefs.GetString(saveKey);
                 progressData = JsonUtility.FromJson<GameProgressData>(jsonData);
 
+                Debug.Log($"[GameProgressManager] ✅ Loaded {progressData.placedItems.Count} items from key: {saveKey}");
+                
                 if (debugMode)
                 {
-                    string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
-                    Debug.Log($"[GameProgressManager] Progress loaded{levelInfo}: {progressData.placedItems.Count} items placed (Key: {saveKey})");
+                    foreach (var item in progressData.placedItems)
+                    {
+                        Debug.Log($"  - {item.itemId}");
+                    }
                 }
 
                 OnProgressLoaded?.Invoke();
@@ -182,11 +313,7 @@ public class GameProgressManager : MonoBehaviour
         }
         else
         {
-            if (debugMode)
-            {
-                string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
-                Debug.Log($"[GameProgressManager] No save data found{levelInfo}, starting fresh (Key: {saveKey})");
-            }
+            Debug.Log($"[GameProgressManager] 🆕 No save data for key: {saveKey} - Starting fresh");
             InitializeProgress();
         }
     }
@@ -199,13 +326,19 @@ public class GameProgressManager : MonoBehaviour
             string jsonData = JsonUtility.ToJson(progressData, true);
 
             string saveKey = GetCurrentSaveKey();
+            string sceneName = SceneManager.GetActiveScene().name;
+            
             PlayerPrefs.SetString(saveKey, jsonData);
             PlayerPrefs.Save();
 
+            Debug.Log($"[GameProgressManager] 💾 SAVE - Scene: {sceneName}, Key: {saveKey}, Items: {progressData.placedItems.Count}");
+            
             if (debugMode)
             {
-                string levelInfo = currentLevelData != null ? $" for {currentLevelData.levelName}" : "";
-                Debug.Log($"[GameProgressManager] Progress saved{levelInfo}: {progressData.placedItems.Count} items (Key: {saveKey})");
+                foreach (var item in progressData.placedItems)
+                {
+                    Debug.Log($"  - {item.itemId}");
+                }
             }
 
             OnProgressSaved?.Invoke();

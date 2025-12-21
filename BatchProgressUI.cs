@@ -1,96 +1,101 @@
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 /// <summary>
-/// Manages progress UI updates for batch completion tracking.
-/// Handles percentage text, batch progress text, and progress sliders.
+/// Handles all UI updates for batch progress (sliders, text, percentages)
 /// </summary>
-[System.Serializable]
-public class BatchProgressUI
+public class BatchProgressUI : MonoBehaviour
 {
-    [Header("UI References")]
-    public Text gameProgressText;
+    [Header("Progress UI References")]
+    [SerializeField] private Text gameProgressText;
     [Tooltip("Text showing game progress in percentage (e.g., 'GAME PROGRESS: 35%')")]
 
-    public Text currentBatchProgressText;
+    [SerializeField] private Text currentBatchProgressText;
     [Tooltip("Text showing current batch progress (e.g., '3/7')")]
 
-    public Slider progressSlider;
+    [SerializeField] private Slider progressSlider;
     [Tooltip("Optional slider to show visual progress")]
 
     [Header("Settings")]
-    public bool updateProgressUI = true;
+    [SerializeField] private bool updateProgressUI = true;
+    [Tooltip("Enable/disable progress UI updates")]
 
     [Header("Debug")]
-    public bool debugMode = false;
+    [SerializeField] private bool debugMode = false;
+
+    // Reference to main manager (set by BatchManager)
+    private DropSpotBatchManager batchManager;
+    private List<DropSpot> allDropSpots;
 
     /// <summary>
-    /// Update all progress UI elements.
+    /// Initialize with reference to batch manager and drop spots
     /// </summary>
-    public void UpdateProgress(
-        int currentBatch,
-        int totalPlacedInCurrentBatch,
-        int currentBatchSize,
-        List<DropSpot> allDropSpots,
-        int totalRequiredSpots,
-        GameProgressManager progressManager)
+    public void Initialize(DropSpotBatchManager manager, List<DropSpot> dropSpots)
+    {
+        batchManager = manager;
+        allDropSpots = dropSpots;
+    }
+
+    /// <summary>
+    /// Update all progress UI elements
+    /// </summary>
+    public void UpdateProgress(int currentBatch, int totalPlacedInBatch, int batchSize)
     {
         if (!updateProgressUI) return;
 
         // Calculate game progress percentage
-        float gameProgressPercentage = CalculateGameProgressPercentage(
-            allDropSpots,
-            totalRequiredSpots,
-            progressManager
-        );
+        float gameProgressPercentage = CalculateGameProgressPercentage();
 
-        // Update game progress text
+        // Update "GAME PROGRESS" text
         if (gameProgressText != null)
         {
             gameProgressText.text = $"GAME PROGRESS: {gameProgressPercentage:F0}%";
         }
 
-        // Update current batch progress text
+        // Update current batch progress text (e.g., "3/7")
         if (currentBatchProgressText != null)
         {
-            currentBatchProgressText.text = $"{totalPlacedInCurrentBatch}/{currentBatchSize}";
+            currentBatchProgressText.text = $"{totalPlacedInBatch}/{batchSize}";
         }
 
-        // Update progress slider
+        // Update slider
         if (progressSlider != null)
         {
-            if (currentBatchSize > 0)
+            if (batchSize > 0)
             {
-                progressSlider.maxValue = currentBatchSize;
-                progressSlider.value = totalPlacedInCurrentBatch;
+                progressSlider.maxValue = batchSize;
+                progressSlider.value = totalPlacedInBatch;
             }
         }
 
-        #if UNITY_EDITOR
         if (debugMode)
         {
-            Debug.Log($"[BatchProgressUI] Game: {gameProgressPercentage:F1}%, Batch: {totalPlacedInCurrentBatch}/{currentBatchSize}");
+            Debug.Log($"[BatchProgressUI] Game Progress: {gameProgressPercentage:F1}%, Current Batch: {totalPlacedInBatch}/{batchSize}");
         }
-        #endif
     }
 
-    private float CalculateGameProgressPercentage(
-        List<DropSpot> allDropSpots,
-        int totalRequired,
-        GameProgressManager progressManager)
+    /// <summary>
+    /// Calculate overall game progress as percentage
+    /// </summary>
+    private float CalculateGameProgressPercentage()
     {
-        if (totalRequired == 0) return 0f;
+        if (batchManager == null || allDropSpots == null)
+            return 0f;
+
+        int totalRequired = batchManager.GetTotalRequiredSpots();
+        if (totalRequired == 0)
+            return 0f;
 
         int totalPlaced = 0;
 
-        if (progressManager != null)
+        if (GameProgressManager.Instance != null)
         {
+            // Count how many items have been placed
             for (int i = 0; i < allDropSpots.Count && i < totalRequired; i++)
             {
                 if (allDropSpots[i] != null &&
-                    progressManager.IsItemPlaced(allDropSpots[i].spotId))
+                    GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
                 {
                     totalPlaced++;
                 }
@@ -102,24 +107,47 @@ public class BatchProgressUI
     }
 
     /// <summary>
-    /// Check if UI references are properly set.
+    /// Calculate total remaining items in the game
     /// </summary>
-    public bool ValidateReferences()
+    public int CalculateTotalRemainingItems()
     {
-        bool valid = true;
+        if (batchManager == null || allDropSpots == null)
+            return 0;
 
-        if (gameProgressText == null)
+        if (GameProgressManager.Instance == null)
+            return batchManager.GetTotalRequiredSpots();
+
+        int totalPlaced = 0;
+
+        // Count how many items have been placed across all batches
+        for (int i = 0; i < allDropSpots.Count; i++)
         {
-            Debug.LogWarning("[BatchProgressUI] gameProgressText is not assigned");
-            valid = false;
+            if (allDropSpots[i] != null &&
+                GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
+            {
+                totalPlaced++;
+            }
         }
 
-        if (currentBatchProgressText == null)
-        {
-            Debug.LogWarning("[BatchProgressUI] currentBatchProgressText is not assigned");
-            valid = false;
-        }
+        int totalRequired = batchManager.GetTotalRequiredSpots();
+        int remaining = totalRequired - totalPlaced;
 
-        return valid;
+        return Mathf.Max(0, remaining);
+    }
+
+    /// <summary>
+    /// Force update progress UI (for testing)
+    /// </summary>
+    [ContextMenu("🔄 Force Update Progress UI")]
+    public void ForceUpdate()
+    {
+        if (batchManager != null)
+        {
+            Debug.Log("🔄 Manually updating Progress UI...");
+            int currentBatch = batchManager.GetCurrentBatchIndex();
+            int batchSize = batchManager.GetBatchSize(currentBatch);
+            UpdateProgress(currentBatch, 0, batchSize); // You'll need to track totalPlaced
+            Debug.Log("✅ Progress UI updated!");
+        }
     }
 }

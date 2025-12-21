@@ -184,6 +184,7 @@ public class ScrollableButtonBar : MonoBehaviour
             if (buttonImage != null && buttonDataList[i].buttonSprite != null)
             {
                 buttonImage.sprite = buttonDataList[i].buttonSprite;
+                buttonImage.SetNativeSize(); // Set image to sprite's native size
             }
             
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
@@ -346,6 +347,7 @@ public class ScrollableButtonBar : MonoBehaviour
                 if (img != null)
                 {
                     img.sprite = sprite;
+                    img.SetNativeSize(); // Set image to sprite's native size
                 }
             }
         }

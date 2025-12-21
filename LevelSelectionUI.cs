@@ -3,36 +3,40 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 
 /// <summary>
 /// UI לבחירת Levels - מציג רשימת levels, נועל/פותח לפי התקדמות
-/// עם עיצוב גרפי יפה, לוגו, ואנימציות
+/// INTEGRATED with GameProgressManager system!
 /// </summary>
 public class LevelSelectionUI : MonoBehaviour
 {
+    public enum ButtonMode
+    {
+        ManualButtons,      // Connect pre-placed buttons from scene
+        AutoGenerate        // Generate buttons automatically
+    }
+
+    [Header("🎮 Button Mode")]
+    [SerializeField] private ButtonMode buttonMode = ButtonMode.ManualButtons;
+    [Tooltip("Manual: Connect your own buttons. Auto: Generate buttons automatically")]
+
     [Header("🎨 Visual Settings")]
     [SerializeField] private Image gameLogo;
-    [Tooltip("לוגו המשחק בראש המסך")]
-
     [SerializeField] private Text titleText;
-    [Tooltip("כותרת המסך (לדוגמה: 'בחר שלב')")]
-
     [SerializeField] private Image backgroundImage;
-    [Tooltip("תמונת רקע למסך")]
 
     [Header("Level Configuration")]
     [SerializeField] private int totalLevels = 10;
-    [Tooltip("מספר ה-levels במשחק")]
-
     [SerializeField] private string levelScenePrefix = "Level";
-    [Tooltip("קידומת שם ה-scene (Level1, Level2, וכו')")]
 
-    [Header("UI References")]
+    [Header("📌 Manual Buttons (if using Manual Mode)")]
+    [SerializeField] private List<Button> manualLevelButtons = new List<Button>();
+    [Tooltip("Drag your pre-placed buttons here in order (Level 1, Level 2, etc.)")]
+
+    [Header("🤖 Auto-Generate Settings (if using Auto Mode)")]
     [SerializeField] private Transform levelButtonContainer;
-    [Tooltip("Parent transform for level buttons (usually a GridLayoutGroup)")]
-
     [SerializeField] private GameObject levelButtonPrefab;
-    [Tooltip("Prefab for level button - should have Image, Text, Button")]
 
     [Header("🎨 Button Styling")]
     [SerializeField] private Sprite lockedIcon;
@@ -45,38 +49,129 @@ public class LevelSelectionUI : MonoBehaviour
     [Header("✨ Animation Settings")]
     [SerializeField] private bool animateButtonsOnStart = true;
     [SerializeField] private float buttonAnimationDelay = 0.05f;
-    [Tooltip("עיכוב בין כל כפתור באנימציה")]
-
     [SerializeField] private float buttonPopDuration = 0.3f;
     [SerializeField] private AnimationCurve buttonPopCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
-    [Header("Debug")]
+    [Header("🐛 Debug Settings")]
     [SerializeField] private bool debugMode = false;
+    [SerializeField] private bool enableDebugOverlay = true;
+    [SerializeField] private KeyCode debugToggleKey = KeyCode.F1;
+    [SerializeField] private KeyCode quickUnlockAllKey = KeyCode.F2;
+    [SerializeField] private KeyCode quickResetKey = KeyCode.F3;
+    [SerializeField] private bool showDebugGUI = false;
+    [SerializeField] private bool logStateChanges = true;
+    [SerializeField] private bool showPerformanceMetrics = false;
 
     private List<Button> levelButtons = new List<Button>();
 
+    // Debug tracking
+    private float lastRefreshTime;
+    private int refreshCount;
+    private Dictionary<int, LevelDebugInfo> levelDebugInfo = new Dictionary<int, LevelDebugInfo>();
+
+    private class LevelDebugInfo
+    {
+        public int levelNumber;
+        public bool isUnlocked;
+        public bool isCompleted;
+        public int clickCount;
+        public float lastClickTime;
+        public string playerPrefsKey;
+    }
+
     private void Start()
     {
-        // Set title if available
+        Debug.Log("[LevelSelectionUI] === LEVEL SELECTION STARTING ===");
+        
+        // Show current completion state
+        Debug.Log("[LevelSelectionUI] Current level completion state:");
+        for (int i = 1; i <= totalLevels; i++)
+        {
+            bool completed = IsLevelCompleted(i);
+            bool unlocked = IsLevelUnlocked(i);
+            Debug.Log($"  Level {i}: {(completed ? "✓ Completed" : "○ Not Complete")} | {(unlocked ? "🔓 Unlocked" : "🔒 Locked")}");
+        }
+        
         if (titleText != null)
         {
             titleText.text = "בחר שלב";
         }
 
-        GenerateLevelButtons();
+        if (buttonMode == ButtonMode.ManualButtons)
+        {
+            SetupManualButtons();
+        }
+        else
+        {
+            GenerateLevelButtons();
+        }
 
-        // Animate buttons on start
         if (animateButtonsOnStart)
         {
             StartCoroutine(AnimateButtonsSequence());
         }
+
+        InitializeDebugTools();
+        
+        Debug.Log("[LevelSelectionUI] === LEVEL SELECTION READY ===");
     }
 
+    private void Update()
+    {
+        HandleDebugInput();
+    }
+
+    /// <summary>
+    /// Setup manually placed buttons from the scene
+    /// </summary>
+    private void SetupManualButtons()
+    {
+        levelButtons.Clear();
+
+        if (manualLevelButtons.Count == 0)
+        {
+            DebugLogError("No manual buttons assigned! Drag your buttons into the Manual Level Buttons list.");
+            return;
+        }
+
+        // Hide buttons initially for animation
+        if (animateButtonsOnStart)
+        {
+            foreach (Button btn in manualLevelButtons)
+            {
+                if (btn != null)
+                {
+                    btn.transform.localScale = Vector3.zero;
+                }
+            }
+        }
+
+        // Setup each button
+        for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
+        {
+            Button button = manualLevelButtons[i];
+            if (button == null)
+            {
+                DebugLogWarning($"Button {i + 1} is null!");
+                continue;
+            }
+
+            int levelNumber = i + 1;
+            SetupButton(button, levelNumber);
+            levelButtons.Add(button);
+        }
+
+        DebugLog($"Setup {levelButtons.Count} manual buttons");
+    }
+
+    /// <summary>
+    /// Generate buttons automatically (old method)
+    /// </summary>
     private void GenerateLevelButtons()
     {
         if (levelButtonPrefab == null || levelButtonContainer == null)
         {
-            Debug.LogError("[LevelSelectionUI] Missing prefab or container!");
+            DebugLogError("Missing prefab or container for auto-generation!");
             return;
         }
 
@@ -87,44 +182,68 @@ public class LevelSelectionUI : MonoBehaviour
         }
         levelButtons.Clear();
 
-        // Create button for each level (1-10)
+        // Create button for each level
         for (int i = 0; i < totalLevels; i++)
         {
             CreateLevelButton(i);
         }
 
-        if (debugMode)
-            Debug.Log($"[LevelSelectionUI] Created {levelButtons.Count} level buttons");
+        DebugLog($"Created {levelButtons.Count} level buttons");
     }
 
     private void CreateLevelButton(int levelIndex)
     {
-        int levelNumber = levelIndex + 1; // 1-10
+        int levelNumber = levelIndex + 1;
 
-        // Instantiate button
         GameObject buttonObj = Instantiate(levelButtonPrefab, levelButtonContainer);
         buttonObj.name = $"LevelButton_{levelNumber}";
 
-        // Hide initially for animation
         if (animateButtonsOnStart)
         {
             buttonObj.transform.localScale = Vector3.zero;
         }
 
-        // Get components
         Button button = buttonObj.GetComponent<Button>();
-        Image buttonImage = buttonObj.GetComponent<Image>();
-        Text buttonText = buttonObj.GetComponentInChildren<Text>();
-
         if (button == null)
         {
-            Debug.LogError($"[LevelSelectionUI] Button component missing on prefab!");
+            DebugLogError($"Button component missing on prefab!");
             return;
         }
 
-        // Check unlock status
+        SetupButton(button, levelNumber);
+        levelButtons.Add(button);
+    }
+
+    /// <summary>
+    /// Setup a button's appearance and click handler
+    /// </summary>
+    private void SetupButton(Button button, int levelNumber)
+    {
+        Image buttonImage = button.GetComponent<Image>();
+        Text buttonText = button.GetComponentInChildren<Text>();
+
         bool isUnlocked = IsLevelUnlocked(levelNumber);
         bool isCompleted = IsLevelCompleted(levelNumber);
+
+        // Track debug info
+        UpdateLevelDebugInfo(levelNumber, isUnlocked, isCompleted);
+
+        // ✅ Find and show/hide the lock GameObject
+        Transform lockTransform = button.transform.Find("lock");
+        if (lockTransform != null)
+        {
+            // Show lock ONLY if level is locked (not unlocked)
+            lockTransform.gameObject.SetActive(!isUnlocked);
+            
+            if (debugMode)
+            {
+                DebugLog($"Level {levelNumber} lock: {(isUnlocked ? "Hidden" : "Visible")}");
+            }
+        }
+        else if (debugMode)
+        {
+            DebugLogWarning($"No 'lock' child found in button for Level {levelNumber}");
+        }
 
         // Set text
         if (buttonText != null)
@@ -139,7 +258,7 @@ public class LevelSelectionUI : MonoBehaviour
             }
             else
             {
-                buttonText.text = $"🔒";
+                buttonText.text = $"{levelNumber}"; // Show number even when locked
             }
         }
 
@@ -165,28 +284,33 @@ public class LevelSelectionUI : MonoBehaviour
 
         // Setup button click
         button.interactable = isUnlocked;
+
+        // Remove old listeners to prevent duplicates
+        button.onClick.RemoveAllListeners();
+
         int capturedLevelNum = levelNumber;
         button.onClick.AddListener(() => OnLevelButtonClicked(capturedLevelNum));
 
-        levelButtons.Add(button);
-
-        if (debugMode)
-        {
-            string status = isCompleted ? "Completed" : (isUnlocked ? "Unlocked" : "Locked");
-            Debug.Log($"[LevelSelectionUI] Level {levelNumber} - {status}");
-        }
+        string status = isCompleted ? "Completed" : (isUnlocked ? "Unlocked" : "Locked");
+        DebugLog($"Level {levelNumber} - {status}");
     }
 
+    /// <summary>
+    /// Check if level is unlocked (Level 1 always unlocked, others need previous level complete)
+    /// ✅ USES LEVEL COMPLETION KEYS
+    /// </summary>
     private bool IsLevelUnlocked(int levelNumber)
     {
-        // Level 1 is always unlocked
         if (levelNumber == 1)
             return true;
 
-        // Check if previous level is completed
         return IsLevelCompleted(levelNumber - 1);
     }
 
+    /// <summary>
+    /// Check if level is completed
+    /// ✅ USES LEVEL COMPLETION KEYS: Level_X_Completed
+    /// </summary>
     private bool IsLevelCompleted(int levelNumber)
     {
         string key = $"Level_{levelNumber}_Completed";
@@ -197,29 +321,37 @@ public class LevelSelectionUI : MonoBehaviour
     {
         if (!IsLevelUnlocked(levelNumber))
         {
-            Debug.LogWarning($"[LevelSelectionUI] Level {levelNumber} is locked!");
+            DebugLogWarning($"Level {levelNumber} is locked!");
             return;
         }
 
-        Debug.Log($"[LevelSelectionUI] Loading Level {levelNumber}...");
+        // Track click in debug info
+        if (levelDebugInfo.ContainsKey(levelNumber))
+        {
+            levelDebugInfo[levelNumber].clickCount++;
+            levelDebugInfo[levelNumber].lastClickTime = Time.time;
+        }
+
+        DebugLog($"Loading Level {levelNumber}...");
         LoadLevel(levelNumber);
     }
 
     private void LoadLevel(int levelNumber)
     {
         string sceneName = $"{levelScenePrefix}{levelNumber}";
-
-        // Save which level we're loading
-        PlayerPrefs.SetInt("CurrentLevel", levelNumber - 1); // 0-based for LevelManager
+        
+        // ✅ Save which level we're loading (0-indexed for CurrentLevel)
+        PlayerPrefs.SetInt("CurrentLevel", levelNumber - 1);
         PlayerPrefs.Save();
 
-        // Load the scene
+        if (logStateChanges)
+        {
+            DebugLog($"Saved CurrentLevel = {levelNumber - 1}, Loading scene: {sceneName}");
+        }
+
         SceneManager.LoadScene(sceneName);
     }
 
-    /// <summary>
-    /// אנימציה של הכפתורים - pop-in אחד אחרי השני
-    /// </summary>
     private IEnumerator AnimateButtonsSequence()
     {
         for (int i = 0; i < levelButtons.Count; i++)
@@ -229,13 +361,11 @@ public class LevelSelectionUI : MonoBehaviour
                 StartCoroutine(AnimateButtonPopIn(levelButtons[i].transform, i * buttonAnimationDelay));
             }
         }
-
         yield return null;
     }
 
     private IEnumerator AnimateButtonPopIn(Transform buttonTransform, float delay)
     {
-        // Wait for delay
         yield return new WaitForSeconds(delay);
 
         float elapsed = 0f;
@@ -247,7 +377,6 @@ public class LevelSelectionUI : MonoBehaviour
             float t = elapsed / buttonPopDuration;
             float curveValue = buttonPopCurve.Evaluate(t);
 
-            // Add bounce effect
             float bounce = 1f + Mathf.Sin(t * Mathf.PI) * 0.2f;
             buttonTransform.localScale = targetScale * curveValue * bounce;
 
@@ -257,18 +386,26 @@ public class LevelSelectionUI : MonoBehaviour
         buttonTransform.localScale = targetScale;
     }
 
-    /// <summary>
-    /// Refresh all buttons (call this after completing a level)
-    /// </summary>
+    #region Context Menu Commands
+
     [ContextMenu("Refresh Buttons")]
     public void RefreshButtons()
     {
-        GenerateLevelButtons();
+        lastRefreshTime = Time.time;
+        refreshCount++;
+
+        if (buttonMode == ButtonMode.ManualButtons)
+        {
+            SetupManualButtons();
+        }
+        else
+        {
+            GenerateLevelButtons();
+        }
+
+        DebugLog($"Buttons refreshed (count: {refreshCount})");
     }
 
-    /// <summary>
-    /// Unlock all levels (for testing)
-    /// </summary>
     [ContextMenu("Unlock All Levels")]
     public void UnlockAllLevels()
     {
@@ -278,15 +415,13 @@ public class LevelSelectionUI : MonoBehaviour
         }
         PlayerPrefs.Save();
         RefreshButtons();
-        Debug.Log("[LevelSelectionUI] All levels unlocked!");
+        DebugLog("All levels unlocked!");
     }
 
-    /// <summary>
-    /// Reset all progress (for testing)
-    /// </summary>
     [ContextMenu("Reset All Progress")]
     public void ResetAllProgress()
     {
+        // Reset level completion keys
         for (int i = 1; i <= totalLevels; i++)
         {
             PlayerPrefs.DeleteKey($"Level_{i}_Completed");
@@ -294,6 +429,366 @@ public class LevelSelectionUI : MonoBehaviour
         }
         PlayerPrefs.Save();
         RefreshButtons();
-        Debug.Log("[LevelSelectionUI] All progress reset!");
+        DebugLog("All progress reset!");
     }
+
+    [ContextMenu("Lock All Levels")]
+    public void LockAllLevels()
+    {
+        for (int i = 2; i <= totalLevels; i++)
+        {
+            PlayerPrefs.DeleteKey($"Level_{i}_Completed");
+            PlayerPrefs.DeleteKey($"Level_{i}_Unlocked");
+        }
+        PlayerPrefs.Save();
+        RefreshButtons();
+        DebugLog("All levels locked (except Level 1)!");
+    }
+
+    [ContextMenu("🐛 Show Debug Report")]
+    public void ShowDebugReport()
+    {
+        StringBuilder report = new StringBuilder();
+        report.AppendLine("=== LEVEL SELECTION DEBUG REPORT ===");
+        report.AppendLine($"Total Levels: {totalLevels}");
+        report.AppendLine($"Button Mode: {buttonMode}");
+        report.AppendLine($"Buttons Created: {levelButtons.Count}");
+        report.AppendLine($"Refresh Count: {refreshCount}");
+        report.AppendLine();
+
+        report.AppendLine("Level States:");
+        for (int i = 1; i <= totalLevels; i++)
+        {
+            bool unlocked = IsLevelUnlocked(i);
+            bool completed = IsLevelCompleted(i);
+            string key = $"Level_{i}_Completed";
+            int clicks = levelDebugInfo.ContainsKey(i) ? levelDebugInfo[i].clickCount : 0;
+
+            report.AppendLine($"  Level {i}: {(completed ? "✓ Completed" : (unlocked ? "🔓 Unlocked" : "🔒 Locked"))} | Clicks: {clicks} | Key: {key}");
+        }
+
+        report.AppendLine();
+        report.AppendLine("PlayerPrefs Data:");
+        for (int i = 1; i <= totalLevels; i++)
+        {
+            string key = $"Level_{i}_Completed";
+            int value = PlayerPrefs.GetInt(key, -1);
+            if (value != -1)
+            {
+                report.AppendLine($"  {key} = {value}");
+            }
+        }
+
+        Debug.Log(report.ToString());
+    }
+
+    [ContextMenu("🐛 Unlock Next Level")]
+    public void DebugUnlockNext()
+    {
+        for (int i = 1; i <= totalLevels; i++)
+        {
+            if (!IsLevelUnlocked(i))
+            {
+                MarkLevelComplete(i - 1); // Complete previous to unlock this
+                DebugLog($"Completed Level {i-1}, unlocked Level {i}");
+                RefreshButtons();
+                return;
+            }
+        }
+        DebugLog("All levels already unlocked!");
+    }
+
+    [ContextMenu("🐛 Complete Random Level")]
+    public void DebugCompleteRandom()
+    {
+        int randomLevel = Random.Range(1, totalLevels + 1);
+        MarkLevelComplete(randomLevel);
+        RefreshButtons();
+        DebugLog($"Randomly completed Level {randomLevel}");
+    }
+
+    [ContextMenu("🐛 Simulate Progress (50%)")]
+    public void DebugSimulateProgress50()
+    {
+        ResetAllProgress();
+        int halfLevels = Mathf.CeilToInt(totalLevels * 0.5f);
+        for (int i = 1; i <= halfLevels; i++)
+        {
+            MarkLevelComplete(i);
+        }
+        RefreshButtons();
+        DebugLog($"Simulated 50% progress ({halfLevels} levels completed)");
+    }
+
+    [ContextMenu("🐛 Toggle Debug GUI")]
+    public void ToggleDebugGUI()
+    {
+        showDebugGUI = !showDebugGUI;
+        DebugLog($"Debug GUI: {(showDebugGUI ? "ON" : "OFF")}");
+    }
+
+    #endregion
+
+    #region Debug Tools
+
+    private void InitializeDebugTools()
+    {
+        if (!enableDebugOverlay && !debugMode)
+            return;
+
+        // Initialize debug info for all levels
+        for (int i = 1; i <= totalLevels; i++)
+        {
+            UpdateLevelDebugInfo(i, IsLevelUnlocked(i), IsLevelCompleted(i));
+        }
+
+        DebugLog("Debug tools initialized");
+        DebugLog($"Press {debugToggleKey} to toggle debug GUI");
+        DebugLog($"Press {quickUnlockAllKey} to unlock all levels");
+        DebugLog($"Press {quickResetKey} to reset progress");
+    }
+
+    private void UpdateLevelDebugInfo(int levelNumber, bool isUnlocked, bool isCompleted)
+    {
+        if (!levelDebugInfo.ContainsKey(levelNumber))
+        {
+            levelDebugInfo[levelNumber] = new LevelDebugInfo
+            {
+                levelNumber = levelNumber,
+                playerPrefsKey = $"Level_{levelNumber}_Completed"
+            };
+        }
+
+        var info = levelDebugInfo[levelNumber];
+
+        if (logStateChanges && (info.isUnlocked != isUnlocked || info.isCompleted != isCompleted))
+        {
+            DebugLog($"Level {levelNumber} state changed - Unlocked: {info.isUnlocked}->{isUnlocked}, Completed: {info.isCompleted}->{isCompleted}");
+        }
+
+        info.isUnlocked = isUnlocked;
+        info.isCompleted = isCompleted;
+    }
+
+    private void HandleDebugInput()
+    {
+        if (!enableDebugOverlay && !debugMode)
+            return;
+
+        if (Input.GetKeyDown(debugToggleKey))
+        {
+            ToggleDebugGUI();
+        }
+
+        if (Input.GetKeyDown(quickUnlockAllKey))
+        {
+            UnlockAllLevels();
+        }
+
+        if (Input.GetKeyDown(quickResetKey))
+        {
+            ResetAllProgress();
+        }
+
+        // Secret combo: Hold Shift + U to unlock all
+        if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.U))
+        {
+            UnlockAllLevels();
+        }
+
+        // Secret combo: Hold Shift + R to reset all
+        if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.R))
+        {
+            ResetAllProgress();
+        }
+
+        // Secret combo: Hold Shift + N to unlock next
+        if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.N))
+        {
+            DebugUnlockNext();
+        }
+    }
+
+    private void OnGUI()
+    {
+        if (!showDebugGUI)
+            return;
+
+        GUI.skin.box.fontSize = 12;
+        GUI.skin.label.fontSize = 11;
+        GUI.skin.button.fontSize = 11;
+
+        float panelWidth = 350;
+        float panelHeight = Screen.height - 20;
+        GUILayout.BeginArea(new Rect(10, 10, panelWidth, panelHeight), GUI.skin.box);
+
+        GUILayout.Label("🐛 LEVEL SELECTION DEBUG PANEL", GUI.skin.box);
+
+        GUILayout.Space(5);
+        GUILayout.Label($"Mode: {buttonMode} | Buttons: {levelButtons.Count}/{totalLevels}");
+        GUILayout.Label($"Refreshes: {refreshCount} | Last: {(Time.time - lastRefreshTime):F1}s ago");
+
+        if (showPerformanceMetrics)
+        {
+            GUILayout.Label($"FPS: {(1f / Time.deltaTime):F0}");
+            GUILayout.Label($"Memory: {(System.GC.GetTotalMemory(false) / 1024f / 1024f):F1} MB");
+        }
+
+        GUILayout.Space(10);
+
+        // Quick Actions
+        GUILayout.Label("⚡ Quick Actions:", GUI.skin.box);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Unlock All"))
+            UnlockAllLevels();
+        if (GUILayout.Button("Reset All"))
+            ResetAllProgress();
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Unlock Next"))
+            DebugUnlockNext();
+        if (GUILayout.Button("50% Progress"))
+            DebugSimulateProgress50();
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Refresh"))
+            RefreshButtons();
+        if (GUILayout.Button("Report"))
+            ShowDebugReport();
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(10);
+
+        // Level States
+        GUILayout.Label("📊 Level States:", GUI.skin.box);
+
+        GUILayout.BeginVertical(GUI.skin.box);
+        for (int i = 1; i <= Mathf.Min(totalLevels, 15); i++) // Limit display to prevent overflow
+        {
+            bool unlocked = IsLevelUnlocked(i);
+            bool completed = IsLevelCompleted(i);
+            int clicks = levelDebugInfo.ContainsKey(i) ? levelDebugInfo[i].clickCount : 0;
+
+            string status = completed ? "✓" : (unlocked ? "🔓" : "🔒");
+            string clickInfo = clicks > 0 ? $" | Clicks: {clicks}" : "";
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"{status} Lvl {i}{clickInfo}", GUILayout.Width(150));
+
+            if (GUILayout.Button("✓", GUILayout.Width(30)))
+            {
+                MarkLevelComplete(i);
+                RefreshButtons();
+            }
+
+            if (GUILayout.Button("🔒", GUILayout.Width(30)))
+            {
+                if (i > 1)
+                {
+                    PlayerPrefs.DeleteKey($"Level_{i}_Completed");
+                    PlayerPrefs.Save();
+                    RefreshButtons();
+                }
+            }
+
+            if (GUILayout.Button("▶", GUILayout.Width(30)))
+            {
+                LoadLevel(i);
+            }
+
+            GUILayout.EndHorizontal();
+        }
+
+        if (totalLevels > 15)
+        {
+            GUILayout.Label($"... and {totalLevels - 15} more levels");
+        }
+
+        GUILayout.EndVertical();
+
+        GUILayout.Space(10);
+
+        // Settings
+        GUILayout.Label("⚙️ Settings:", GUI.skin.box);
+        logStateChanges = GUILayout.Toggle(logStateChanges, "Log State Changes");
+        showPerformanceMetrics = GUILayout.Toggle(showPerformanceMetrics, "Show Performance");
+
+        GUILayout.Space(10);
+        GUILayout.Label($"Press {debugToggleKey} to close", GUI.skin.label);
+
+        GUILayout.EndArea();
+    }
+
+    private void DebugLog(string message)
+    {
+        if (debugMode)
+        {
+            Debug.Log($"[LevelSelectionUI] {message}");
+        }
+    }
+
+    private void DebugLogWarning(string message)
+    {
+        if (debugMode)
+        {
+            Debug.LogWarning($"[LevelSelectionUI] {message}");
+        }
+    }
+
+    private void DebugLogError(string message)
+    {
+        Debug.LogError($"[LevelSelectionUI] {message}");
+    }
+
+    #endregion
+
+    #region Public API
+
+    /// <summary>
+    /// ✅ Mark a level as complete (call this when level is finished!)
+    /// This is what should be called when player completes a level
+    /// </summary>
+    public static void MarkLevelComplete(int levelNumber)
+    {
+        string key = $"Level_{levelNumber}_Completed";
+        
+        Debug.Log($"[LevelSelectionUI] 🎯 MarkLevelComplete called for Level {levelNumber}");
+        Debug.Log($"[LevelSelectionUI] Setting {key} = 1");
+        
+        PlayerPrefs.SetInt(key, 1);
+        PlayerPrefs.Save(); // Force save immediately
+        
+        // Verify it was saved
+        int verification = PlayerPrefs.GetInt(key, -1);
+        Debug.Log($"[LevelSelectionUI] ✅ Verification: {key} = {verification}");
+        
+        if (verification != 1)
+        {
+            Debug.LogError($"[LevelSelectionUI] ❌ FAILED to save {key}!");
+        }
+        else
+        {
+            Debug.Log($"[LevelSelectionUI] ✅ Level {levelNumber} marked as complete!");
+        }
+    }
+
+    /// <summary>
+    /// Unlock a specific level (for debug/cheat purposes)
+    /// </summary>
+    public void UnlockLevel(int levelNumber)
+    {
+        if (levelNumber <= 1)
+        {
+            DebugLog($"Level {levelNumber} is always unlocked");
+            return;
+        }
+
+        MarkLevelComplete(levelNumber - 1); // Complete previous level
+        RefreshButtons();
+        DebugLog($"Level {levelNumber} unlocked!");
+    }
+
+    #endregion
 }
