@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Collections;
 
 public class TutorialSlideManager : MonoBehaviour
@@ -21,6 +22,9 @@ public class TutorialSlideManager : MonoBehaviour
 
     [Header("Settings")]
     [SerializeField] private bool skipIfCompleted = true;
+    [SerializeField] private string levelSelectionSceneName = "LevelSelection";
+    [SerializeField] private float delayBeforeLoadingMenu = 5f;
+    [Tooltip("Delay in seconds before loading level selection after tutorial completes")]
 
     private int currentStage = 0;
     private bool isTransitioning = false;
@@ -321,8 +325,33 @@ public class TutorialSlideManager : MonoBehaviour
             Debug.Log("[TutorialSlideManager] Hint button will remain visible");
         }
 
+        // Try to trigger level complete controller if it exists
+        LevelCompleteController levelComplete = FindObjectOfType<LevelCompleteController>();
+        if (levelComplete != null)
+        {
+            Debug.Log("[TutorialSlideManager] Triggering LevelCompleteController...");
+            levelComplete.TriggerLevelComplete();
+        }
+        else
+        {
+            Debug.Log("[TutorialSlideManager] No LevelCompleteController found - loading level selection after delay");
+            StartCoroutine(LoadLevelSelectionAfterDelay());
+        }
+
         // כבה את הסקריפט
         enabled = false;
+    }
+
+    /// <summary>
+    /// Load level selection scene after delay
+    /// </summary>
+    private IEnumerator LoadLevelSelectionAfterDelay()
+    {
+        Debug.Log($"[TutorialSlideManager] Waiting {delayBeforeLoadingMenu} seconds before loading level selection...");
+        yield return new WaitForSeconds(delayBeforeLoadingMenu);
+
+        Debug.Log($"[TutorialSlideManager] Loading {levelSelectionSceneName}...");
+        SceneManager.LoadScene(levelSelectionSceneName);
     }
     
     /// <summary>
