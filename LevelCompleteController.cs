@@ -24,16 +24,18 @@ public class LevelCompleteController : MonoBehaviour
 
     [Header("Settings")]
     [SerializeField] private string levelSelectionSceneName = "LevelSelection";
-    [SerializeField] private float autoLoadDelay = 3f;
-    [Tooltip("Auto-load next level after X seconds (0 = disabled)")]
+    [SerializeField] private float autoLoadDelay = 5f;
+    [Tooltip("Auto-load level selection after X seconds (0 = disabled)")]
+    [SerializeField] private bool goToLevelSelectionInsteadOfNextLevel = true;
+    [Tooltip("If true, goes to level selection after delay. If false, advances to next level.")]
 
     [Header("🎬 Ending Dialog")]
     [SerializeField] private EndingDialogController endingDialog;
     [Tooltip("Optional: Play ending dialog before completion screen")]
     [SerializeField] private bool useEndingDialog = false;
-    
+
     [Header("Ad Integration")]
-    [SerializeField] private bool showAdOnCompletion = true;
+    [SerializeField] private bool showAdOnCompletion = false;
     [Tooltip("Show rewarded ad after level completion")]
     [SerializeField] private bool skipAdsInEditor = true;
     [Tooltip("Skip ads when running in Unity Editor")]
@@ -248,7 +250,17 @@ public class LevelCompleteController : MonoBehaviour
     private IEnumerator AutoLoadAfterDelay()
     {
         yield return new WaitForSeconds(autoLoadDelay);
-        ProceedToNextLevel();
+
+        // Check if we should go to level selection or next level
+        if (goToLevelSelectionInsteadOfNextLevel)
+        {
+            Debug.Log($"[LevelCompleteController] Auto-loading level selection after {autoLoadDelay} seconds");
+            LoadMenu();
+        }
+        else
+        {
+            ProceedToNextLevel();
+        }
     }
 
     private void OnNextLevelButtonClicked()
