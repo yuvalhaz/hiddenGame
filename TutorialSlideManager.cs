@@ -98,14 +98,33 @@ public class TutorialSlideManager : MonoBehaviour
     private int CountSettledItems()
     {
         int count = 0;
-        DropSpot[] allDropSpots = DropSpotCache.GetAll();
 
-        foreach (DropSpot spot in allDropSpots)
+        // Use GameProgressManager which persists between sessions
+        if (GameProgressManager.Instance != null)
         {
-            if (spot != null && spot.IsSettled)
+            DropSpot[] allDropSpots = DropSpotCache.GetAll();
+
+            foreach (DropSpot spot in allDropSpots)
             {
-                count++;
-                Debug.Log($"[TutorialSlideManager] Found settled item: {spot.spotId}");
+                if (spot != null && GameProgressManager.Instance.IsItemPlaced(spot.spotId))
+                {
+                    count++;
+                    Debug.Log($"[TutorialSlideManager] Found placed item (from save): {spot.spotId}");
+                }
+            }
+        }
+        else
+        {
+            // Fallback to runtime check if no GameProgressManager
+            DropSpot[] allDropSpots = DropSpotCache.GetAll();
+
+            foreach (DropSpot spot in allDropSpots)
+            {
+                if (spot != null && spot.IsSettled)
+                {
+                    count++;
+                    Debug.Log($"[TutorialSlideManager] Found settled item (runtime): {spot.spotId}");
+                }
             }
         }
 
