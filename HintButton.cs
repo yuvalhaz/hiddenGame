@@ -11,9 +11,17 @@ public class HintButton : MonoBehaviour
     [Header("Button Reference")]
     [SerializeField] private Button button;
 
-    [Header("Target UI")]
+    [Header("Hint System")]
+    [Tooltip("Direct hint activation - shows hint immediately without dialog")]
+    [SerializeField] private VisualHintSystem visualHintSystem;
+
+    [Header("Target UI (Legacy - use VisualHintSystem instead)")]
     [Tooltip("The hint dialog CanvasGroup to show when button is clicked")]
     [SerializeField] private CanvasGroup targetGroup;
+
+    [Header("Mode")]
+    [Tooltip("If true, shows hint directly. If false, opens dialog.")]
+    [SerializeField] private bool showHintDirectly = true;
 
     [Header("Events")]
     [Tooltip("Optional event triggered when button is pressed")]
@@ -31,6 +39,20 @@ public class HintButton : MonoBehaviour
 
         if (button != null)
             button.onClick.AddListener(OnClick);
+
+        // Auto-find VisualHintSystem if not assigned
+        if (showHintDirectly && visualHintSystem == null)
+        {
+            visualHintSystem = FindObjectOfType<VisualHintSystem>();
+            if (visualHintSystem != null)
+            {
+                Debug.Log("[HintButton] VisualHintSystem found automatically!");
+            }
+            else
+            {
+                Debug.LogWarning("[HintButton] VisualHintSystem not found in scene. Hint button won't work!");
+            }
+        }
     }
 
     private void OnDestroy()
@@ -41,23 +63,42 @@ public class HintButton : MonoBehaviour
 
     /// <summary>
     /// Called when hint button is clicked.
-    /// Shows the target hint dialog UI.
+    /// Shows the target hint dialog UI or triggers hint directly.
     /// </summary>
     private void OnClick()
     {
-        // Show hint UI via CanvasGroup
-        if (targetGroup != null)
+        if (showHintDirectly)
         {
-            targetGroup.alpha = 1f;
-            targetGroup.interactable = true;
-            targetGroup.blocksRaycasts = true;
+            // NEW MODE: Show hint directly without dialog
+            if (visualHintSystem != null)
+            {
+                #if UNITY_EDITOR
+                Debug.Log("[HintButton] Triggering hint directly");
+                #endif
+
+                visualHintSystem.TriggerHint();
+            }
+            else
+            {
+                Debug.LogWarning("[HintButton] VisualHintSystem not assigned! Please assign in Inspector.");
+            }
+        }
+        else
+        {
+            // LEGACY MODE: Show dialog
+            if (targetGroup != null)
+            {
+                targetGroup.alpha = 1f;
+                targetGroup.interactable = true;
+                targetGroup.blocksRaycasts = true;
+            }
+
+            #if UNITY_EDITOR
+            Debug.Log("[HintButton] Hint button clicked - showing dialog");
+            #endif
         }
 
-        #if UNITY_EDITOR
-        Debug.Log("[HintButton] Hint button clicked - showing dialog");
-        #endif
-
-        // Trigger optional event
+        // Trigger optional event (for tutorial tracking, etc.)
         onPressed?.Invoke();
     }
 
