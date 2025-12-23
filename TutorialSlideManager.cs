@@ -253,6 +253,23 @@ public class TutorialSlideManager : MonoBehaviour
             Debug.Log("[TutorialSlideManager] ✅ Stage 4: Hint button clicked! Player can now place the item.");
         }
     }
+
+    /// <summary>
+    /// Check if dragging is allowed. Called from DraggableButton before starting drag.
+    /// In stage 4, player must click hint button before dragging.
+    /// </summary>
+    public bool CanStartDrag()
+    {
+        // Stage 4: Must click hint button first!
+        if (currentStage == 4 && !hintClickedInStage4)
+        {
+            Debug.Log("[TutorialSlideManager] ⚠️ Stage 4: Cannot drag yet - must click hint button first!");
+            return false;
+        }
+
+        // All other stages: allow dragging
+        return true;
+    }
     
     /// <summary>
     /// הסתר את כל השקופיות
