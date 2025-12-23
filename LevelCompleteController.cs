@@ -32,7 +32,7 @@ public class LevelCompleteController : MonoBehaviour
     [Header("🎬 Ending Dialog")]
     [SerializeField] private EndingDialogController endingDialog;
     [Tooltip("Optional: Play ending dialog before completion screen")]
-    [SerializeField] private bool useEndingDialog = false;
+    [SerializeField] private bool useEndingDialog = true;
 
     [Header("Ad Integration")]
     [SerializeField] private bool showAdOnCompletion = false;
