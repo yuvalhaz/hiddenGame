@@ -98,6 +98,13 @@ public class HintButton : MonoBehaviour
             #endif
         }
 
+        // Notify TutorialSlideManager automatically (for stage 4)
+        if (TutorialSlideManager.Instance != null)
+        {
+            TutorialSlideManager.Instance.OnHintButtonClicked();
+            Debug.Log("[HintButton] Notified TutorialSlideManager");
+        }
+
         // Trigger optional event (for tutorial tracking, etc.)
         onPressed?.Invoke();
     }
