@@ -16,7 +16,7 @@ public class TutorialSlideManager : MonoBehaviour
     [SerializeField] private GameObject hintButtonObject;
 
     [Header("Timing Settings")]
-    [SerializeField] private float delayBeforeFirstSlide = 3f;
+    [SerializeField] private float delayBeforeFirstSlide = 1f;
     [SerializeField] private float delayBetweenSlides = 3f;
 
     [Header("Settings")]
