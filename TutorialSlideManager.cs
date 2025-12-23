@@ -11,7 +11,7 @@ public class TutorialSlideManager : MonoBehaviour
     [SerializeField] private GameObject stage2Slide;
     [SerializeField] private GameObject stage3Slide;
     [SerializeField] private GameObject stage4Slide; // "Click the hint button"
-    [SerializeField] private GameObject stage5Slide; // Fifth item
+    // Stage 5 has no slide - just place the fifth item
 
     [Header("Hint Button Control")]
     [Tooltip("The hint button GameObject - will be shown only from stage 4")]
@@ -232,17 +232,8 @@ public class TutorialSlideManager : MonoBehaviour
                 break;
 
             case 5:
-                // Stage 5: Fifth item
-                if (stage5Slide != null)
-                {
-                    stage5Slide.SetActive(true);
-                    Debug.Log("[TutorialSlideManager] Showing Stage 5");
-                }
-                else
-                {
-                    Debug.LogWarning("[TutorialSlideManager] Stage 5 slide is not assigned - completing tutorial");
-                    CompleteTutorial();
-                }
+                // Stage 5: Fifth item - no slide needed, just place the item
+                Debug.Log("[TutorialSlideManager] Stage 5: Place fifth item (no slide)");
                 break;
 
             default:
@@ -318,7 +309,7 @@ public class TutorialSlideManager : MonoBehaviour
         if (stage2Slide != null) stage2Slide.SetActive(false);
         if (stage3Slide != null) stage3Slide.SetActive(false);
         if (stage4Slide != null) stage4Slide.SetActive(false);
-        if (stage5Slide != null) stage5Slide.SetActive(false);
+        // No stage5Slide - stage 5 has no tutorial message
     }
     
     /// <summary>
