@@ -11,6 +11,7 @@ public class TutorialSlideManager : MonoBehaviour
     [SerializeField] private GameObject stage2Slide;
     [SerializeField] private GameObject stage3Slide;
     [SerializeField] private GameObject stage4Slide; // "Click the hint button"
+    [SerializeField] private GameObject stage5Slide; // Fifth item
 
     [Header("Hint Button Control")]
     [Tooltip("The hint button GameObject - will be shown only from stage 4")]
@@ -76,7 +77,7 @@ public class TutorialSlideManager : MonoBehaviour
         int settledCount = CountSettledItems();
         int startStage = settledCount + 1; // If 0 settled → stage 1, if 1 settled → stage 2, etc.
 
-        if (startStage > 4)
+        if (startStage > 5)
         {
             Debug.Log("[TutorialSlideManager] All items already placed - completing tutorial");
             CompleteTutorial();
@@ -230,6 +231,20 @@ public class TutorialSlideManager : MonoBehaviour
                 }
                 break;
 
+            case 5:
+                // Stage 5: Fifth item
+                if (stage5Slide != null)
+                {
+                    stage5Slide.SetActive(true);
+                    Debug.Log("[TutorialSlideManager] Showing Stage 5");
+                }
+                else
+                {
+                    Debug.LogWarning("[TutorialSlideManager] Stage 5 slide is not assigned - completing tutorial");
+                    CompleteTutorial();
+                }
+                break;
+
             default:
                 // הטוטוריאל הסתיים!
                 CompleteTutorial();
@@ -303,6 +318,7 @@ public class TutorialSlideManager : MonoBehaviour
         if (stage2Slide != null) stage2Slide.SetActive(false);
         if (stage3Slide != null) stage3Slide.SetActive(false);
         if (stage4Slide != null) stage4Slide.SetActive(false);
+        if (stage5Slide != null) stage5Slide.SetActive(false);
     }
     
     /// <summary>
