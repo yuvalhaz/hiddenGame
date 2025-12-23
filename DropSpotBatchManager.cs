@@ -332,7 +332,7 @@ public class DropSpotBatchManager : MonoBehaviour
 
     private IEnumerator RevealNextBatchDelayed()
     {
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(4f);
         RevealBatch(currentBatch);
     }
 
