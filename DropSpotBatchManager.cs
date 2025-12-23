@@ -248,6 +248,16 @@ public class DropSpotBatchManager : MonoBehaviour
             {
                 // Last batch - show "WELL DONE!" + confetti, then trigger level complete
                 isLastBatchCompletion = true;
+
+                // ✅ Check if tutorial is active - let TutorialSlideManager handle completion
+                if (TutorialSlideManager.Instance != null)
+                {
+                    if (debugMode)
+                        Debug.Log("🎓 Tutorial active - skipping batch level completion (tutorial will handle it)");
+                    isLastBatchCompletion = false;
+                    return;
+                }
+
                 if (messageController != null)
                 {
                     messageController.ShowCustomMessage("WELL DONE!", showConfetti: true, onComplete: () =>
