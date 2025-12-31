@@ -11,5 +11,9 @@
 !Assets/Scripts/
 !Assets/Scripts/**
 
+# אל תתעלם מתיקיית scripts שבתוך Assets (lowercase)
+!Assets/scripts/
+!Assets/scripts/**
+
 # התעלם מקבצי meta
 *.meta
