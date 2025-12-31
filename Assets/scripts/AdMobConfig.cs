@@ -11,18 +11,27 @@ public class AdMobConfig : MonoBehaviour
 
     [Header("Test Ad Unit IDs (Google Demo Ads)")]
     [Tooltip("Rewarded test ad unit (Google sample)")]
-    [SerializeField] private string testAdUnitId_Android = "ca-app-pub-3940256099942544/5224354917";
-    [SerializeField] private string testAdUnitId_iOS = "ca-app-pub-3940256099942544/1712485313";
+    [SerializeField] private string testRewardedAdUnitId_Android = "ca-app-pub-3940256099942544/5224354917";
+    [SerializeField] private string testRewardedAdUnitId_iOS = "ca-app-pub-3940256099942544/1712485313";
+    
+    [Tooltip("Interstitial test ad unit (Google sample)")]
+    [SerializeField] private string testInterstitialAdUnitId_Android = "ca-app-pub-3940256099942544/1033173712";
+    [SerializeField] private string testInterstitialAdUnitId_iOS = "ca-app-pub-3940256099942544/4411468910";
 
     [Header("Production Ad Unit IDs")]
     [Tooltip("REAL Rewarded Ad Unit ID from your AdMob account (Android)")]
-    [SerializeField] private string productionAdUnitId_Android = "ca-app-pub-7861548436347890/5250139476";
+    [SerializeField] private string productionRewardedAdUnitId_Android = "ca-app-pub-7861548436347890/9905311499";
     [Tooltip("REAL Rewarded Ad Unit ID from your AdMob account (iOS, if you use it)")]
-    [SerializeField] private string productionAdUnitId_iOS = "";
+    [SerializeField] private string productionRewardedAdUnitId_iOS = "";
+    
+    [Tooltip("REAL Interstitial Ad Unit ID from your AdMob account (Android)")]
+    [SerializeField] private string productionInterstitialAdUnitId_Android = "ca-app-pub-7861548436347890/1100930228";
+    [Tooltip("REAL Interstitial Ad Unit ID from your AdMob account (iOS, if you use it)")]
+    [SerializeField] private string productionInterstitialAdUnitId_iOS = "";
 
     [Header("AdMob App ID")]
     [Tooltip("REAL AdMob App ID (Android)")]
-    [SerializeField] private string adMobAppId_Android = "ca-app-pub-7861548436347890~8618538845";
+    [SerializeField] private string adMobAppId_Android = "ca-app-pub-7861548436347890~7127282529";
 
     [Tooltip("AdMob App ID for iOS (optional)")]
     [SerializeField] private string adMobAppId_iOS = "";
@@ -35,17 +44,41 @@ public class AdMobConfig : MonoBehaviour
         string adUnitId = "";
 
 #if UNITY_ANDROID
-        adUnitId = useTestAds ? testAdUnitId_Android : productionAdUnitId_Android;
+        adUnitId = useTestAds ? testRewardedAdUnitId_Android : productionRewardedAdUnitId_Android;
 #elif UNITY_IOS
-        adUnitId = useTestAds ? testAdUnitId_iOS : productionAdUnitId_iOS;
+        adUnitId = useTestAds ? testRewardedAdUnitId_iOS : productionRewardedAdUnitId_iOS;
 #else
         Debug.LogWarning("[AdMobConfig] Platform not supported for ads");
-        adUnitId = testAdUnitId_Android; // fallback
+        adUnitId = testRewardedAdUnitId_Android; // fallback
 #endif
 
         if (string.IsNullOrEmpty(adUnitId))
         {
-            Debug.LogWarning("[AdMobConfig] Ad Unit ID is empty! Check configuration.");
+            Debug.LogWarning("[AdMobConfig] Rewarded Ad Unit ID is empty! Check configuration.");
+        }
+
+        return adUnitId;
+    }
+
+    /// <summary>
+    /// Returns the correct Interstitial Ad Unit ID according to platform & test mode
+    /// </summary>
+    public string GetInterstitialAdUnitId()
+    {
+        string adUnitId = "";
+
+#if UNITY_ANDROID
+        adUnitId = useTestAds ? testInterstitialAdUnitId_Android : productionInterstitialAdUnitId_Android;
+#elif UNITY_IOS
+        adUnitId = useTestAds ? testInterstitialAdUnitId_iOS : productionInterstitialAdUnitId_iOS;
+#else
+        Debug.LogWarning("[AdMobConfig] Platform not supported for ads");
+        adUnitId = testInterstitialAdUnitId_Android; // fallback
+#endif
+
+        if (string.IsNullOrEmpty(adUnitId))
+        {
+            Debug.LogWarning("[AdMobConfig] Interstitial Ad Unit ID is empty! Check configuration.");
         }
 
         return adUnitId;

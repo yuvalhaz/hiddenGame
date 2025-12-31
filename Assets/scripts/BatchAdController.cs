@@ -2,43 +2,46 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Controls when and how ads are shown between batch completions.
-/// Handles timing, frequency, and coordination with batch progression.
+/// Handles ad timing, display, and waiting logic for batch completions
 /// </summary>
-[System.Serializable]
-public class BatchAdController
+public class BatchAdController : MonoBehaviour
 {
+    [Header("🎓 Tutorial Mode")]
+    [SerializeField] private bool isTutorialMode = false;
+    [Tooltip("Enable this for Level0 - completely disables all ads in this level")]
+
     [Header("Ad Settings")]
-    public bool showAdsOnBatchComplete = true;
+    [SerializeField] private bool showAdsOnBatchComplete = true;
     [Tooltip("Show ads when completing batches")]
 
-    public int adFrequency = 1;
+    [SerializeField] private int adFrequency = 1;
     [Tooltip("Show ad every X batches (1 = every batch, 2 = every 2 batches)")]
 
-    public bool skipAdOnFirstBatch = false;
+    [SerializeField] private bool skipAdOnFirstBatch = false;
     [Tooltip("Don't show ad after completing the first batch")]
 
-    public float delayBeforeAd = 0.5f;
+    [SerializeField] private float delayBeforeAd = 0.5f;
     [Tooltip("Extra delay after message disappears before showing ad")]
 
-    public bool waitForAdToClose = true;
+    [SerializeField] private bool waitForAdToClose = true;
     [Tooltip("Wait for ad to close before revealing next batch")]
 
     [Header("Debug")]
-    public bool debugMode = false;
+    [SerializeField] private bool debugMode = true;
 
+    // State tracking
     private int batchesCompleted = 0;
 
-    /// <summary>
-    /// Reset the batch counter (for new game/level).
-    /// </summary>
-    public void Reset()
+    void Start()
     {
-        batchesCompleted = 0;
+        if (isTutorialMode)
+        {
+            Debug.Log("[BatchAdController] 🎓 TUTORIAL MODE - All ads disabled for this level");
+        }
     }
 
     /// <summary>
-    /// Increment batch completion counter.
+    /// Increment completed batch counter
     /// </summary>
     public void IncrementBatchesCompleted()
     {
@@ -46,113 +49,116 @@ public class BatchAdController
     }
 
     /// <summary>
-    /// Check if an ad should be shown for the given completed batch.
+    /// Check if ad should be shown now
     /// </summary>
     public bool ShouldShowAd(int completedBatchIndex)
     {
-        if (!showAdsOnBatchComplete)
+        // ✅ TUTORIAL MODE - Never show ads
+        if (isTutorialMode)
         {
-            #if UNITY_EDITOR
             if (debugMode)
-                Debug.Log("[BatchAdController] Ads disabled");
-            #endif
+                Debug.Log("🎓 Tutorial mode - ads disabled");
             return false;
         }
 
-        if (RewardedAdsManager.Instance == null)
+        if (!showAdsOnBatchComplete)
         {
-            Debug.LogWarning("[BatchAdController] RewardedAdsManager not found!");
+            if (debugMode)
+                Debug.Log("📺 Ads disabled");
+            return false;
+        }
+
+        if (InterstitialAdsManager.Instance == null)
+        {
+            Debug.LogWarning("📺 InterstitialAdsManager not found!");
             return false;
         }
 
         if (skipAdOnFirstBatch && completedBatchIndex == 0)
         {
-            #if UNITY_EDITOR
             if (debugMode)
-                Debug.Log("[BatchAdController] Skipping ad on first batch");
-            #endif
+                Debug.Log("📺 Skipping ad on first batch");
             return false;
         }
 
         if (adFrequency <= 0)
         {
-            #if UNITY_EDITOR
             if (debugMode)
-                Debug.Log("[BatchAdController] Ad frequency is 0");
-            #endif
+                Debug.Log("📺 Ad frequency is 0");
             return false;
         }
 
         bool shouldShow = (batchesCompleted % adFrequency) == 0;
 
-        #if UNITY_EDITOR
         if (debugMode)
-            Debug.Log($"[BatchAdController] Completed: {batchesCompleted}, Freq: {adFrequency}, Show: {shouldShow}");
-        #endif
+            Debug.Log($"📺 Completed: {batchesCompleted}, Freq: {adFrequency}, Show: {shouldShow}");
 
         return shouldShow;
     }
 
     /// <summary>
-    /// Show ad with proper timing and callbacks.
+    /// Show ad and wait for it to complete, then invoke callback
     /// </summary>
-    public IEnumerator ShowAdAndWait(float messageDisplayTime, System.Action onAdComplete)
+    public IEnumerator ShowAdAndContinue(float messageTime, System.Action onAdComplete)
     {
-        #if UNITY_EDITOR
-        if (debugMode)
-            Debug.Log("[BatchAdController] Waiting for completion message...");
-        #endif
-
-        // Wait for message to finish
-        yield return new WaitForSeconds(messageDisplayTime + delayBeforeAd);
-
-        #if UNITY_EDITOR
-        if (debugMode)
-            Debug.Log("[BatchAdController] Showing ad now...");
-        #endif
-
-        if (RewardedAdsManager.Instance == null)
+        // ✅ TUTORIAL MODE - Skip immediately
+        if (isTutorialMode)
         {
-            Debug.LogWarning("[BatchAdController] RewardedAdsManager missing!");
+            if (debugMode)
+                Debug.Log("🎓 Tutorial mode - skipping ad wait, continuing immediately");
+            
+            // Still wait for message to finish for better UX
+            yield return new WaitForSeconds(messageTime);
+            onAdComplete?.Invoke();
+            yield break;
+        }
+
+        if (debugMode)
+            Debug.Log("📺 Waiting for completion message to finish...");
+
+        // Wait for message to disappear
+        yield return new WaitForSeconds(messageTime + delayBeforeAd);
+
+        if (debugMode)
+            Debug.Log("📺 Message finished. Showing ad now...");
+
+        if (InterstitialAdsManager.Instance == null)
+        {
+            Debug.LogWarning("📺 InterstitialAdsManager missing!");
             onAdComplete?.Invoke();
             yield break;
         }
 
         bool adClosed = false;
 
-        RewardedAdsManager.Instance.ShowRewarded(
-            onReward: () =>
-            {
-                #if UNITY_EDITOR
-                if (debugMode)
-                    Debug.Log("[BatchAdController] Ad reward granted!");
-                #endif
-            },
+        InterstitialAdsManager.Instance.ShowInterstitial(
             onClosed: (completed) =>
             {
-                #if UNITY_EDITOR
                 if (debugMode)
-                    Debug.Log($"[BatchAdController] Ad closed. Completed: {completed}");
-                #endif
+                    Debug.Log($"📺 Ad closed. Completed: {completed}");
                 adClosed = true;
             },
             onFailed: (error) =>
             {
-                Debug.LogWarning($"[BatchAdController] Ad failed: {error}");
+                Debug.LogWarning($"📺 Ad failed: {error}");
                 adClosed = true;
             },
             onOpened: () =>
             {
-                #if UNITY_EDITOR
                 if (debugMode)
-                    Debug.Log("[BatchAdController] Ad opened!");
-                #endif
+                    Debug.Log("📺 Ad opened!");
             }
         );
 
-        // Wait for ad to close if enabled
         if (waitForAdToClose)
         {
+            // Check if ad is even ready
+            if (!InterstitialAdsManager.Instance.IsReady())
+            {
+                Debug.LogWarning("📺 Ad was not ready, skipping wait");
+                adClosed = true;
+            }
+
             float timeout = 60f;
             float elapsed = 0f;
 
@@ -163,18 +169,44 @@ public class BatchAdController
             }
 
             if (elapsed >= timeout)
-            {
-                Debug.LogWarning("[BatchAdController] Ad timeout!");
-            }
+                Debug.LogWarning("📺 Ad timeout!");
         }
 
-        #if UNITY_EDITOR
         if (debugMode)
-            Debug.Log("[BatchAdController] Ad finished. Continuing...");
-        #endif
+            Debug.Log("📺 Ad finished. Continuing...");
 
+        // Invoke callback
         onAdComplete?.Invoke();
     }
 
-    public int GetBatchesCompleted() => batchesCompleted;
+    /// <summary>
+    /// Reset the completed batches counter (for testing)
+    /// </summary>
+    public void ResetBatchCounter()
+    {
+        batchesCompleted = 0;
+    }
+
+    [ContextMenu("📺 Test Ad")]
+    private void TestAd()
+    {
+        if (isTutorialMode)
+        {
+            Debug.LogWarning("🎓 Cannot test ad in Tutorial Mode!");
+            return;
+        }
+
+        if (InterstitialAdsManager.Instance == null)
+        {
+            Debug.LogError("❌ InterstitialAdsManager not found!");
+            return;
+        }
+
+        Debug.Log("📺 Testing ad...");
+        InterstitialAdsManager.Instance.ShowInterstitial(
+            onClosed: (completed) => Debug.Log($"✅ Closed: {completed}"),
+            onFailed: (error) => Debug.LogError($"❌ Failed: {error}"),
+            onOpened: () => Debug.Log("📺 Opened!")
+        );
+    }
 }

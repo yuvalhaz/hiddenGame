@@ -120,6 +120,20 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        // Check with TutorialSlideManager if dragging is allowed
+        if (TutorialSlideManager.Instance != null)
+        {
+            if (!TutorialSlideManager.Instance.CanStartDrag())
+            {
+                // Dragging blocked by tutorial (stage 4: must click hint first)
+                #if UNITY_EDITOR
+                if (debugMode)
+                    Debug.Log($"[DraggableButton] Drag blocked by tutorial for {buttonID}");
+                #endif
+                return; // BLOCK THE DRAG!
+            }
+        }
+
         originalPosition = rectTransform.anchoredPosition;
         isDragging = true;
 

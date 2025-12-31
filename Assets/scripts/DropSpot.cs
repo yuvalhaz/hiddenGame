@@ -57,6 +57,13 @@ public class DropSpot : MonoBehaviour
         // ✨ הפעל אפקט נצנצים עדין!
         TriggerSparkles();
 
+        // 🎓 עדכן את מנהל השקופיות שפריט נכון הונח
+        if (TutorialSlideManager.Instance != null)
+        {
+            TutorialSlideManager.Instance.OnCorrectDrop(spotId);
+            Debug.Log($"[DropSpot] Tutorial notified: {spotId} placed correctly");
+        }
+
         Debug.Log($"DropSpot {spotId} - Ghost destroyed, revealing background");
     }
 

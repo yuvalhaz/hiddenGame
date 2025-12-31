@@ -4,18 +4,21 @@ using UnityEngine;
 using GoogleMobileAds.Api;
 #endif
 
-public class RewardedAdsManager : MonoBehaviour
+/// <summary>
+/// Manages Interstitial Ads (full-screen ads shown between batches/levels)
+/// </summary>
+public class InterstitialAdsManager : MonoBehaviour
 {
-    public static RewardedAdsManager Instance;
+    public static InterstitialAdsManager Instance;
 
-    /// <summary>נורה כשהתקבל Reward.</summary>
-    public event Action OnRewardGranted;
+    /// <summary>נורה כשהפרסומת נסגרת.</summary>
+    public event Action<bool> OnAdClosed; // bool = האם הפרסומת הושלמה
 
     [Header("Configuration")]
     [SerializeField] private AdMobConfig adMobConfig;
 
 #if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
-    private RewardedAd rewardedAd;
+    private InterstitialAd interstitialAd;
     private bool isAdLoading = false;
 #endif
 
@@ -48,17 +51,17 @@ public class RewardedAdsManager : MonoBehaviour
     {
         if (adMobConfig == null)
         {
-            Debug.LogError("[RewardedAdsManager] AdMobConfig not found! Add it to the scene.");
+            Debug.LogError("[InterstitialAdsManager] AdMobConfig not found! Add it to the scene.");
             return;
         }
 
-        // אתחול Google Mobile Ads SDK
+        // אתחול Google Mobile Ads SDK (אם עוד לא אותחל)
         MobileAds.Initialize(initStatus =>
         {
-            Debug.Log($"[RewardedAdsManager] AdMob initialized. Status: {initStatus}");
+            Debug.Log($"[InterstitialAdsManager] AdMob initialized for Interstitial ads");
             if (adMobConfig.IsTestMode())
             {
-                Debug.Log("[RewardedAdsManager] Running in TEST MODE with Google demo ads");
+                Debug.Log("[InterstitialAdsManager] Running in TEST MODE with Google demo ads");
             }
         });
     }
@@ -71,108 +74,104 @@ public class RewardedAdsManager : MonoBehaviour
 #if UNITY_EDITOR
         return true;
 #else
-        return rewardedAd != null && rewardedAd.CanShowAd();
+        return interstitialAd != null && interstitialAd.CanShowAd();
 #endif
     }
 
     public void Preload(Action<bool> onLoaded = null)
     {
 #if UNITY_EDITOR
-        Debug.Log("[RewardedAdsManager] Editor mode - simulating ad load");
+        Debug.Log("[InterstitialAdsManager] Editor mode - simulating ad load");
         SafeInvoke(onLoaded, true);
 #else
-        LoadRewardedAd(onLoaded);
+        LoadInterstitialAd(onLoaded);
 #endif
     }
 
 #if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
-    private void LoadRewardedAd(Action<bool> onLoaded = null)
+    private void LoadInterstitialAd(Action<bool> onLoaded = null)
     {
         if (adMobConfig == null)
         {
-            Debug.LogError("[RewardedAdsManager] Cannot load ad - AdMobConfig is missing");
+            Debug.LogError("[InterstitialAdsManager] Cannot load ad - AdMobConfig is missing");
             SafeInvoke(onLoaded, false);
             return;
         }
 
         // נקה פרסומת קודמת
-        if (rewardedAd != null)
+        if (interstitialAd != null)
         {
-            rewardedAd.Destroy();
-            rewardedAd = null;
+            interstitialAd.Destroy();
+            interstitialAd = null;
         }
 
         if (isAdLoading)
         {
-            Debug.LogWarning("[RewardedAdsManager] Ad is already loading");
+            Debug.LogWarning("[InterstitialAdsManager] Ad is already loading");
             SafeInvoke(onLoaded, false);
             return;
         }
 
         isAdLoading = true;
-        string adUnitId = adMobConfig.GetRewardedAdUnitId();
+        string adUnitId = adMobConfig.GetInterstitialAdUnitId();
 
-        Debug.Log($"[RewardedAdsManager] Loading ad with ID: {adUnitId}");
+        Debug.Log($"[InterstitialAdsManager] Loading ad with ID: {adUnitId}");
 
         // בקשת פרסומת
         var adRequest = new AdRequest();
 
-        RewardedAd.Load(adUnitId, adRequest, (RewardedAd ad, LoadAdError error) =>
+        InterstitialAd.Load(adUnitId, adRequest, (InterstitialAd ad, LoadAdError error) =>
         {
             isAdLoading = false;
 
             if (error != null || ad == null)
             {
-                Debug.LogError($"[RewardedAdsManager] Failed to load ad: {error}");
+                Debug.LogError($"[InterstitialAdsManager] Failed to load ad: {error}");
                 SafeInvoke(onLoaded, false);
                 return;
             }
 
-            rewardedAd = ad;
-            Debug.Log("[RewardedAdsManager] Ad loaded successfully!");
+            interstitialAd = ad;
+            Debug.Log("[InterstitialAdsManager] Ad loaded successfully!");
 
             SafeInvoke(onLoaded, true);
         });
     }
 #endif
 
-    // ===================== MAIN API - Single method with optional parameters =====================
+    // ===================== MAIN API =====================
 
     /// <summary>
-    /// Show rewarded ad with optional callbacks
+    /// Show interstitial ad with optional callbacks
     /// </summary>
-    /// <param name="onReward">Called when user earns reward</param>
     /// <param name="onClosed">Called when ad is closed - receives bool indicating if completed</param>
     /// <param name="onFailed">Called if ad fails to show - receives error message</param>
     /// <param name="onOpened">Called when ad opens</param>
-    public void ShowRewarded(
-        Action onReward = null,
+    public void ShowInterstitial(
         Action<bool> onClosed = null,
         Action<string> onFailed = null,
         Action onOpened = null)
     {
 #if UNITY_EDITOR
-        Debug.Log("[RewardedAdsManager] Editor simulate: opened -> reward -> closed(true).");
+        Debug.Log("[InterstitialAdsManager] Editor simulate: opened -> closed(true).");
         SafeInvoke(onOpened);
-        SafeInvoke(OnRewardGranted);
-        SafeInvoke(onReward);
+        SafeInvoke(OnAdClosed, true);
         SafeInvoke(onClosed, true);
 #else
-        ShowRewardedAdReal(onReward, onClosed, onFailed, onOpened);
+        ShowInterstitialAdReal(onClosed, onFailed, onOpened);
 #endif
     }
 
 #if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
-    private void ShowRewardedAdReal(
-        Action onReward,
+    private void ShowInterstitialAdReal(
         Action<bool> onClosed,
         Action<string> onFailed,
         Action onOpened)
     {
-        if (rewardedAd == null || !rewardedAd.CanShowAd())
+        if (interstitialAd == null || !interstitialAd.CanShowAd())
         {
-            string errorMsg = "Ad is not ready to show";
-            Debug.LogWarning($"[RewardedAdsManager] {errorMsg}");
+            string errorMsg = "Interstitial ad is not ready to show";
+            Debug.LogWarning($"[InterstitialAdsManager] {errorMsg}");
             SafeInvoke(onFailed, errorMsg);
 
             // נסה לטעון פרסומת חדשה
@@ -180,28 +179,30 @@ public class RewardedAdsManager : MonoBehaviour
             return;
         }
 
-        bool rewardGranted = false;
+        bool adWasShown = false;
 
         // רישום callbacks
-        rewardedAd.OnAdFullScreenContentOpened += () =>
+        interstitialAd.OnAdFullScreenContentOpened += () =>
         {
-            Debug.Log("[RewardedAdsManager] Ad opened");
+            Debug.Log("[InterstitialAdsManager] Ad opened");
+            adWasShown = true;
             SafeInvoke(onOpened);
         };
 
-        rewardedAd.OnAdFullScreenContentClosed += () =>
+        interstitialAd.OnAdFullScreenContentClosed += () =>
         {
-            Debug.Log($"[RewardedAdsManager] Ad closed. Reward granted: {rewardGranted}");
-            SafeInvoke(onClosed, rewardGranted);
+            Debug.Log($"[InterstitialAdsManager] Ad closed. Was shown: {adWasShown}");
+            SafeInvoke(OnAdClosed, adWasShown);
+            SafeInvoke(onClosed, adWasShown);
 
             // טען פרסומת חדשה אוטומטית
             Preload();
         };
 
-        rewardedAd.OnAdFullScreenContentFailed += (AdError error) =>
+        interstitialAd.OnAdFullScreenContentFailed += (AdError error) =>
         {
             string errorMsg = $"Failed to show ad: {error}";
-            Debug.LogError($"[RewardedAdsManager] {errorMsg}");
+            Debug.LogError($"[InterstitialAdsManager] {errorMsg}");
             SafeInvoke(onFailed, errorMsg);
 
             // טען פרסומת חדשה אוטומטית
@@ -209,37 +210,19 @@ public class RewardedAdsManager : MonoBehaviour
         };
 
         // הצג פרסומת
-        rewardedAd.Show((Reward reward) =>
-        {
-            rewardGranted = true;
-            Debug.Log($"[RewardedAdsManager] Reward earned: {reward.Type}, {reward.Amount}");
-            SafeInvoke(OnRewardGranted);
-            SafeInvoke(onReward);
-        });
+        interstitialAd.Show();
     }
 #endif
-
-    /// <summary>
-    /// Alias for ShowRewarded - same functionality
-    /// </summary>
-    public void ShowHintAd(
-        Action onReward = null,
-        Action<bool> onClosed = null,
-        Action<string> onFailed = null,
-        Action onOpened = null)
-    {
-        ShowRewarded(onReward, onClosed, onFailed, onOpened);
-    }
 
     // ===================== Cleanup =====================
 
     void OnDestroy()
     {
 #if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
-        if (rewardedAd != null)
+        if (interstitialAd != null)
         {
-            rewardedAd.Destroy();
-            rewardedAd = null;
+            interstitialAd.Destroy();
+            interstitialAd = null;
         }
 #endif
     }

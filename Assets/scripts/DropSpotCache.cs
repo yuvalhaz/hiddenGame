@@ -93,4 +93,24 @@ public static class DropSpotCache
     {
         return cache != null && cache.ContainsKey(spotId);
     }
+
+    /// <summary>
+    /// Get all cached DropSpots as an array.
+    /// </summary>
+    public static DropSpot[] GetAll()
+    {
+        if (!isInitialized || cache == null || cache.Count == 0)
+        {
+            Refresh();
+        }
+
+        if (cache == null || cache.Count == 0)
+        {
+            return new DropSpot[0];
+        }
+
+        DropSpot[] result = new DropSpot[cache.Count];
+        cache.Values.CopyTo(result, 0);
+        return result;
+    }
 }
