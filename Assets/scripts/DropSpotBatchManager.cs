@@ -85,6 +85,11 @@ public class DropSpotBatchManager : MonoBehaviour
                 Debug.Log($"[DropSpotBatchManager] Auto-found {allDropSpots.Count} DropSpots");
         }
 
+        // ✅ FIX: Refresh DropSpotCache immediately after finding DropSpots
+        DropSpotCache.Refresh();
+        if (debugMode)
+            Debug.Log($"[DropSpotBatchManager] ✅ DropSpotCache refreshed with {DropSpotCache.Count} spots");
+
         int required = GetTotalRequiredSpots();
         if (allDropSpots.Count < required)
         {
