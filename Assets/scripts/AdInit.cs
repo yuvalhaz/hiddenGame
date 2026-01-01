@@ -9,6 +9,7 @@ public class AdInit : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private RewardedAdsManager rewardedAds;
+    [SerializeField] private InterstitialAdsManager interstitialAds;
     [SerializeField] private AdMobConfig adMobConfig;
 
     [Header("Config")]
@@ -27,6 +28,9 @@ public class AdInit : MonoBehaviour
         if (!rewardedAds)
             rewardedAds = FindObjectOfType<RewardedAdsManager>(true);
 
+        if (!interstitialAds)
+            interstitialAds = FindObjectOfType<InterstitialAdsManager>(true);
+
         if (!adMobConfig)
             adMobConfig = FindObjectOfType<AdMobConfig>(true);
     }
@@ -37,12 +41,6 @@ public class AdInit : MonoBehaviour
         if (!adMobConfig)
         {
             Debug.LogError("[AdInit] AdMobConfig not found! Add it to the scene for ads to work.");
-            return;
-        }
-
-        if (!rewardedAds)
-        {
-            Debug.LogWarning("[AdInit] RewardedAdsManager not found in scene.");
             return;
         }
 
@@ -59,18 +57,42 @@ public class AdInit : MonoBehaviour
         // טען מראש אם מוגדר
         if (preloadOnStart)
         {
-            rewardedAds.Preload(success =>
+            // Preload rewarded ads (for hints)
+            if (rewardedAds)
             {
-                if (success)
-                    Debug.Log("[AdInit] Ad preloaded successfully!");
-                else
-                    Debug.LogWarning("[AdInit] Failed to preload ad");
-            });
+                rewardedAds.Preload(success =>
+                {
+                    if (success)
+                        Debug.Log("[AdInit] Rewarded ad preloaded successfully!");
+                    else
+                        Debug.LogWarning("[AdInit] Failed to preload rewarded ad");
+                });
+            }
+            else
+            {
+                Debug.LogWarning("[AdInit] RewardedAdsManager not found - skipping rewarded ad preload");
+            }
+
+            // Preload interstitial ads (for batch completions)
+            if (interstitialAds)
+            {
+                interstitialAds.Preload(success =>
+                {
+                    if (success)
+                        Debug.Log("[AdInit] Interstitial ad preloaded successfully!");
+                    else
+                        Debug.LogWarning("[AdInit] Failed to preload interstitial ad");
+                });
+            }
+            else
+            {
+                Debug.LogWarning("[AdInit] InterstitialAdsManager not found - skipping interstitial ad preload");
+            }
         }
     }
 
     /// <summary>
-    /// ניתן לקרוא מפאנל/כפתור כדי לטעון מראש בכל רגע.
+    /// ניתן לקרוא מפאנל/כפתור כדי לטעון rewarded ad מראש בכל רגע.
     /// </summary>
     public void PreloadRewardedNow()
     {
@@ -87,10 +109,35 @@ public class AdInit : MonoBehaviour
     }
 
     /// <summary>
-    /// בדיקת מוכנות – שימושי לפני הצגה.
+    /// ניתן לקרוא כדי לטעון interstitial ad מראש בכל רגע.
+    /// </summary>
+    public void PreloadInterstitialNow()
+    {
+        if (!interstitialAds)
+        {
+            interstitialAds = FindObjectOfType<InterstitialAdsManager>(true);
+            if (!interstitialAds)
+            {
+                Debug.LogWarning("[AdInit] Cannot preload – InterstitialAdsManager missing.");
+                return;
+            }
+        }
+        interstitialAds.Preload();
+    }
+
+    /// <summary>
+    /// בדיקת מוכנות rewarded ad – שימושי לפני הצגה.
     /// </summary>
     public bool IsRewardedReady()
     {
         return rewardedAds != null && rewardedAds.IsReady();
+    }
+
+    /// <summary>
+    /// בדיקת מוכנות interstitial ad – שימושי לפני הצגה.
+    /// </summary>
+    public bool IsInterstitialReady()
+    {
+        return interstitialAds != null && interstitialAds.IsReady();
     }
 }
