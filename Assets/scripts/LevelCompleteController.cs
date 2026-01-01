@@ -48,6 +48,14 @@ public class LevelCompleteController : MonoBehaviour
 
     private void Start()
     {
+        // Check if tutorial was already completed and redirect to level selection
+        if (isTutorialLevel && PlayerPrefs.GetInt("TutorialCompleted", 0) == 1)
+        {
+            Debug.Log("[LevelCompleteController] Tutorial already completed, loading level selection...");
+            SceneManager.LoadScene(levelSelectionSceneName);
+            return;
+        }
+
         // Hide completion panel at start
         if (completionPanel != null)
             completionPanel.SetActive(false);
@@ -111,6 +119,14 @@ public class LevelCompleteController : MonoBehaviour
             Debug.LogWarning("[LevelCompleteController] ⚠️ LevelManager is NULL (Tutorial or standalone level - this is OK)");
         }
 
+        // Save tutorial completion flag
+        if (isTutorialLevel)
+        {
+            PlayerPrefs.SetInt("TutorialCompleted", 1);
+            PlayerPrefs.Save();
+            Debug.Log("[LevelCompleteController] ✅ Tutorial marked as completed!");
+        }
+
         // Start ending dialog
         endingDialog.StartEndingDialog();
 
@@ -132,6 +148,14 @@ public class LevelCompleteController : MonoBehaviour
         {
             nextLevelData.Unlock();
             Debug.Log($"[LevelCompleteController] 🔓 {nextLevelData.levelName} unlocked!");
+        }
+
+        // Save tutorial completion flag
+        if (isTutorialLevel)
+        {
+            PlayerPrefs.SetInt("TutorialCompleted", 1);
+            PlayerPrefs.Save();
+            Debug.Log("[LevelCompleteController] ✅ Tutorial marked as completed!");
         }
 
         // Show completion screen
