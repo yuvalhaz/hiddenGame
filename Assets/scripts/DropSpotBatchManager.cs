@@ -4,139 +4,47 @@ using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// Manages batches of DropSpots with flexible batch sizes
+/// Core batch manager - coordinates batch progression and delegates to sub-systems
+/// REFACTORED: Now uses BatchProgressUI, BatchMessageController, and BatchAdController
 /// </summary>
 public class DropSpotBatchManager : MonoBehaviour
 {
-    // סוגי אנימציות זמינים
-    public enum AnimationType
-    {
-        ScaleBounce,    // גדל עם קפיצה
-        ScaleSmooth,    // גדל חלק
-        PopIn,          // קופץ פנימה
-        SlideDown,      // מחליק מלמעלה
-        Rotate          // מסתובב תוך כדי הופעה
-    }
-
     [Header("🎯 Batch Mode")]
     [SerializeField] private bool useCustomBatchSizes = false;
     [Tooltip("Enable to define different sizes for each batch")]
-    
+
     [Header("⚙️ Simple Mode (All Batches Same Size)")]
     [SerializeField] private int numberOfBatches = 3;
     [SerializeField] private int spotsPerBatch = 7;
-    
+
     [Header("🔧 Advanced Mode (Custom Size Per Batch)")]
     [SerializeField] private List<int> customBatchSizes = new List<int>() { 5, 7, 10 };
     [Tooltip("Define size for each batch: [Batch 0: 5 spots, Batch 1: 7 spots, Batch 2: 10 spots]")]
-    
+
     [Header("📋 DropSpot References")]
     [SerializeField] private List<DropSpot> allDropSpots = new List<DropSpot>();
-    
-    [Header("🎉 Completion Messages")]
-    [SerializeField] private bool showCompletionMessage = true;
-    
-    [Header("📺 UI References")]
-    [SerializeField] private GameObject completionPanel;
-    [Tooltip("The panel/canvas that contains the message")]
-    [SerializeField] private UnityEngine.UI.Text completionText;
-    [Tooltip("Legacy Unity UI Text component")]
-    
-    [SerializeField] private float messageDuration = 2f;
-    [Tooltip("How long to show the message (seconds)")]
-    
-    [Header("📊 Progress Bar UI")]
-    [SerializeField] private UnityEngine.UI.Text gameProgressText;
-    [Tooltip("Text showing game progress in percentage (e.g., 'GAME PROGRESS: 35%')")]
-    [SerializeField] private UnityEngine.UI.Text currentBatchProgressText;
-    [Tooltip("Text showing current batch progress (e.g., '3/7')")]
-    [SerializeField] private UnityEngine.UI.Slider progressSlider;
-    [Tooltip("Optional slider to show visual progress")]
-    [SerializeField] private bool updateProgressUI = true;
-    [Tooltip("Enable/disable progress UI updates")]
-    
-    [Header("🎬 Animation Settings")]
-    [SerializeField] private bool useAnimation = true;
-    [SerializeField] private AnimationType animationType = AnimationType.ScaleBounce;
-    [SerializeField] private float animationDuration = 0.5f;
-    [Tooltip("Duration of the entrance animation")]
-    [SerializeField] private AnimationCurve scaleCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
-    
-    [Header("🔊 Audio Settings")]
-    [SerializeField] private bool playSound = true;
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private bool useRandomSound = true;
-    [SerializeField] private List<AudioClip> completionSounds = new List<AudioClip>();
-    [SerializeField] private AudioClip singleSound;
-    [Tooltip("Use this if you want only one sound (when useRandomSound = false)")]
-    [Range(0f, 1f)]
-    [SerializeField] private float soundVolume = 1f;
-    
-    [Header("💬 Message Content")]
-    [SerializeField] private bool useCustomMessagesPerBatch = false;
-    [Tooltip("Different message for each batch")]
-    [SerializeField] private List<string> customMessagesPerBatch = new List<string>() 
-    { 
-        "GREAT JOB!", 
-        "AMAZING!", 
-        "PERFECT!" 
-    };
-    
-    [Header("🎲 Random Messages Mode")]
-    [SerializeField] private List<string> randomMessages = new List<string>()
-    {
-        "GREAT!",
-        "AWESOME!",
-        "FANTASTIC!",
-        "WONDERFUL!",
-        "EXCELLENT!",
-        "AMAZING!",
-        "SUPER!",
-        "PERFECT!",
-        "BRILLIANT!",
-        "INCREDIBLE!"
-    };
-    
-    [Header("🎨 Random Colors")]
-    [SerializeField] private bool useRandomColors = true;
-    [SerializeField] private List<Color> messageColors = new List<Color>()
-    {
-        new Color(1f, 0.84f, 0f),      // זהב
-        new Color(1f, 0.27f, 0f),      // כתום-אדום
-        new Color(0.2f, 0.8f, 0.2f),   // ירוק
-        new Color(0f, 0.75f, 1f),      // כחול בהיר
-        new Color(1f, 0.41f, 0.71f),   // ורוד
-        new Color(0.58f, 0f, 0.83f),   // סגול
-        new Color(1f, 1f, 0f),         // צהוב
-        new Color(1f, 0.5f, 0f)        // כתום
-    };
-    
-    [Header("📺 Ad Settings")]
-    [SerializeField] private bool showAdsOnBatchComplete = true;
-    [Tooltip("Show ads when completing batches")]
-    [SerializeField] private int adFrequency = 1;
-    [Tooltip("Show ad every X batches (1 = every batch, 2 = every 2 batches)")]
-    [SerializeField] private bool skipAdOnFirstBatch = false;
-    [Tooltip("Don't show ad after completing the first batch")]
-    [SerializeField] private float delayBeforeAd = 0.5f;
-    [Tooltip("Extra delay after message disappears before showing ad")]
-    [SerializeField] private bool waitForAdToClose = true;
-    [Tooltip("Wait for ad to close before revealing next batch")]
-    
+
+    [Header("📺 UI Sub-Systems")]
+    [SerializeField] private BatchProgressUI progressUI;
+    [SerializeField] private BatchMessageController messageController;
+    [SerializeField] private BatchAdController adController;
+
+    [Header("🎬 Level Complete")]
+    [SerializeField] private LevelCompleteController levelCompleteController;
+    [Tooltip("Controller that handles level completion and ending dialog")]
+
     [Header("🐛 Debug")]
     [SerializeField] private bool debugMode = true;
-    
+
+    // State
     private int currentBatch = 0;
     private int totalPlacedInCurrentBatch = 0;
-    private int batchesCompleted = 0;
-    
-    private Coroutine hideMessageCoroutine = null;
-    private bool isShowingMessage = false;
+    private bool isLastBatchCompletion = false;
 
     private void OnValidate()
     {
         int required = GetTotalRequiredSpots();
-        
+
         if (allDropSpots.Count > 0 && allDropSpots.Count != required)
         {
             Debug.LogWarning($"[DropSpotBatchManager] ⚠️ Mismatch! Required: {required} spots, Found: {allDropSpots.Count} spots in list");
@@ -150,29 +58,25 @@ public class DropSpotBatchManager : MonoBehaviour
 
     private void Awake()
     {
-        if (completionPanel != null)
+        // Auto-create components if missing
+        if (progressUI == null)
         {
-            completionPanel.SetActive(false);
-            completionPanel.transform.localScale = Vector3.one;
-            completionPanel.transform.localRotation = Quaternion.identity;
+            progressUI = gameObject.AddComponent<BatchProgressUI>();
+            Debug.Log("[DropSpotBatchManager] ✅ Created BatchProgressUI");
         }
-        
-        isShowingMessage = false;
-        hideMessageCoroutine = null;
-        batchesCompleted = 0;
-        
-        if (audioSource == null && playSound)
+
+        if (messageController == null)
         {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-            {
-                audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.playOnAwake = false;
-                if (debugMode)
-                    Debug.Log("[DropSpotBatchManager] ✅ Created AudioSource component");
-            }
+            messageController = gameObject.AddComponent<BatchMessageController>();
+            Debug.Log("[DropSpotBatchManager] ✅ Created BatchMessageController");
         }
-        
+
+        if (adController == null)
+        {
+            adController = gameObject.AddComponent<BatchAdController>();
+            Debug.Log("[DropSpotBatchManager] ✅ Created BatchAdController");
+        }
+
         if (allDropSpots.Count == 0)
         {
             allDropSpots.AddRange(FindObjectsOfType<DropSpot>(true));
@@ -202,19 +106,24 @@ public class DropSpotBatchManager : MonoBehaviour
     private IEnumerator InitializeAfterDelay()
     {
         yield return null;
-        
+
         if (debugMode)
         {
             Debug.Log("========================================");
             Debug.Log("[DropSpotBatchManager] 🚀 INITIALIZING");
             Debug.Log("========================================");
         }
-        
+
+        // Initialize sub-systems
+        if (progressUI != null)
+            progressUI.Initialize(this, allDropSpots);
+
+        // Connect to GameProgressManager event
         if (GameProgressManager.Instance != null)
         {
             GameProgressManager.Instance.OnItemPlaced -= OnItemPlaced;
             GameProgressManager.Instance.OnItemPlaced += OnItemPlaced;
-            
+
             if (debugMode)
                 Debug.Log("[DropSpotBatchManager] ✅ Connected to event");
         }
@@ -222,9 +131,9 @@ public class DropSpotBatchManager : MonoBehaviour
         {
             Debug.LogError("[DropSpotBatchManager] ❌ GameProgressManager is NULL!");
         }
-        
+
         CalculateCurrentBatch();
-        
+
         if (debugMode)
         {
             Debug.Log($"[DropSpotBatchManager] currentBatch = {currentBatch}");
@@ -234,13 +143,23 @@ public class DropSpotBatchManager : MonoBehaviour
 
         HideAllDropSpots();
         RevealBatch(currentBatch);
-        
-        // ✅ עדכן את ה-Progress UI בהתחלה
+
+        // Update UI
         UpdateProgressUI();
-        
+
         if (debugMode)
             Debug.Log("[DropSpotBatchManager] ✅ Init complete!");
     }
+
+    private void OnDestroy()
+    {
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.OnItemPlaced -= OnItemPlaced;
+        }
+    }
+
+    // ===== CORE BATCH LOGIC =====
 
     private void CalculateCurrentBatch()
     {
@@ -288,14 +207,6 @@ public class DropSpotBatchManager : MonoBehaviour
             Debug.Log("🏆 All batches complete!");
     }
 
-    private void OnDestroy()
-    {
-        if (GameProgressManager.Instance != null)
-        {
-            GameProgressManager.Instance.OnItemPlaced -= OnItemPlaced;
-        }
-    }
-
     private void OnItemPlaced(string itemId)
     {
         if (debugMode)
@@ -304,363 +215,134 @@ public class DropSpotBatchManager : MonoBehaviour
             Debug.Log($"🔔 Item placed: {itemId}");
             Debug.Log($"Before: batch={currentBatch}, placed={totalPlacedInCurrentBatch}");
         }
-        
+
         totalPlacedInCurrentBatch++;
         int batchSize = GetBatchSize(currentBatch);
-        
-        // ✅ עדכן את ה-UI
+
+        // Update UI
         UpdateProgressUI();
-        
+
         if (debugMode)
             Debug.Log($"Progress: {totalPlacedInCurrentBatch}/{batchSize}");
-        
+
         if (totalPlacedInCurrentBatch >= batchSize)
         {
             if (debugMode)
             {
                 Debug.Log("🎉🎉🎉 BATCH COMPLETE! 🎉🎉🎉");
-                Debug.Log($"showMessage = {showCompletionMessage}");
+                Debug.Log($"Batch size: {batchSize}");
+                Debug.Log($"Current batch: {currentBatch}");
+                Debug.Log($"Total batches: {GetTotalBatches()}");
             }
-            
+
             int completedBatch = currentBatch;
-            batchesCompleted++;
-            
-            if (showCompletionMessage)
+
+            // Increment ad controller counter
+            if (adController != null)
+                adController.IncrementBatchesCompleted();
+
+            // Check if this is the last batch
+            bool isLastBatch = (currentBatch >= GetTotalBatches() - 1);
+
+            if (isLastBatch)
             {
-                ShowCompletionMessage(completedBatch);
-            }
-            
-            currentBatch++;
-            totalPlacedInCurrentBatch = 0;
-            
-            // ✅ עדכן UI אחרי מעבר לבאטץ' הבא
-            UpdateProgressUI();
-            
-            // ✅ בדוק אם צריך להציג פרסומת
-            if (ShouldShowAdNow(completedBatch))
-            {
+                // Last batch - show "WELL DONE!" + confetti, then trigger level complete
+                isLastBatchCompletion = true;
+                if (messageController != null)
+                {
+                    messageController.ShowCustomMessage("WELL DONE!", showConfetti: true, onComplete: () =>
+                    {
+                        // ✅ After message, trigger level completion!
+                        if (levelCompleteController != null)
+                        {
+                            if (debugMode)
+                                Debug.Log("🎯 Triggering level complete after WELL DONE!");
+                            levelCompleteController.TriggerLevelComplete();
+                        }
+                        else
+                        {
+                            Debug.LogError("❌ LevelCompleteController is NULL! Cannot complete level!");
+                        }
+                        isLastBatchCompletion = false;
+                    });
+                }
+                else
+                {
+                    // No message controller - trigger immediately
+                    if (levelCompleteController != null)
+                    {
+                        if (debugMode)
+                            Debug.Log("🎯 Triggering level complete (no message controller)!");
+                        levelCompleteController.TriggerLevelComplete();
+                    }
+                }
+
                 if (debugMode)
-                    Debug.Log($"📺 Will show ad after message for batch {completedBatch}");
-                
-                StartCoroutine(ShowAdAndContinue());
+                    Debug.Log("🏆 Last batch! Showing WELL DONE with confetti!");
             }
             else
             {
-                // אין פרסומת - המשך לבאטץ' הבא
+                // Regular batch - show encouragement message
+                if (messageController != null)
+                {
+                    messageController.ShowCompletionMessage(completedBatch);
+                }
+
+                if (debugMode)
+                    Debug.Log($"📝 Regular batch {completedBatch}, showing encouragement message");
+            }
+
+            currentBatch++;
+            totalPlacedInCurrentBatch = 0;
+
+            // Update UI after advancing
+            UpdateProgressUI();
+
+            // Check if should show ad
+            if (adController != null && adController.ShouldShowAd(completedBatch))
+            {
+                if (debugMode)
+                    Debug.Log($"📺 Will show ad after message for batch {completedBatch}");
+
+                StartCoroutine(adController.ShowAdAndContinue(
+                    messageTime: 2.5f, // message duration + animation
+                    onAdComplete: () =>
+                    {
+                        // After ad, reveal next batch
+                        if (currentBatch < GetTotalBatches())
+                        {
+                            StartCoroutine(RevealNextBatchDelayed());
+                        }
+                    }
+                ));
+            }
+            else
+            {
+                // No ad - reveal next batch directly
                 if (currentBatch < GetTotalBatches())
                 {
                     StartCoroutine(RevealNextBatchDelayed());
                 }
             }
-            
+
             if (debugMode)
                 Debug.Log("━━━━━━━━━━━━━━━━━━━━━━━━━━");
         }
     }
 
-    private bool ShouldShowAdNow(int completedBatchIndex)
-    {
-        if (!showAdsOnBatchComplete)
-        {
-            if (debugMode)
-                Debug.Log("📺 Ads disabled");
-            return false;
-        }
-        
-        if (RewardedAdsManager.Instance == null)
-        {
-            Debug.LogWarning("📺 RewardedAdsManager not found!");
-            return false;
-        }
-        
-        if (skipAdOnFirstBatch && completedBatchIndex == 0)
-        {
-            if (debugMode)
-                Debug.Log("📺 Skipping ad on first batch");
-            return false;
-        }
-        
-        if (adFrequency <= 0)
-        {
-            if (debugMode)
-                Debug.Log("📺 Ad frequency is 0");
-            return false;
-        }
-        
-        bool shouldShow = (batchesCompleted % adFrequency) == 0;
-        
-        if (debugMode)
-            Debug.Log($"📺 Completed: {batchesCompleted}, Freq: {adFrequency}, Show: {shouldShow}");
-        
-        return shouldShow;
-    }
-
-    private IEnumerator ShowAdAndContinue()
-    {
-        if (debugMode)
-            Debug.Log("📺 Waiting for completion message to finish...");
-        
-        // ✅ חכה עד שהודעת העידוד תיעלם לגמרי
-        float messageTime = messageDuration;
-        if (useAnimation)
-            messageTime += animationDuration * 0.5f;
-        
-        yield return new WaitForSeconds(messageTime + delayBeforeAd);
-        
-        if (debugMode)
-            Debug.Log("📺 Message finished. Showing ad now...");
-        
-        if (RewardedAdsManager.Instance == null)
-        {
-            Debug.LogWarning("📺 RewardedAdsManager missing!");
-            if (currentBatch < GetTotalBatches())
-                StartCoroutine(RevealNextBatchDelayed());
-            yield break;
-        }
-        
-        bool adClosed = false;
-        
-        RewardedAdsManager.Instance.ShowRewarded(
-            onReward: () =>
-            {
-                if (debugMode)
-                    Debug.Log("📺 Ad reward granted!");
-            },
-            onClosed: (completed) =>
-            {
-                if (debugMode)
-                    Debug.Log($"📺 Ad closed. Completed: {completed}");
-                adClosed = true;
-            },
-            onFailed: (error) =>
-            {
-                Debug.LogWarning($"📺 Ad failed: {error}");
-                adClosed = true;
-            },
-            onOpened: () =>
-            {
-                if (debugMode)
-                    Debug.Log("📺 Ad opened!");
-            }
-        );
-        
-        if (waitForAdToClose)
-        {
-            float timeout = 60f;
-            float elapsed = 0f;
-            
-            while (!adClosed && elapsed < timeout)
-            {
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-            
-            if (elapsed >= timeout)
-                Debug.LogWarning("📺 Ad timeout!");
-        }
-        
-        if (debugMode)
-            Debug.Log("📺 Ad finished. Continuing...");
-        
-        if (currentBatch < GetTotalBatches())
-        {
-            StartCoroutine(RevealNextBatchDelayed());
-        }
-        else
-        {
-            if (debugMode)
-                Debug.Log("🏆 All batches complete!");
-        }
-    }
-
-    private void ShowCompletionMessage(int batch)
-    {
-        if (debugMode)
-            Debug.Log($"💬 ShowCompletionMessage({batch})");
-        
-        if (isShowingMessage)
-        {
-            if (hideMessageCoroutine != null)
-                StopCoroutine(hideMessageCoroutine);
-            if (completionPanel != null)
-                completionPanel.SetActive(false);
-        }
-        
-        isShowingMessage = true;
-        
-        string message = GetCompletionMessage(batch);
-        
-        if (completionPanel == null || completionText == null)
-        {
-            Debug.LogError("❌ Panel or Text is NULL!");
-            isShowingMessage = false;
-            return;
-        }
-        
-        completionPanel.transform.localScale = Vector3.one;
-        completionPanel.transform.localRotation = Quaternion.identity;
-        
-        completionText.text = message;
-        
-        if (useRandomColors && messageColors.Count > 0)
-        {
-            completionText.color = messageColors[Random.Range(0, messageColors.Count)];
-        }
-        
-        completionPanel.SetActive(true);
-        
-        if (useAnimation)
-            StartCoroutine(AnimateMessage());
-        
-        if (playSound)
-            PlayCompletionSound();
-        
-        hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
-        
-        Debug.Log($"<color=yellow>🎉 {message} 🎉</color>");
-    }
-
-    private IEnumerator HideMessageAfterDelay()
-    {
-        yield return new WaitForSeconds(messageDuration);
-        
-        if (useAnimation && completionPanel != null)
-            yield return StartCoroutine(AnimateMessageOut());
-        
-        if (completionPanel != null)
-            completionPanel.SetActive(false);
-        
-        isShowingMessage = false;
-        hideMessageCoroutine = null;
-    }
-
-    private IEnumerator AnimateMessage()
-    {
-        if (completionPanel == null) yield break;
-        
-        Transform t = completionPanel.transform;
-        Vector3 originalScale = t.localScale;
-        Vector3 originalPos = t.localPosition;
-        Quaternion originalRot = t.localRotation;
-        
-        float elapsed = 0f;
-        
-        switch (animationType)
-        {
-            case AnimationType.ScaleBounce:
-                t.localScale = Vector3.zero;
-                while (elapsed < animationDuration)
-                {
-                    elapsed += Time.deltaTime;
-                    float progress = elapsed / animationDuration;
-                    float bounce = Mathf.Sin(progress * Mathf.PI * 0.5f);
-                    float overshoot = 1f + Mathf.Sin(progress * Mathf.PI) * 0.2f;
-                    t.localScale = originalScale * bounce * overshoot;
-                    yield return null;
-                }
-                break;
-                
-            case AnimationType.ScaleSmooth:
-                t.localScale = Vector3.zero;
-                while (elapsed < animationDuration)
-                {
-                    elapsed += Time.deltaTime;
-                    float progress = scaleCurve.Evaluate(elapsed / animationDuration);
-                    t.localScale = originalScale * progress;
-                    yield return null;
-                }
-                break;
-                
-            case AnimationType.PopIn:
-                t.localScale = originalScale * 1.5f;
-                while (elapsed < animationDuration)
-                {
-                    elapsed += Time.deltaTime;
-                    float progress = elapsed / animationDuration;
-                    float easeOut = 1f - Mathf.Pow(1f - progress, 3f);
-                    t.localScale = Vector3.Lerp(originalScale * 1.5f, originalScale, easeOut);
-                    yield return null;
-                }
-                break;
-                
-            case AnimationType.SlideDown:
-                Vector3 startPos = originalPos + Vector3.up * 300f;
-                t.localPosition = startPos;
-                while (elapsed < animationDuration)
-                {
-                    elapsed += Time.deltaTime;
-                    float progress = elapsed / animationDuration;
-                    float easeOut = 1f - Mathf.Pow(1f - progress, 3f);
-                    t.localPosition = Vector3.Lerp(startPos, originalPos, easeOut);
-                    yield return null;
-                }
-                break;
-                
-            case AnimationType.Rotate:
-                t.localScale = Vector3.zero;
-                while (elapsed < animationDuration)
-                {
-                    elapsed += Time.deltaTime;
-                    float progress = elapsed / animationDuration;
-                    t.localScale = originalScale * scaleCurve.Evaluate(progress);
-                    t.localRotation = Quaternion.Euler(0, 0, (1f - progress) * 360f);
-                    yield return null;
-                }
-                break;
-        }
-        
-        t.localScale = originalScale;
-        t.localPosition = originalPos;
-        t.localRotation = originalRot;
-    }
-
-    private IEnumerator AnimateMessageOut()
-    {
-        if (completionPanel == null) yield break;
-        
-        Transform t = completionPanel.transform;
-        Vector3 start = t.localScale;
-        float duration = animationDuration * 0.5f;
-        float elapsed = 0f;
-        
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            t.localScale = Vector3.Lerp(start, Vector3.zero, elapsed / duration);
-            yield return null;
-        }
-    }
-
-    private void PlayCompletionSound()
-    {
-        if (audioSource == null) return;
-        
-        AudioClip clip = null;
-        
-        if (useRandomSound && completionSounds.Count > 0)
-            clip = completionSounds[Random.Range(0, completionSounds.Count)];
-        else if (singleSound != null)
-            clip = singleSound;
-        
-        if (clip != null)
-            audioSource.PlayOneShot(clip, soundVolume);
-    }
-
-    private string GetCompletionMessage(int batch)
-    {
-        if (useCustomMessagesPerBatch && batch < customMessagesPerBatch.Count)
-            return customMessagesPerBatch[batch];
-        
-        if (randomMessages.Count > 0)
-            return randomMessages[Random.Range(0, randomMessages.Count)];
-        
-        return "GREAT!";
-    }
-
     private IEnumerator RevealNextBatchDelayed()
     {
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(4f);
         RevealBatch(currentBatch);
+    }
+
+    private void UpdateProgressUI()
+    {
+        if (progressUI != null)
+        {
+            int batchSize = GetBatchSize(currentBatch);
+            progressUI.UpdateProgress(currentBatch, totalPlacedInCurrentBatch, batchSize);
+        }
     }
 
     private void HideAllDropSpots()
@@ -684,94 +366,6 @@ public class DropSpotBatchManager : MonoBehaviour
         }
     }
 
-    // ✅ עדכון ה-Progress UI
-    private void UpdateProgressUI()
-    {
-        if (!updateProgressUI) return;
-        
-        // חישוב אחוזי התקדמות במשחק
-        float gameProgressPercentage = CalculateGameProgressPercentage();
-        
-        // עדכון טקסט "GAME PROGRESS"
-        if (gameProgressText != null)
-        {
-            gameProgressText.text = $"GAME PROGRESS: {gameProgressPercentage:F0}%";
-        }
-        
-        // עדכון התקדמות ב-batch הנוכחי
-        if (currentBatchProgressText != null)
-        {
-            int currentBatchSize = GetBatchSize(currentBatch);
-            currentBatchProgressText.text = $"{totalPlacedInCurrentBatch}/{currentBatchSize}";
-        }
-        
-        // עדכון סליידר
-        if (progressSlider != null)
-        {
-            int currentBatchSize = GetBatchSize(currentBatch);
-            if (currentBatchSize > 0)
-            {
-                progressSlider.maxValue = currentBatchSize;
-                progressSlider.value = totalPlacedInCurrentBatch;
-            }
-        }
-        
-        if (debugMode)
-        {
-            Debug.Log($"[ProgressUI] Game Progress: {gameProgressPercentage:F1}%, Current Batch: {totalPlacedInCurrentBatch}/{GetBatchSize(currentBatch)}");
-        }
-    }
-
-    // ✅ חישוב אחוזי התקדמות במשחק
-    private float CalculateGameProgressPercentage()
-    {
-        int totalRequired = GetTotalRequiredSpots();
-        if (totalRequired == 0)
-            return 0f;
-        
-        int totalPlaced = 0;
-        
-        if (GameProgressManager.Instance != null)
-        {
-            // ספור כמה פריטים כבר הושמו
-            for (int i = 0; i < allDropSpots.Count && i < totalRequired; i++)
-            {
-                if (allDropSpots[i] != null && 
-                    GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
-                {
-                    totalPlaced++;
-                }
-            }
-        }
-        
-        float percentage = (float)totalPlaced / totalRequired * 100f;
-        return Mathf.Clamp(percentage, 0f, 100f);
-    }
-
-    // ✅ חישוב כמה פריטים נותרו בסך הכל (לשימוש פנימי)
-    private int CalculateTotalRemainingItems()
-    {
-        if (GameProgressManager.Instance == null)
-            return GetTotalRequiredSpots();
-        
-        int totalPlaced = 0;
-        
-        // ספור כמה פריטים כבר הושמו בכל ה-batches
-        for (int i = 0; i < allDropSpots.Count; i++)
-        {
-            if (allDropSpots[i] != null && 
-                GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
-            {
-                totalPlaced++;
-            }
-        }
-        
-        int totalRequired = GetTotalRequiredSpots();
-        int remaining = totalRequired - totalPlaced;
-        
-        return Mathf.Max(0, remaining);
-    }
-
     private void RevealBatch(int batch)
     {
         int start = GetBatchStartIndex(batch);
@@ -784,30 +378,32 @@ public class DropSpotBatchManager : MonoBehaviour
         for (int i = start; i < end && i < allDropSpots.Count; i++)
         {
             if (allDropSpots[i] == null) continue;
-            
+
             if (GameProgressManager.Instance != null && GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
                 continue;
-            
+
             allDropSpots[i].gameObject.SetActive(true);
         }
-        
-        // ✅ עדכן UI אחרי חשיפת batch
+
+        // Update UI after revealing batch
         UpdateProgressUI();
     }
 
-    private int GetTotalRequiredSpots()
+    // ===== PUBLIC API =====
+
+    public int GetTotalRequiredSpots()
     {
         return useCustomBatchSizes ? customBatchSizes.Sum() : numberOfBatches * spotsPerBatch;
     }
 
-    private int GetBatchSize(int batch)
+    public int GetBatchSize(int batch)
     {
         if (useCustomBatchSizes && batch < customBatchSizes.Count)
             return customBatchSizes[batch];
         return spotsPerBatch;
     }
 
-    private int GetBatchStartIndex(int batch)
+    public int GetBatchStartIndex(int batch)
     {
         if (useCustomBatchSizes)
         {
@@ -819,72 +415,63 @@ public class DropSpotBatchManager : MonoBehaviour
         return batch * spotsPerBatch;
     }
 
-    private int GetTotalBatches()
+    public int GetTotalBatches()
     {
         return useCustomBatchSizes ? customBatchSizes.Count : numberOfBatches;
     }
 
-    [ContextMenu("🎨 Test Message")]
-    private void TestMessage()
+    public int GetCurrentBatchIndex()
     {
-        if (completionText == null || completionPanel == null)
-        {
-            Debug.LogError("❌ UI not assigned!");
-            return;
-        }
-        ShowCompletionMessage(0);
+        return currentBatch;
     }
 
-    [ContextMenu("📺 Test Ad")]
-    private void TestAd()
+    public List<DropSpot> GetCurrentBatchAvailableSpots()
     {
-        if (RewardedAdsManager.Instance == null)
+        List<DropSpot> availableSpots = new List<DropSpot>();
+
+        if (currentBatch >= GetTotalBatches())
         {
-            Debug.LogError("❌ RewardedAdsManager not found!");
-            return;
+            if (debugMode)
+                Debug.Log("[DropSpotBatchManager] No more batches available");
+            return availableSpots;
         }
-        
-        Debug.Log("📺 Testing ad...");
-        RewardedAdsManager.Instance.ShowRewarded(
-            onReward: () => Debug.Log("✅ Reward!"),
-            onClosed: (completed) => Debug.Log($"✅ Closed: {completed}"),
-            onFailed: (error) => Debug.LogError($"❌ Failed: {error}"),
-            onOpened: () => Debug.Log("📺 Opened!")
-        );
+
+        int start = GetBatchStartIndex(currentBatch);
+        int size = GetBatchSize(currentBatch);
+        int end = start + size;
+
+        for (int i = start; i < end && i < allDropSpots.Count; i++)
+        {
+            if (allDropSpots[i] == null) continue;
+
+            // Only include spots that haven't been placed yet
+            if (GameProgressManager.Instance != null &&
+                !GameProgressManager.Instance.IsItemPlaced(allDropSpots[i].spotId))
+            {
+                availableSpots.Add(allDropSpots[i]);
+            }
+        }
+
+        if (debugMode)
+            Debug.Log($"[DropSpotBatchManager] Found {availableSpots.Count} available spots in batch {currentBatch}");
+
+        return availableSpots;
     }
 
-    [ContextMenu("🎬 Test Complete Flow")]
-    private void TestCompleteFlow()
+    public void ShowCustomMessage(string message)
     {
-        if (completionText == null || completionPanel == null)
+        if (messageController != null)
         {
-            Debug.LogError("❌ UI not assigned!");
-            return;
-        }
-        
-        Debug.Log("🎬 Testing: Message → Ad → Next Batch");
-        StartCoroutine(TestFlowCoroutine());
-    }
-    
-    private IEnumerator TestFlowCoroutine()
-    {
-        ShowCompletionMessage(0);
-        
-        float messageTime = messageDuration;
-        if (useAnimation)
-            messageTime += animationDuration * 0.5f;
-        
-        Debug.Log($"⏰ Waiting {messageTime}s...");
-        yield return new WaitForSeconds(messageTime);
-        
-        Debug.Log("✅ Message done!");
-        
-        if (RewardedAdsManager.Instance != null)
-        {
-            Debug.Log("📺 Showing ad...");
-            RewardedAdsManager.Instance.ShowRewarded();
+            messageController.ShowCustomMessage(message, showConfetti: true);
         }
     }
+
+    public List<DropSpot> GetAllDropSpots()
+    {
+        return allDropSpots;
+    }
+
+    // ===== DEBUG/TESTING =====
 
     [ContextMenu("📊 Show Status")]
     private void ShowStatus()
@@ -892,37 +479,14 @@ public class DropSpotBatchManager : MonoBehaviour
         Debug.Log("========================================");
         Debug.Log($"Batch: {currentBatch}/{GetTotalBatches()}");
         Debug.Log($"Progress: {totalPlacedInCurrentBatch}/{GetBatchSize(currentBatch)}");
-        Debug.Log($"Completed: {batchesCompleted} batches");
-        Debug.Log($"Game Progress: {CalculateGameProgressPercentage():F1}%");
-        Debug.Log($"Items Remaining: {CalculateTotalRemainingItems()}");
-        Debug.Log($"Ads: {showAdsOnBatchComplete}");
-        Debug.Log($"Frequency: every {adFrequency} batches");
-        Debug.Log("========================================");
-    }
 
-    [ContextMenu("🔍 Check UI")]
-    private void CheckUI()
-    {
-        Debug.Log("========================================");
-        Debug.Log("=== UI SETUP ===");
-        Debug.Log($"Completion Panel: {(completionPanel != null ? "✅" : "❌")}");
-        Debug.Log($"Completion Text: {(completionText != null ? "✅" : "❌")}");
-        Debug.Log($"Game Progress Text: {(gameProgressText != null ? "✅" : "❌")}");
-        Debug.Log($"Batch Progress Text: {(currentBatchProgressText != null ? "✅" : "❌")}");
-        Debug.Log($"Progress Slider: {(progressSlider != null ? "✅" : "❌")}");
-        
-        if (completionPanel != null)
-            Debug.Log($"Panel Active: {completionPanel.activeSelf}");
-        
-        Debug.Log("========================================");
-    }
+        if (progressUI != null)
+        {
+            int remaining = progressUI.CalculateTotalRemainingItems();
+            Debug.Log($"Items Remaining: {remaining}");
+        }
 
-    [ContextMenu("🔄 Force Update Progress UI")]
-    private void ForceUpdateProgressUI()
-    {
-        Debug.Log("🔄 Manually updating Progress UI...");
-        UpdateProgressUI();
-        Debug.Log("✅ Progress UI updated!");
+        Debug.Log("========================================");
     }
 
     [ContextMenu("🔧 Show Config")]
