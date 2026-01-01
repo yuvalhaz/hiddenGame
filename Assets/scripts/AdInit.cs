@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 /// <summary>
 /// אתחול פרסומות - מטעין פרסומות מראש ושומר אותן זמינות.
@@ -54,40 +55,57 @@ public class AdInit : MonoBehaviour
             Debug.Log("[AdInit] Production Mode - using REAL Ad Units");
         }
 
-        // טען מראש אם מוגדר
+        // ✅ FIX: Wait for MobileAds.Initialize() to complete before preloading
         if (preloadOnStart)
         {
-            // Preload rewarded ads (for hints)
-            if (rewardedAds)
-            {
-                rewardedAds.Preload(success =>
-                {
-                    if (success)
-                        Debug.Log("[AdInit] Rewarded ad preloaded successfully!");
-                    else
-                        Debug.LogWarning("[AdInit] Failed to preload rewarded ad");
-                });
-            }
-            else
-            {
-                Debug.LogWarning("[AdInit] RewardedAdsManager not found - skipping rewarded ad preload");
-            }
+            StartCoroutine(PreloadAdsAfterDelay());
+        }
+    }
 
-            // Preload interstitial ads (for batch completions)
-            if (interstitialAds)
+    /// <summary>
+    /// Wait for MobileAds to initialize, then preload ads
+    /// </summary>
+    private IEnumerator PreloadAdsAfterDelay()
+    {
+        // Wait 2 seconds for MobileAds.Initialize() to complete
+        Debug.Log("[AdInit] Waiting for MobileAds initialization...");
+        yield return new WaitForSeconds(2f);
+
+        Debug.Log("[AdInit] Starting ad preload...");
+
+        // Preload rewarded ads (for hints)
+        if (rewardedAds)
+        {
+            rewardedAds.Preload(success =>
             {
-                interstitialAds.Preload(success =>
-                {
-                    if (success)
-                        Debug.Log("[AdInit] Interstitial ad preloaded successfully!");
-                    else
-                        Debug.LogWarning("[AdInit] Failed to preload interstitial ad");
-                });
-            }
-            else
+                if (success)
+                    Debug.Log("[AdInit] Rewarded ad preloaded successfully!");
+                else
+                    Debug.LogWarning("[AdInit] Failed to preload rewarded ad");
+            });
+        }
+        else
+        {
+            Debug.LogWarning("[AdInit] RewardedAdsManager not found - skipping rewarded ad preload");
+        }
+
+        // Wait a bit between preloads
+        yield return new WaitForSeconds(0.5f);
+
+        // Preload interstitial ads (for batch completions)
+        if (interstitialAds)
+        {
+            interstitialAds.Preload(success =>
             {
-                Debug.LogWarning("[AdInit] InterstitialAdsManager not found - skipping interstitial ad preload");
-            }
+                if (success)
+                    Debug.Log("[AdInit] Interstitial ad preloaded successfully!");
+                else
+                    Debug.LogWarning("[AdInit] Failed to preload interstitial ad");
+            });
+        }
+        else
+        {
+            Debug.LogWarning("[AdInit] InterstitialAdsManager not found - skipping interstitial ad preload");
         }
     }
 
