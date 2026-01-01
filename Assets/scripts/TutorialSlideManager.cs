@@ -20,7 +20,7 @@ public class TutorialSlideManager : MonoBehaviour
     [Header("Hint Button Blink")]
     [Tooltip("Enable blinking animation for hint button in stage 4")]
     [SerializeField] private bool enableHintBlink = true;
-    [SerializeField] private float blinkSpeed = 1.5f;
+    [SerializeField] private float blinkSpeed = 3.0f; // ✨ Doubled for faster blink (was 1.5f)
     [SerializeField] private float blinkMinAlpha = 0.3f;
     [SerializeField] private float blinkMaxAlpha = 1f;
 
@@ -283,11 +283,16 @@ public class TutorialSlideManager : MonoBehaviour
             // Continue anyway but log the warning
         }
 
+        // ✅ FIX: Save next stage IMMEDIATELY so it persists if game closes during delay
+        int nextStage = currentStage + 1;
+        PlayerPrefs.SetInt("TutorialCurrentStage", nextStage);
+        PlayerPrefs.Save();
+        Debug.Log($"[TutorialSlideManager] ✅ Saved next stage ({nextStage}) immediately to prevent getting stuck");
+
         // Immediately hide current slide
         HideAllSlides();
 
         // Wait 3 seconds before showing next stage
-        int nextStage = currentStage + 1;
         StartCoroutine(ShowStageAfterDelay(nextStage, delayBetweenSlides));
     }
 
