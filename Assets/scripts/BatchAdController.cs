@@ -129,6 +129,14 @@ public class BatchAdController : MonoBehaviour
             yield break;
         }
 
+        // ✅ Check if ad is ready BEFORE trying to show it
+        if (!InterstitialAdsManager.Instance.IsReady())
+        {
+            Debug.LogWarning("📺 Ad is not ready, skipping ad");
+            onAdComplete?.Invoke();
+            yield break;
+        }
+
         bool adClosed = false;
 
         InterstitialAdsManager.Instance.ShowInterstitial(
@@ -152,13 +160,6 @@ public class BatchAdController : MonoBehaviour
 
         if (waitForAdToClose)
         {
-            // Check if ad is even ready
-            if (!InterstitialAdsManager.Instance.IsReady())
-            {
-                Debug.LogWarning("📺 Ad was not ready, skipping wait");
-                adClosed = true;
-            }
-
             float timeout = 60f;
             float elapsed = 0f;
 
