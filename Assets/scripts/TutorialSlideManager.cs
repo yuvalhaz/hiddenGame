@@ -352,8 +352,21 @@ public class TutorialSlideManager : MonoBehaviour
         // Immediately hide current slide
         HideAllSlides();
 
-        // Wait 3 seconds before showing next stage
-        StartCoroutine(ShowStageAfterDelay(nextStage, delayBetweenSlides));
+        // ✅ NEW: Check if this was the 5th item placement
+        int settledCount = CountSettledItems();
+        Debug.Log($"[TutorialSlideManager] Items placed so far: {settledCount}");
+
+        if (settledCount >= 5 && nextStage <= 5)
+        {
+            // All 5 items now placed! Show all remaining tutorial slides in sequence
+            Debug.Log($"[TutorialSlideManager] 🎉 Fifth item placed! Showing all remaining slides from {nextStage} to 5");
+            StartCoroutine(ShowAllRemainingSlidesSequence(nextStage));
+        }
+        else
+        {
+            // Normal flow: Wait 3 seconds before showing next stage
+            StartCoroutine(ShowStageAfterDelay(nextStage, delayBetweenSlides));
+        }
     }
 
     /// <summary>
