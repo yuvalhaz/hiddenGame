@@ -12,6 +12,7 @@ public class InterstitialAdsManager : MonoBehaviour
 {
     public static InterstitialAdsManager Instance;
 
+
     /// <summary>נורה כשהפרסומת נסגרת.</summary>
     public event Action<bool> OnAdClosed; // bool = האם הפרסומת הושלמה
 
