@@ -78,10 +78,10 @@ public class InterstitialAdsManager : MonoBehaviour
             Debug.Log("[InterstitialAdsManager] Configuring TEST MODE");
 
             // Set test device configuration
-            var requestConfiguration = new RequestConfiguration
-                .Builder()
-                .SetTestDeviceIds(System.Collections.Generic.List<string> { AdRequest.TestDeviceSimulator })
-                .build();
+            var deviceIds = new System.Collections.Generic.List<string> { AdRequest.TestDeviceSimulator };
+            var requestConfiguration = new RequestConfiguration.Builder()
+                .SetTestDeviceIds(deviceIds)
+                .Build();
 
             MobileAds.SetRequestConfiguration(requestConfiguration);
         }
