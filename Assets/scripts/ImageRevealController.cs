@@ -206,6 +206,7 @@ public class ImageRevealController : MonoBehaviour
             audioSource.playOnAwake = false;
         }
 
+        audioSource.volume = 0.6f;
         audioSource.PlayOneShot(clipToPlay);
     }
 
