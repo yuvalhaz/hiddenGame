@@ -72,20 +72,6 @@ public class InterstitialAdsManager : MonoBehaviour
             return;
         }
 
-        // ✅ Configure test devices for better test ad delivery
-        if (adMobConfig.IsTestMode())
-        {
-            Debug.Log("[InterstitialAdsManager] Configuring TEST MODE");
-
-            // Set test device configuration
-            var deviceIds = new System.Collections.Generic.List<string> { AdRequest.TestDeviceSimulator };
-            var requestConfiguration = new RequestConfiguration.Builder()
-                .SetTestDeviceIds(deviceIds)
-                .Build();
-
-            MobileAds.SetRequestConfiguration(requestConfiguration);
-        }
-
         // אתחול Google Mobile Ads SDK (אם עוד לא אותחל)
         MobileAds.Initialize(initStatus =>
         {
