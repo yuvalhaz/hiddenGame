@@ -48,14 +48,6 @@ public class LevelCompleteController : MonoBehaviour
 
     private void Start()
     {
-        // Check if tutorial was already completed and redirect to level selection
-        if (isTutorialLevel && PlayerPrefs.GetInt("TutorialCompleted", 0) == 1)
-        {
-            Debug.Log("[LevelCompleteController] Tutorial already completed, loading level selection...");
-            SceneManager.LoadScene(levelSelectionSceneName);
-            return;
-        }
-
         // Hide completion panel at start
         if (completionPanel != null)
             completionPanel.SetActive(false);
@@ -66,6 +58,33 @@ public class LevelCompleteController : MonoBehaviour
 
         if (menuButton != null)
             menuButton.onClick.AddListener(LoadMenu);
+    }
+
+    /// <summary>
+    /// Static helper: Check if tutorial has been completed
+    /// Use this in your game loader/startup to decide where to go
+    /// </summary>
+    public static bool IsTutorialCompleted()
+    {
+        return PlayerPrefs.GetInt("TutorialCompleted", 0) == 1;
+    }
+
+    /// <summary>
+    /// Static helper: Get the scene to load on game start
+    /// Returns tutorial scene if not completed, level selection if completed
+    /// </summary>
+    public static string GetStartupScene(string tutorialSceneName, string levelSelectionSceneName)
+    {
+        if (IsTutorialCompleted())
+        {
+            Debug.Log("[LevelCompleteController] Tutorial completed - loading level selection");
+            return levelSelectionSceneName;
+        }
+        else
+        {
+            Debug.Log("[LevelCompleteController] Tutorial not completed - loading tutorial");
+            return tutorialSceneName;
+        }
     }
 
     private void OnDestroy()
