@@ -86,15 +86,43 @@ public class TutorialSlideManager : MonoBehaviour
         int savedStage = PlayerPrefs.GetInt("TutorialCurrentStage", 0);
         int settledCount = CountSettledItems();
 
-        // Use the higher value: saved stage or settled count
-        // This handles both cases:
-        // 1. Player placed items but didn't wait for slides
-        // 2. Player saw slides but didn't place items
-        int startStage = Mathf.Max(savedStage, settledCount + 1);
+        Debug.Log($"[TutorialSlideManager] Saved stage: {savedStage}, Settled items: {settledCount}");
 
-        Debug.Log($"[TutorialSlideManager] Saved stage: {savedStage}, Settled items: {settledCount}, Starting from: {startStage}");
+        // ✅ NEW: If all 5 items are placed, show all remaining slides
+        if (settledCount >= 5)
+        {
+            Debug.Log("[TutorialSlideManager] All 5 items placed! Showing remaining tutorial slides...");
 
-        if (startStage > 5)
+            // If player hasn't seen all slides yet, show them
+            if (savedStage < 5)
+            {
+                // Start from the last seen stage
+                int startStage = Mathf.Max(1, savedStage);
+                Debug.Log($"[TutorialSlideManager] Starting slide show from stage {startStage}");
+
+                // Show hint button if needed
+                if (hintButtonObject != null)
+                {
+                    hintButtonObject.SetActive(true);
+                }
+
+                // Show all remaining slides in sequence
+                StartCoroutine(ShowAllRemainingSlidesSequence(startStage));
+                return;
+            }
+            else
+            {
+                // All slides shown, complete tutorial
+                Debug.Log("[TutorialSlideManager] All stages completed - completing tutorial");
+                CompleteTutorial();
+                return;
+            }
+        }
+
+        // Normal flow: Use the higher value between saved stage and settled count
+        int normalStartStage = Mathf.Max(savedStage, settledCount + 1);
+
+        if (normalStartStage > 5)
         {
             Debug.Log("[TutorialSlideManager] All stages completed - completing tutorial");
             CompleteTutorial();
@@ -102,14 +130,14 @@ public class TutorialSlideManager : MonoBehaviour
         }
 
         // If starting from stage 4 or later, show hint button immediately
-        if (startStage >= 4 && hintButtonObject != null)
+        if (normalStartStage >= 4 && hintButtonObject != null)
         {
             hintButtonObject.SetActive(true);
             Debug.Log("[TutorialSlideManager] Starting from stage 4+ - hint button visible");
         }
 
         // Wait then show the appropriate stage
-        StartCoroutine(ShowStageAfterDelay(startStage, delayBeforeFirstSlide));
+        StartCoroutine(ShowStageAfterDelay(normalStartStage, delayBeforeFirstSlide));
     }
 
     /// <summary>
@@ -164,7 +192,38 @@ public class TutorialSlideManager : MonoBehaviour
         ShowStageImmediate(stageNumber);
         isTransitioning = false;
     }
-    
+
+    /// <summary>
+    /// Show all remaining tutorial slides in sequence (used when all items placed but slides not seen)
+    /// </summary>
+    private IEnumerator ShowAllRemainingSlidesSequence(int startStage)
+    {
+        Debug.Log($"[TutorialSlideManager] ✨ Starting slide sequence from stage {startStage} to 5");
+
+        // Wait initial delay
+        yield return new WaitForSeconds(delayBeforeFirstSlide);
+
+        // Show each stage from startStage to 5
+        for (int stage = startStage; stage <= 5; stage++)
+        {
+            Debug.Log($"[TutorialSlideManager] Showing stage {stage} in sequence");
+            ShowStageImmediate(stage);
+
+            // Wait between slides (except after last one)
+            if (stage < 5)
+            {
+                yield return new WaitForSeconds(delayBetweenSlides);
+            }
+        }
+
+        // All slides shown, wait a bit then complete tutorial
+        Debug.Log("[TutorialSlideManager] All slides shown in sequence!");
+        yield return new WaitForSeconds(delayBetweenSlides);
+
+        HideAllSlides();
+        CompleteTutorial();
+    }
+
     /// <summary>
     /// Show slide immediately (no delay)
     /// </summary>
