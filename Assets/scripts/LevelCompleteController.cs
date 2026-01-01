@@ -107,14 +107,8 @@ public class LevelCompleteController : MonoBehaviour
         }
         else
         {
-            if (isTutorialLevel)
-            {
-                Debug.LogWarning("[LevelCompleteController] ⚠️ LevelManager is NULL (Tutorial Level - this is expected)");
-            }
-            else
-            {
-                Debug.LogError("[LevelCompleteController] ❌ LevelManager is NULL!");
-            }
+            // Tutorial levels or standalone levels without LevelManager
+            Debug.LogWarning("[LevelCompleteController] ⚠️ LevelManager is NULL (Tutorial or standalone level - this is OK)");
         }
 
         // Start ending dialog
