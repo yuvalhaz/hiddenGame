@@ -93,13 +93,13 @@ public class TutorialSlideManager : MonoBehaviour
         {
             Debug.Log($"[TutorialSlideManager] ⚠️ All 5 items placed! savedStage={savedStage}");
 
-            // Tutorial not completed yet - show slides from where we left off
-            // Stage 5 is the last stage before completion (stage 6+ = complete)
-            if (savedStage <= 5)
+            // Check if we still have slides to show
+            // savedStage represents the LAST slide shown, so we need savedStage + 1
+            if (savedStage < 5)
             {
-                // Start from saved stage, or stage 1 if nothing saved
-                int startStage = Mathf.Max(1, savedStage);
-                Debug.Log($"[TutorialSlideManager] 📺 Showing tutorial slides from stage {startStage} to 5");
+                // Start from NEXT stage after last seen (savedStage + 1)
+                int startStage = savedStage + 1;
+                Debug.Log($"[TutorialSlideManager] 📺 Showing remaining tutorial slides from stage {startStage} to 5");
 
                 // Show hint button if needed
                 if (hintButtonObject != null)
@@ -111,10 +111,17 @@ public class TutorialSlideManager : MonoBehaviour
                 StartCoroutine(ShowAllRemainingSlidesSequence(startStage));
                 return;
             }
+            else if (savedStage == 5)
+            {
+                // Stage 5 was the last one shown, complete tutorial
+                Debug.Log("[TutorialSlideManager] ✅ All 5 stages already shown - completing tutorial");
+                CompleteTutorial();
+                return;
+            }
             else
             {
-                // All slides already shown (savedStage > 5), complete tutorial
-                Debug.Log("[TutorialSlideManager] ✅ All stages already completed - finishing tutorial");
+                // savedStage > 5 - tutorial already completed
+                Debug.Log("[TutorialSlideManager] ✅ Tutorial already completed (savedStage > 5)");
                 CompleteTutorial();
                 return;
             }
@@ -343,12 +350,6 @@ public class TutorialSlideManager : MonoBehaviour
             // Continue anyway but log the warning
         }
 
-        // ✅ FIX: Save next stage IMMEDIATELY so it persists if game closes during delay
-        int nextStage = currentStage + 1;
-        PlayerPrefs.SetInt("TutorialCurrentStage", nextStage);
-        PlayerPrefs.Save();
-        Debug.Log($"[TutorialSlideManager] ✅ Saved next stage ({nextStage}) immediately to prevent getting stuck");
-
         // Immediately hide current slide
         HideAllSlides();
 
@@ -356,15 +357,23 @@ public class TutorialSlideManager : MonoBehaviour
         int settledCount = CountSettledItems();
         Debug.Log($"[TutorialSlideManager] Items placed so far: {settledCount}");
 
+        int nextStage = currentStage + 1;
+
         if (settledCount >= 5 && nextStage <= 5)
         {
             // All 5 items now placed! Show all remaining tutorial slides in sequence
+            // DON'T save nextStage here - let ShowAllRemainingSlidesSequence save each stage as it shows it
             Debug.Log($"[TutorialSlideManager] 🎉 Fifth item placed! Showing all remaining slides from {nextStage} to 5");
             StartCoroutine(ShowAllRemainingSlidesSequence(nextStage));
         }
         else
         {
-            // Normal flow: Wait 3 seconds before showing next stage
+            // Normal flow: Save next stage IMMEDIATELY so it persists if game closes during delay
+            PlayerPrefs.SetInt("TutorialCurrentStage", nextStage);
+            PlayerPrefs.Save();
+            Debug.Log($"[TutorialSlideManager] ✅ Saved next stage ({nextStage}) immediately to prevent getting stuck");
+
+            // Wait 3 seconds before showing next stage
             StartCoroutine(ShowStageAfterDelay(nextStage, delayBetweenSlides));
         }
     }
