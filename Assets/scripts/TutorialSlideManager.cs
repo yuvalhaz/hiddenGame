@@ -17,6 +17,13 @@ public class TutorialSlideManager : MonoBehaviour
     [Tooltip("The hint button GameObject - will be shown only from stage 4")]
     [SerializeField] private GameObject hintButtonObject;
 
+    [Header("Hint Button Blink")]
+    [Tooltip("Enable blinking animation for hint button in stage 4")]
+    [SerializeField] private bool enableHintBlink = true;
+    [SerializeField] private float blinkSpeed = 1.5f;
+    [SerializeField] private float blinkMinAlpha = 0.3f;
+    [SerializeField] private float blinkMaxAlpha = 1f;
+
     [Header("Timing Settings")]
     [SerializeField] private float delayBeforeFirstSlide = 1f;
     [SerializeField] private float delayBetweenSlides = 3f;
@@ -30,6 +37,8 @@ public class TutorialSlideManager : MonoBehaviour
     private int currentStage = 0;
     private bool isTransitioning = false;
     private bool hintClickedInStage4 = false; // Track if hint was clicked during stage 4
+    private Coroutine blinkCoroutine; // Track blink animation
+    private CanvasGroup hintButtonCanvasGroup; // For blinking effect
     
     void Awake()
     {
@@ -216,6 +225,12 @@ public class TutorialSlideManager : MonoBehaviour
                 {
                     hintButtonObject.SetActive(true);
                     Debug.Log("[TutorialSlideManager] 💡 Hint button now visible!");
+
+                    // ✨ Start blinking animation
+                    if (enableHintBlink)
+                    {
+                        StartHintButtonBlink();
+                    }
                 }
 
                 if (stage4Slide != null)
@@ -273,6 +288,9 @@ public class TutorialSlideManager : MonoBehaviour
     public void OnHintButtonClicked()
     {
         Debug.Log($"[TutorialSlideManager] Hint button clicked (Current stage: {currentStage})");
+
+        // ✨ Stop blinking when hint is clicked
+        StopHintButtonBlink();
 
         // Special handling for stage 4: Hide the tutorial slide when hint is clicked
         if (currentStage == 4 && !hintClickedInStage4)
@@ -387,4 +405,93 @@ public class TutorialSlideManager : MonoBehaviour
     {
         CompleteTutorial();
     }
+
+    #region Hint Button Blink Animation
+
+    /// <summary>
+    /// Start blinking the hint button to draw attention
+    /// </summary>
+    private void StartHintButtonBlink()
+    {
+        if (hintButtonObject == null)
+        {
+            Debug.LogWarning("[TutorialSlideManager] Cannot blink - hintButtonObject is null");
+            return;
+        }
+
+        // Get or add CanvasGroup component
+        if (hintButtonCanvasGroup == null)
+        {
+            hintButtonCanvasGroup = hintButtonObject.GetComponent<CanvasGroup>();
+            if (hintButtonCanvasGroup == null)
+            {
+                hintButtonCanvasGroup = hintButtonObject.AddComponent<CanvasGroup>();
+            }
+        }
+
+        // Stop existing blink if any
+        if (blinkCoroutine != null)
+        {
+            StopCoroutine(blinkCoroutine);
+        }
+
+        // Start new blink
+        blinkCoroutine = StartCoroutine(BlinkHintButton());
+        Debug.Log("[TutorialSlideManager] ✨ Started hint button blink animation");
+    }
+
+    /// <summary>
+    /// Stop blinking the hint button
+    /// </summary>
+    private void StopHintButtonBlink()
+    {
+        if (blinkCoroutine != null)
+        {
+            StopCoroutine(blinkCoroutine);
+            blinkCoroutine = null;
+        }
+
+        // Reset alpha to full
+        if (hintButtonCanvasGroup != null)
+        {
+            hintButtonCanvasGroup.alpha = 1f;
+        }
+
+        Debug.Log("[TutorialSlideManager] ⏹ Stopped hint button blink");
+    }
+
+    /// <summary>
+    /// Coroutine that blinks the hint button continuously
+    /// </summary>
+    private IEnumerator BlinkHintButton()
+    {
+        if (hintButtonCanvasGroup == null) yield break;
+
+        while (true)
+        {
+            // Fade out
+            float time = 0f;
+            float duration = 1f / blinkSpeed;
+
+            while (time < duration)
+            {
+                time += Time.deltaTime;
+                float t = time / duration;
+                hintButtonCanvasGroup.alpha = Mathf.Lerp(blinkMaxAlpha, blinkMinAlpha, t);
+                yield return null;
+            }
+
+            // Fade in
+            time = 0f;
+            while (time < duration)
+            {
+                time += Time.deltaTime;
+                float t = time / duration;
+                hintButtonCanvasGroup.alpha = Mathf.Lerp(blinkMinAlpha, blinkMaxAlpha, t);
+                yield return null;
+            }
+        }
+    }
+
+    #endregion
 }
