@@ -82,13 +82,21 @@ public class TutorialSlideManager : MonoBehaviour
             }
         }
 
-        // Check how many items are already placed and start from appropriate stage
+        // ✅ FIX: Load saved tutorial stage
+        int savedStage = PlayerPrefs.GetInt("TutorialCurrentStage", 0);
         int settledCount = CountSettledItems();
-        int startStage = settledCount + 1; // If 0 settled → stage 1, if 1 settled → stage 2, etc.
+
+        // Use the higher value: saved stage or settled count
+        // This handles both cases:
+        // 1. Player placed items but didn't wait for slides
+        // 2. Player saw slides but didn't place items
+        int startStage = Mathf.Max(savedStage, settledCount + 1);
+
+        Debug.Log($"[TutorialSlideManager] Saved stage: {savedStage}, Settled items: {settledCount}, Starting from: {startStage}");
 
         if (startStage > 5)
         {
-            Debug.Log("[TutorialSlideManager] All items already placed - completing tutorial");
+            Debug.Log("[TutorialSlideManager] All stages completed - completing tutorial");
             CompleteTutorial();
             return;
         }
@@ -100,9 +108,7 @@ public class TutorialSlideManager : MonoBehaviour
             Debug.Log("[TutorialSlideManager] Starting from stage 4+ - hint button visible");
         }
 
-        Debug.Log($"[TutorialSlideManager] Found {settledCount} items already placed - starting from stage {startStage}");
-
-        // Wait 3 seconds then show the appropriate stage
+        // Wait then show the appropriate stage
         StartCoroutine(ShowStageAfterDelay(startStage, delayBeforeFirstSlide));
     }
 
@@ -173,7 +179,11 @@ public class TutorialSlideManager : MonoBehaviour
     private void ShowStageImmediate(int stageNumber)
     {
         currentStage = stageNumber;
-        
+
+        // ✅ FIX: Save current stage to PlayerPrefs
+        PlayerPrefs.SetInt("TutorialCurrentStage", currentStage);
+        PlayerPrefs.Save();
+
         // הסתר את כל השקופיות
         HideAllSlides();
         
@@ -337,8 +347,9 @@ public class TutorialSlideManager : MonoBehaviour
     {
         Debug.Log("[TutorialSlideManager] ✅ Tutorial completed!");
 
-        // שמור שהטוטוריאל הושלם
+        // שמור שהטוטוריאל הושלם ונקה את ה-stage הנוכחי
         PlayerPrefs.SetInt("TutorialCompleted", 1);
+        PlayerPrefs.DeleteKey("TutorialCurrentStage");
         PlayerPrefs.Save();
 
         HideAllSlides();
@@ -393,6 +404,7 @@ public class TutorialSlideManager : MonoBehaviour
     public void ResetTutorial()
     {
         PlayerPrefs.DeleteKey("TutorialCompleted");
+        PlayerPrefs.DeleteKey("TutorialCurrentStage");
         PlayerPrefs.Save();
         currentStage = 0;
         enabled = true;
