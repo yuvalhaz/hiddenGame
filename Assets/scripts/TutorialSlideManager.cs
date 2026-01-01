@@ -91,14 +91,15 @@ public class TutorialSlideManager : MonoBehaviour
         // ✅ NEW: If all 5 items are placed, show all remaining slides
         if (settledCount >= 5)
         {
-            Debug.Log("[TutorialSlideManager] All 5 items placed! Showing remaining tutorial slides...");
+            Debug.Log($"[TutorialSlideManager] ⚠️ All 5 items placed! savedStage={savedStage}");
 
-            // If player hasn't seen all slides yet, show them
-            if (savedStage < 5)
+            // Tutorial not completed yet - show slides from where we left off
+            // Stage 5 is the last stage before completion (stage 6+ = complete)
+            if (savedStage <= 5)
             {
-                // Start from the last seen stage
+                // Start from saved stage, or stage 1 if nothing saved
                 int startStage = Mathf.Max(1, savedStage);
-                Debug.Log($"[TutorialSlideManager] Starting slide show from stage {startStage}");
+                Debug.Log($"[TutorialSlideManager] 📺 Showing tutorial slides from stage {startStage} to 5");
 
                 // Show hint button if needed
                 if (hintButtonObject != null)
@@ -112,8 +113,8 @@ public class TutorialSlideManager : MonoBehaviour
             }
             else
             {
-                // All slides shown, complete tutorial
-                Debug.Log("[TutorialSlideManager] All stages completed - completing tutorial");
+                // All slides already shown (savedStage > 5), complete tutorial
+                Debug.Log("[TutorialSlideManager] ✅ All stages already completed - finishing tutorial");
                 CompleteTutorial();
                 return;
             }
