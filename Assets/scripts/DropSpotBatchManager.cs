@@ -246,39 +246,23 @@ public class DropSpotBatchManager : MonoBehaviour
 
             if (isLastBatch)
             {
-                // Last batch - show "WELL DONE!" + confetti, then trigger level complete
+                // ✅ Last batch - skip batch message and directly trigger level complete
                 isLastBatchCompletion = true;
-                if (messageController != null)
+
+                if (debugMode)
+                    Debug.Log("🏆 Last batch complete! Triggering level completion (skipping batch message)...");
+
+                // Directly trigger level complete - no batch message
+                if (levelCompleteController != null)
                 {
-                    messageController.ShowCustomMessage("WELL DONE!", showConfetti: true, onComplete: () =>
-                    {
-                        // ✅ After message, trigger level completion!
-                        if (levelCompleteController != null)
-                        {
-                            if (debugMode)
-                                Debug.Log("🎯 Triggering level complete after WELL DONE!");
-                            levelCompleteController.TriggerLevelComplete();
-                        }
-                        else
-                        {
-                            Debug.LogError("❌ LevelCompleteController is NULL! Cannot complete level!");
-                        }
-                        isLastBatchCompletion = false;
-                    });
+                    levelCompleteController.TriggerLevelComplete();
                 }
                 else
                 {
-                    // No message controller - trigger immediately
-                    if (levelCompleteController != null)
-                    {
-                        if (debugMode)
-                            Debug.Log("🎯 Triggering level complete (no message controller)!");
-                        levelCompleteController.TriggerLevelComplete();
-                    }
+                    Debug.LogError("❌ LevelCompleteController is NULL! Cannot complete level!");
                 }
 
-                if (debugMode)
-                    Debug.Log("🏆 Last batch! Showing WELL DONE with confetti!");
+                isLastBatchCompletion = false;
             }
             else
             {
