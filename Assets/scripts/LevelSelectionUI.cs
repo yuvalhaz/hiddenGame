@@ -46,7 +46,7 @@ public class LevelSelectionUI : MonoBehaviour
 
     [Header("✨ Animation Settings")]
     [SerializeField] private bool animateButtonsOnStart = true;
-    [SerializeField] private float buttonAnimationDelay = 0.15f;
+    [SerializeField] private float buttonAnimationDelay = 0.35f;
     [SerializeField] private float buttonPopDuration = 0.3f;
     [SerializeField] private AnimationCurve buttonPopCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
