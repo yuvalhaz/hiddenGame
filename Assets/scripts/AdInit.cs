@@ -1,37 +1,125 @@
 using UnityEngine;
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+using GoogleMobileAds.Api;
+#endif
 
+/// <summary>
+/// ✅ FIXED: Centralized AdMob initialization - initializes SDK once and preloads ads when ready
+/// </summary>
 [DisallowMultipleComponent]
 public class AdInit : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private RewardedAdsManager rewardedAds;
+    [SerializeField] private AdMobConfig adMobConfig;
 
     [Header("Config")]
     [Tooltip("לטעון מודעת Rewarded מראש עם התחלת הסצנה.")]
-    [SerializeField] private bool preloadOnStart = true;
+    [SerializeField] private bool preloadRewardedOnInit = true;
+
+    [Tooltip("לטעון מודעת Interstitial מראש עם התחלת הסצנה.")]
+    [SerializeField] private bool preloadInterstitialOnInit = true;
 
     [Tooltip("להשאיר את אובייקט האתחול חי בין סצנות.")]
     [SerializeField] private bool dontDestroyOnLoad = true;
+
+    private bool isInitialized = false;
 
     void Awake()
     {
         if (dontDestroyOnLoad)
             DontDestroyOnLoad(gameObject);
 
+        // מצא רפרנסים אוטומטית אם לא מוגדרים
         if (!rewardedAds)
             rewardedAds = FindObjectOfType<RewardedAdsManager>(true);
+
+        if (!adMobConfig)
+            adMobConfig = FindObjectOfType<AdMobConfig>(true);
     }
 
     void Start()
     {
-        if (!rewardedAds)
+        // בדיקות אבחון
+        if (!adMobConfig)
         {
-            Debug.LogWarning("[AdInit] RewardedAdsManager not found in scene.");
+            Debug.LogError("[AdInit] AdMobConfig not found! Add it to the scene for ads to work.");
             return;
         }
 
-        if (preloadOnStart)
-            rewardedAds.Preload(); // ← תואם לממשק שלך; אין LoadRewarded
+        if (!rewardedAds)
+        {
+            Debug.LogWarning("[AdInit] RewardedAdsManager not found in scene.");
+        }
+
+#if UNITY_EDITOR
+        Debug.Log("[AdInit] Editor mode - skipping AdMob initialization");
+        OnAdMobInitialized();
+#else
+        InitializeAdMob();
+#endif
+    }
+
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+    /// <summary>
+    /// ✅ FIXED: Centralized AdMob initialization with proper callback
+    /// </summary>
+    private void InitializeAdMob()
+    {
+        Debug.Log("[AdInit] Initializing AdMob SDK...");
+
+        // הצג מידע על מצב הפרסומות
+        if (adMobConfig.IsTestMode())
+        {
+            Debug.Log($"[AdInit] Test Mode enabled. Rewarded: {adMobConfig.GetRewardedAdUnitId()}, Interstitial: {adMobConfig.GetInterstitialAdUnitId()}");
+        }
+        else
+        {
+            Debug.Log("[AdInit] Production Mode - using REAL Ad Units");
+        }
+
+        // ✅ Initialize SDK and wait for callback before preloading
+        MobileAds.Initialize(initStatus =>
+        {
+            Debug.Log($"[AdInit] ✅ AdMob initialized successfully! Status: {initStatus}");
+            isInitialized = true;
+
+            // ✅ Only preload AFTER initialization is complete
+            OnAdMobInitialized();
+        });
+    }
+#endif
+
+    /// <summary>
+    /// Called when AdMob is fully initialized and ready
+    /// </summary>
+    private void OnAdMobInitialized()
+    {
+        Debug.Log("[AdInit] AdMob ready - preloading ads...");
+
+        // Preload rewarded ad
+        if (preloadRewardedOnInit && rewardedAds != null)
+        {
+            rewardedAds.Preload(success =>
+            {
+                if (success)
+                    Debug.Log("[AdInit] ✅ Rewarded ad preloaded successfully!");
+                else
+                    Debug.LogWarning("[AdInit] ⚠️ Failed to preload rewarded ad");
+            });
+        }
+
+        // Preload interstitial ad
+        if (preloadInterstitialOnInit && InterstitialAdsManager.Instance != null)
+        {
+            InterstitialAdsManager.Instance.Preload(success =>
+            {
+                if (success)
+                    Debug.Log("[AdInit] ✅ Interstitial ad preloaded successfully!");
+                else
+                    Debug.LogWarning("[AdInit] ⚠️ Failed to preload interstitial ad");
+            });
+        }
     }
 
     /// <summary>
@@ -57,5 +145,13 @@ public class AdInit : MonoBehaviour
     public bool IsRewardedReady()
     {
         return rewardedAds != null && rewardedAds.IsReady();
+    }
+
+    /// <summary>
+    /// בדיקה אם AdMob אותחל
+    /// </summary>
+    public bool IsAdMobInitialized()
+    {
+        return isInitialized;
     }
 }
