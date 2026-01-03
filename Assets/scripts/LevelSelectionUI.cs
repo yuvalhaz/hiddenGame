@@ -46,7 +46,7 @@ public class LevelSelectionUI : MonoBehaviour
 
     [Header("✨ Animation Settings")]
     [SerializeField] private bool animateButtonsOnStart = true;
-    [SerializeField] private float buttonAnimationDelay = 0.05f;
+    [SerializeField] private float buttonAnimationDelay = 0.15f;
     [SerializeField] private float buttonPopDuration = 0.3f;
     [SerializeField] private AnimationCurve buttonPopCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
@@ -368,7 +368,7 @@ public class LevelSelectionUI : MonoBehaviour
         }
 
         // Wait for animations to finish + pause
-        yield return new WaitForSeconds(currentDelay + 0.4f);
+        yield return new WaitForSeconds(currentDelay + 0.3f);
         currentDelay = 0f;
 
         // Next 3 buttons (buttons 2, 3, 4)
@@ -382,7 +382,7 @@ public class LevelSelectionUI : MonoBehaviour
         }
 
         // Wait for animations to finish + pause
-        yield return new WaitForSeconds(currentDelay + 0.4f);
+        yield return new WaitForSeconds(currentDelay + 0.3f);
         currentDelay = 0f;
 
         // Rest of the buttons (from button 5 onwards)
