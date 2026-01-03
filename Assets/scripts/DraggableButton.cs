@@ -24,6 +24,15 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     [SerializeField] private bool showConfettiOnSuccess = true;
     [SerializeField] private int confettiCount = 50;
 
+    [Header("Audio Settings")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip dragStartSound;
+    [Tooltip("Sound when starting to drag from bar")]
+    [SerializeField] private AudioClip returnToBarSound;
+    [Tooltip("Sound when item returns to bar (wrong placement)")]
+    [Range(0f, 1f)]
+    [SerializeField] private float soundVolume = 0.6f;
+
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
 
@@ -56,6 +65,17 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         if (canvasGroup == null)
         {
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+
+        // Initialize audio source
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+            }
         }
 
         parentScrollRect = GetComponentInParent<ScrollRect>();
@@ -112,6 +132,19 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             return false;
 
         return GameProgressManager.Instance.IsItemPlaced(buttonID);
+    }
+
+    #endregion
+
+    #region Audio
+
+    private void PlaySound(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+        {
+            audioSource.volume = soundVolume;
+            audioSource.PlayOneShot(clip);
+        }
     }
 
     #endregion
@@ -180,6 +213,9 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
             visualManager.Create(rectTransform, this);
             canvasGroup.alpha = 0f;
+
+            // Play drag start sound
+            PlaySound(dragStartSound);
 
             // Return original button to its position
             rectTransform.anchoredPosition = originalPosition;
@@ -347,6 +383,9 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             canvasGroup.alpha = 1f;
             yield break;
         }
+
+        // Play return to bar sound
+        PlaySound(returnToBarSound);
 
         yield return StartCoroutine(
             DragAnimator.AnimateReturnToBar(

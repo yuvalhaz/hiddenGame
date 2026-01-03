@@ -17,6 +17,13 @@ public class TutorialSlideManager : MonoBehaviour
     [Tooltip("The hint button GameObject - will be shown only from stage 4")]
     [SerializeField] private GameObject hintButtonObject;
 
+    [Header("Hint Button Blink")]
+    [Tooltip("Enable blinking animation for hint button in stage 4")]
+    [SerializeField] private bool enableHintBlink = true;
+    [SerializeField] private float blinkSpeed = 3.0f; // ✨ Doubled for faster blink (was 1.5f)
+    [SerializeField] private float blinkMinAlpha = 0.3f;
+    [SerializeField] private float blinkMaxAlpha = 1f;
+
     [Header("Timing Settings")]
     [SerializeField] private float delayBeforeFirstSlide = 1f;
     [SerializeField] private float delayBetweenSlides = 3f;
@@ -30,6 +37,8 @@ public class TutorialSlideManager : MonoBehaviour
     private int currentStage = 0;
     private bool isTransitioning = false;
     private bool hintClickedInStage4 = false; // Track if hint was clicked during stage 4
+    private Coroutine blinkCoroutine; // Track blink animation
+    private CanvasGroup hintButtonCanvasGroup; // For blinking effect
     
     void Awake()
     {
@@ -73,28 +82,70 @@ public class TutorialSlideManager : MonoBehaviour
             }
         }
 
-        // Check how many items are already placed and start from appropriate stage
+        // ✅ FIX: Load saved tutorial stage
+        int savedStage = PlayerPrefs.GetInt("TutorialCurrentStage", 0);
         int settledCount = CountSettledItems();
-        int startStage = settledCount + 1; // If 0 settled → stage 1, if 1 settled → stage 2, etc.
 
-        if (startStage > 5)
+        Debug.Log($"[TutorialSlideManager] Saved stage: {savedStage}, Settled items: {settledCount}");
+
+        // ✅ NEW: If all 5 items are placed, show all remaining slides
+        if (settledCount >= 5)
         {
-            Debug.Log("[TutorialSlideManager] All items already placed - completing tutorial");
+            Debug.Log($"[TutorialSlideManager] ⚠️ All 5 items placed! savedStage={savedStage}");
+
+            // Check if we still have slides to show
+            // savedStage represents the LAST slide shown, so we need savedStage + 1
+            if (savedStage < 5)
+            {
+                // Start from NEXT stage after last seen (savedStage + 1)
+                int startStage = savedStage + 1;
+                Debug.Log($"[TutorialSlideManager] 📺 Showing remaining tutorial slides from stage {startStage} to 5");
+
+                // Show hint button if needed
+                if (hintButtonObject != null)
+                {
+                    hintButtonObject.SetActive(true);
+                }
+
+                // Show all remaining slides in sequence
+                StartCoroutine(ShowAllRemainingSlidesSequence(startStage));
+                return;
+            }
+            else if (savedStage == 5)
+            {
+                // Stage 5 was the last one shown, complete tutorial
+                Debug.Log("[TutorialSlideManager] ✅ All 5 stages already shown - completing tutorial");
+                CompleteTutorial();
+                return;
+            }
+            else
+            {
+                // savedStage > 5 - tutorial already completed
+                Debug.Log("[TutorialSlideManager] ✅ Tutorial already completed (savedStage > 5)");
+                CompleteTutorial();
+                return;
+            }
+        }
+
+        // Normal flow: Use the higher value between saved stage and settled count
+        int normalStartStage = Mathf.Max(savedStage, settledCount + 1);
+
+        if (normalStartStage > 5)
+        {
+            Debug.Log("[TutorialSlideManager] All stages completed - completing tutorial");
             CompleteTutorial();
             return;
         }
 
         // If starting from stage 4 or later, show hint button immediately
-        if (startStage >= 4 && hintButtonObject != null)
+        if (normalStartStage >= 4 && hintButtonObject != null)
         {
             hintButtonObject.SetActive(true);
             Debug.Log("[TutorialSlideManager] Starting from stage 4+ - hint button visible");
         }
 
-        Debug.Log($"[TutorialSlideManager] Found {settledCount} items already placed - starting from stage {startStage}");
-
-        // Wait 3 seconds then show the appropriate stage
-        StartCoroutine(ShowStageAfterDelay(startStage, delayBeforeFirstSlide));
+        // Wait then show the appropriate stage
+        StartCoroutine(ShowStageAfterDelay(normalStartStage, delayBeforeFirstSlide));
     }
 
     /// <summary>
@@ -149,7 +200,38 @@ public class TutorialSlideManager : MonoBehaviour
         ShowStageImmediate(stageNumber);
         isTransitioning = false;
     }
-    
+
+    /// <summary>
+    /// Show all remaining tutorial slides in sequence (used when all items placed but slides not seen)
+    /// </summary>
+    private IEnumerator ShowAllRemainingSlidesSequence(int startStage)
+    {
+        Debug.Log($"[TutorialSlideManager] ✨ Starting slide sequence from stage {startStage} to 5");
+
+        // Wait initial delay
+        yield return new WaitForSeconds(delayBeforeFirstSlide);
+
+        // Show each stage from startStage to 5
+        for (int stage = startStage; stage <= 5; stage++)
+        {
+            Debug.Log($"[TutorialSlideManager] Showing stage {stage} in sequence");
+            ShowStageImmediate(stage);
+
+            // Wait between slides (except after last one)
+            if (stage < 5)
+            {
+                yield return new WaitForSeconds(delayBetweenSlides);
+            }
+        }
+
+        // All slides shown, wait a bit then complete tutorial
+        Debug.Log("[TutorialSlideManager] All slides shown in sequence!");
+        yield return new WaitForSeconds(delayBetweenSlides);
+
+        HideAllSlides();
+        CompleteTutorial();
+    }
+
     /// <summary>
     /// Show slide immediately (no delay)
     /// </summary>
@@ -164,7 +246,11 @@ public class TutorialSlideManager : MonoBehaviour
     private void ShowStageImmediate(int stageNumber)
     {
         currentStage = stageNumber;
-        
+
+        // ✅ FIX: Save current stage to PlayerPrefs
+        PlayerPrefs.SetInt("TutorialCurrentStage", currentStage);
+        PlayerPrefs.Save();
+
         // הסתר את כל השקופיות
         HideAllSlides();
         
@@ -216,6 +302,12 @@ public class TutorialSlideManager : MonoBehaviour
                 {
                     hintButtonObject.SetActive(true);
                     Debug.Log("[TutorialSlideManager] 💡 Hint button now visible!");
+
+                    // ✨ Start blinking animation
+                    if (enableHintBlink)
+                    {
+                        StartHintButtonBlink();
+                    }
                 }
 
                 if (stage4Slide != null)
@@ -261,9 +353,29 @@ public class TutorialSlideManager : MonoBehaviour
         // Immediately hide current slide
         HideAllSlides();
 
-        // Wait 3 seconds before showing next stage
+        // ✅ NEW: Check if this was the 5th item placement
+        int settledCount = CountSettledItems();
+        Debug.Log($"[TutorialSlideManager] Items placed so far: {settledCount}");
+
         int nextStage = currentStage + 1;
-        StartCoroutine(ShowStageAfterDelay(nextStage, delayBetweenSlides));
+
+        if (settledCount >= 5 && nextStage <= 5)
+        {
+            // All 5 items now placed! Show all remaining tutorial slides in sequence
+            // DON'T save nextStage here - let ShowAllRemainingSlidesSequence save each stage as it shows it
+            Debug.Log($"[TutorialSlideManager] 🎉 Fifth item placed! Showing all remaining slides from {nextStage} to 5");
+            StartCoroutine(ShowAllRemainingSlidesSequence(nextStage));
+        }
+        else
+        {
+            // Normal flow: Save next stage IMMEDIATELY so it persists if game closes during delay
+            PlayerPrefs.SetInt("TutorialCurrentStage", nextStage);
+            PlayerPrefs.Save();
+            Debug.Log($"[TutorialSlideManager] ✅ Saved next stage ({nextStage}) immediately to prevent getting stuck");
+
+            // Wait 3 seconds before showing next stage
+            StartCoroutine(ShowStageAfterDelay(nextStage, delayBetweenSlides));
+        }
     }
 
     /// <summary>
@@ -273,6 +385,9 @@ public class TutorialSlideManager : MonoBehaviour
     public void OnHintButtonClicked()
     {
         Debug.Log($"[TutorialSlideManager] Hint button clicked (Current stage: {currentStage})");
+
+        // ✨ Stop blinking when hint is clicked
+        StopHintButtonBlink();
 
         // Special handling for stage 4: Hide the tutorial slide when hint is clicked
         if (currentStage == 4 && !hintClickedInStage4)
@@ -319,8 +434,9 @@ public class TutorialSlideManager : MonoBehaviour
     {
         Debug.Log("[TutorialSlideManager] ✅ Tutorial completed!");
 
-        // שמור שהטוטוריאל הושלם
+        // שמור שהטוטוריאל הושלם ונקה את ה-stage הנוכחי
         PlayerPrefs.SetInt("TutorialCompleted", 1);
+        PlayerPrefs.DeleteKey("TutorialCurrentStage");
         PlayerPrefs.Save();
 
         HideAllSlides();
@@ -375,6 +491,7 @@ public class TutorialSlideManager : MonoBehaviour
     public void ResetTutorial()
     {
         PlayerPrefs.DeleteKey("TutorialCompleted");
+        PlayerPrefs.DeleteKey("TutorialCurrentStage");
         PlayerPrefs.Save();
         currentStage = 0;
         enabled = true;
@@ -387,4 +504,93 @@ public class TutorialSlideManager : MonoBehaviour
     {
         CompleteTutorial();
     }
+
+    #region Hint Button Blink Animation
+
+    /// <summary>
+    /// Start blinking the hint button to draw attention
+    /// </summary>
+    private void StartHintButtonBlink()
+    {
+        if (hintButtonObject == null)
+        {
+            Debug.LogWarning("[TutorialSlideManager] Cannot blink - hintButtonObject is null");
+            return;
+        }
+
+        // Get or add CanvasGroup component
+        if (hintButtonCanvasGroup == null)
+        {
+            hintButtonCanvasGroup = hintButtonObject.GetComponent<CanvasGroup>();
+            if (hintButtonCanvasGroup == null)
+            {
+                hintButtonCanvasGroup = hintButtonObject.AddComponent<CanvasGroup>();
+            }
+        }
+
+        // Stop existing blink if any
+        if (blinkCoroutine != null)
+        {
+            StopCoroutine(blinkCoroutine);
+        }
+
+        // Start new blink
+        blinkCoroutine = StartCoroutine(BlinkHintButton());
+        Debug.Log("[TutorialSlideManager] ✨ Started hint button blink animation");
+    }
+
+    /// <summary>
+    /// Stop blinking the hint button
+    /// </summary>
+    private void StopHintButtonBlink()
+    {
+        if (blinkCoroutine != null)
+        {
+            StopCoroutine(blinkCoroutine);
+            blinkCoroutine = null;
+        }
+
+        // Reset alpha to full
+        if (hintButtonCanvasGroup != null)
+        {
+            hintButtonCanvasGroup.alpha = 1f;
+        }
+
+        Debug.Log("[TutorialSlideManager] ⏹ Stopped hint button blink");
+    }
+
+    /// <summary>
+    /// Coroutine that blinks the hint button continuously
+    /// </summary>
+    private IEnumerator BlinkHintButton()
+    {
+        if (hintButtonCanvasGroup == null) yield break;
+
+        while (true)
+        {
+            // Fade out
+            float time = 0f;
+            float duration = 1f / blinkSpeed;
+
+            while (time < duration)
+            {
+                time += Time.deltaTime;
+                float t = time / duration;
+                hintButtonCanvasGroup.alpha = Mathf.Lerp(blinkMaxAlpha, blinkMinAlpha, t);
+                yield return null;
+            }
+
+            // Fade in
+            time = 0f;
+            while (time < duration)
+            {
+                time += Time.deltaTime;
+                float t = time / duration;
+                hintButtonCanvasGroup.alpha = Mathf.Lerp(blinkMinAlpha, blinkMaxAlpha, t);
+                yield return null;
+            }
+        }
+    }
+
+    #endregion
 }

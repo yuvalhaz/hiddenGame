@@ -88,6 +88,16 @@ public class BatchMessageController : MonoBehaviour
         new Color(1f, 0.5f, 0f)        // Orange
     };
 
+    [Header("Audio Settings")]
+    [SerializeField] private bool playSound = true;
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private bool useRandomSound = true;
+    [SerializeField] private List<AudioClip> completionSounds = new List<AudioClip>();
+    [SerializeField] private AudioClip singleSound;
+    [Tooltip("Use this if you want only one sound (when useRandomSound = false)")]
+    [Range(0f, 1f)]
+    [SerializeField] private float soundVolume = 0.6f;
+
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
 
@@ -107,6 +117,19 @@ public class BatchMessageController : MonoBehaviour
 
         isShowingMessage = false;
         hideMessageCoroutine = null;
+
+        // Initialize audio source
+        if (audioSource == null && playSound)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+                if (debugMode)
+                    Debug.Log("[BatchMessageController] ✅ Created AudioSource component");
+            }
+        }
 
         // Find Canvas automatically if not assigned
         if (canvas == null)
@@ -164,6 +187,8 @@ public class BatchMessageController : MonoBehaviour
         if (useAnimation)
             StartCoroutine(AnimateMessage());
 
+        PlaySound();
+
         hideMessageCoroutine = StartCoroutine(HideMessageAfterDelay());
 
         Debug.Log($"<color=yellow>🎉 {message} 🎉</color>");
@@ -211,6 +236,8 @@ public class BatchMessageController : MonoBehaviour
 
         if (useAnimation)
             StartCoroutine(AnimateMessage());
+
+        PlaySound();
 
         // Show confetti for special messages
         if (showConfetti && canvas != null && completionPanel != null)
@@ -362,6 +389,24 @@ public class BatchMessageController : MonoBehaviour
             return objectCompletionMessages[Random.Range(0, objectCompletionMessages.Count)];
 
         return "WELL DONE!";
+    }
+
+    private void PlaySound()
+    {
+        if (!playSound || audioSource == null) return;
+
+        AudioClip clip = null;
+
+        if (useRandomSound && completionSounds.Count > 0)
+            clip = completionSounds[Random.Range(0, completionSounds.Count)];
+        else if (singleSound != null)
+            clip = singleSound;
+
+        if (clip != null)
+        {
+            audioSource.volume = soundVolume;
+            audioSource.PlayOneShot(clip);
+        }
     }
 
     /// <summary>

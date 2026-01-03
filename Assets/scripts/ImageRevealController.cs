@@ -152,7 +152,7 @@ public class ImageRevealController : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
         }
-
+        audioSource.volume = 0.5f;
         audioSource.PlayOneShot(clipToPlay);
     }
 

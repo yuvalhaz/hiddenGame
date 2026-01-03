@@ -13,20 +13,50 @@ public class LoadingManager : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private float loadingDuration = 2f;
     [Tooltip("How long to show the loading screen")]
-    
+
     [SerializeField] private float blinkSpeed = 0.5f;
     [Tooltip("How fast the 'Loading...' text blinks")]
-    
+
+    [Header("Audio Settings")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip loadingMusic;
+    [Tooltip("Background music/sound during loading")]
+    [Range(0f, 1f)]
+    [SerializeField] private float musicVolume = 0.6f;
+
     private const string FIRST_TIME_KEY = "IsFirstTime";
-    
+
+    private void Awake()
+    {
+        // Initialize audio source
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+                audioSource.loop = false;
+            }
+        }
+    }
+
     private void Start()
     {
+        // Play loading music
+        if (audioSource != null && loadingMusic != null)
+        {
+            audioSource.volume = musicVolume;
+            audioSource.clip = loadingMusic;
+            audioSource.Play();
+        }
+
         // Start blinking "Loading..." text
         if (loadingText != null)
         {
             StartCoroutine(BlinkLoadingText());
         }
-        
+
         StartCoroutine(LoadGame());
     }
     
@@ -88,12 +118,18 @@ public class LoadingManager : MonoBehaviour
         // וודא שהגענו ל-100%
         if (loadingSlider != null)
             loadingSlider.value = 1f;
-        
+
         if (percentText != null)
             percentText.text = "100%";
-        
+
         yield return new WaitForSeconds(0.2f);
-        
+
+        // Stop music before loading next scene
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
+
         // טען את הסצנה
         Debug.Log($"[LoadingManager] Loading scene: {targetScene}");
         SceneManager.LoadScene(targetScene);

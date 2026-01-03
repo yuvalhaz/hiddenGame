@@ -40,6 +40,10 @@ public class LevelCompleteController : MonoBehaviour
     [SerializeField] private bool skipAdsInEditor = true;
     [Tooltip("Skip ads when running in Unity Editor")]
 
+    [Header("Tutorial Settings")]
+    [SerializeField] private bool isTutorialLevel = false;
+    [Tooltip("Set to true for tutorial levels - will not require LevelManager")]
+
     private bool isCompleted = false;
 
     private void Start()
@@ -103,7 +107,17 @@ public class LevelCompleteController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[LevelCompleteController] ❌ LevelManager is NULL!");
+            // Tutorial levels or standalone levels without LevelManager
+            Debug.LogWarning("[LevelCompleteController] ⚠️ LevelManager is NULL (Tutorial or standalone level - this is OK)");
+        }
+
+        // Save tutorial completion flag
+        if (isTutorialLevel)
+        {
+            PlayerPrefs.SetInt("TutorialCompleted", 1);
+            PlayerPrefs.SetInt("IsFirstTime", 0); // For LoadingManager
+            PlayerPrefs.Save();
+            Debug.Log("[LevelCompleteController] ✅ Tutorial marked as completed!");
         }
 
         // Start ending dialog
@@ -127,6 +141,15 @@ public class LevelCompleteController : MonoBehaviour
         {
             nextLevelData.Unlock();
             Debug.Log($"[LevelCompleteController] 🔓 {nextLevelData.levelName} unlocked!");
+        }
+
+        // Save tutorial completion flag
+        if (isTutorialLevel)
+        {
+            PlayerPrefs.SetInt("TutorialCompleted", 1);
+            PlayerPrefs.SetInt("IsFirstTime", 0); // For LoadingManager
+            PlayerPrefs.Save();
+            Debug.Log("[LevelCompleteController] ✅ Tutorial marked as completed!");
         }
 
         // Show completion screen

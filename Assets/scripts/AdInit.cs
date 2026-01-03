@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 /// <summary>
 /// אתחול פרסומות - מטעין פרסומות מראש ושומר אותן זמינות.
@@ -9,6 +10,7 @@ public class AdInit : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private RewardedAdsManager rewardedAds;
+    [SerializeField] private InterstitialAdsManager interstitialAds;
     [SerializeField] private AdMobConfig adMobConfig;
 
     [Header("Config")]
@@ -27,6 +29,9 @@ public class AdInit : MonoBehaviour
         if (!rewardedAds)
             rewardedAds = FindObjectOfType<RewardedAdsManager>(true);
 
+        if (!interstitialAds)
+            interstitialAds = FindObjectOfType<InterstitialAdsManager>(true);
+
         if (!adMobConfig)
             adMobConfig = FindObjectOfType<AdMobConfig>(true);
     }
@@ -40,12 +45,6 @@ public class AdInit : MonoBehaviour
             return;
         }
 
-        if (!rewardedAds)
-        {
-            Debug.LogWarning("[AdInit] RewardedAdsManager not found in scene.");
-            return;
-        }
-
         // הצג מידע על מצב הפרסומות
         if (adMobConfig.IsTestMode())
         {
@@ -56,21 +55,62 @@ public class AdInit : MonoBehaviour
             Debug.Log("[AdInit] Production Mode - using REAL Ad Units");
         }
 
-        // טען מראש אם מוגדר
+        // ✅ FIX: Wait for MobileAds.Initialize() to complete before preloading
         if (preloadOnStart)
         {
-            rewardedAds.Preload(success =>
-            {
-                if (success)
-                    Debug.Log("[AdInit] Ad preloaded successfully!");
-                else
-                    Debug.LogWarning("[AdInit] Failed to preload ad");
-            });
+            StartCoroutine(PreloadAdsAfterDelay());
         }
     }
 
     /// <summary>
-    /// ניתן לקרוא מפאנל/כפתור כדי לטעון מראש בכל רגע.
+    /// Wait for MobileAds to initialize, then preload ads
+    /// </summary>
+    private IEnumerator PreloadAdsAfterDelay()
+    {
+        // Wait 2 seconds for MobileAds.Initialize() to complete
+        Debug.Log("[AdInit] Waiting for MobileAds initialization...");
+        yield return new WaitForSeconds(2f);
+
+        Debug.Log("[AdInit] Starting ad preload...");
+
+        // Preload rewarded ads (for hints)
+        if (rewardedAds)
+        {
+            rewardedAds.Preload(success =>
+            {
+                if (success)
+                    Debug.Log("[AdInit] Rewarded ad preloaded successfully!");
+                else
+                    Debug.LogWarning("[AdInit] Failed to preload rewarded ad");
+            });
+        }
+        else
+        {
+            Debug.LogWarning("[AdInit] RewardedAdsManager not found - skipping rewarded ad preload");
+        }
+
+        // Wait a bit between preloads
+        yield return new WaitForSeconds(0.5f);
+
+        // Preload interstitial ads (for batch completions)
+        if (interstitialAds)
+        {
+            interstitialAds.Preload(success =>
+            {
+                if (success)
+                    Debug.Log("[AdInit] Interstitial ad preloaded successfully!");
+                else
+                    Debug.LogWarning("[AdInit] Failed to preload interstitial ad");
+            });
+        }
+        else
+        {
+            Debug.LogWarning("[AdInit] InterstitialAdsManager not found - skipping interstitial ad preload");
+        }
+    }
+
+    /// <summary>
+    /// ניתן לקרוא מפאנל/כפתור כדי לטעון rewarded ad מראש בכל רגע.
     /// </summary>
     public void PreloadRewardedNow()
     {
@@ -87,10 +127,35 @@ public class AdInit : MonoBehaviour
     }
 
     /// <summary>
-    /// בדיקת מוכנות – שימושי לפני הצגה.
+    /// ניתן לקרוא כדי לטעון interstitial ad מראש בכל רגע.
+    /// </summary>
+    public void PreloadInterstitialNow()
+    {
+        if (!interstitialAds)
+        {
+            interstitialAds = FindObjectOfType<InterstitialAdsManager>(true);
+            if (!interstitialAds)
+            {
+                Debug.LogWarning("[AdInit] Cannot preload – InterstitialAdsManager missing.");
+                return;
+            }
+        }
+        interstitialAds.Preload();
+    }
+
+    /// <summary>
+    /// בדיקת מוכנות rewarded ad – שימושי לפני הצגה.
     /// </summary>
     public bool IsRewardedReady()
     {
         return rewardedAds != null && rewardedAds.IsReady();
+    }
+
+    /// <summary>
+    /// בדיקת מוכנות interstitial ad – שימושי לפני הצגה.
+    /// </summary>
+    public bool IsInterstitialReady()
+    {
+        return interstitialAds != null && interstitialAds.IsReady();
     }
 }
