@@ -367,8 +367,8 @@ public class LevelSelectionUI : MonoBehaviour
             }
         }
 
-        // Wait for animations to finish + pause
-        yield return new WaitForSeconds(currentDelay + 0.3f);
+        // Wait for animations to finish (delay + animation duration) + pause
+        yield return new WaitForSeconds(currentDelay + buttonPopDuration + 0.3f);
         currentDelay = 0f;
 
         // Next 3 buttons (buttons 2, 3, 4)
@@ -381,8 +381,8 @@ public class LevelSelectionUI : MonoBehaviour
             }
         }
 
-        // Wait for animations to finish + pause
-        yield return new WaitForSeconds(currentDelay + 0.3f);
+        // Wait for animations to finish (delay + animation duration) + pause
+        yield return new WaitForSeconds(currentDelay + buttonPopDuration + 0.3f);
         currentDelay = 0f;
 
         // Rest of the buttons (from button 5 onwards)
