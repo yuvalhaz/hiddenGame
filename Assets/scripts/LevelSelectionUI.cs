@@ -53,7 +53,10 @@ public class LevelSelectionUI : MonoBehaviour
     [Tooltip("Delay before lock shake animation starts (in seconds)")]
 
     [Header("🔊 Audio Settings")]
-    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioSource musicAudioSource;
+    [Tooltip("Audio source for background music (will be created automatically if not assigned)")]
+    [SerializeField] private AudioSource sfxAudioSource;
+    [Tooltip("Audio source for sound effects (will be created automatically if not assigned)")]
     [SerializeField] private AudioClip backgroundMusic;
     [Tooltip("Background music for level selection screen (looped)")]
     [SerializeField] private AudioClip buttonPopSound;
@@ -71,28 +74,50 @@ public class LevelSelectionUI : MonoBehaviour
 
     private void Awake()
     {
-        // Initialize audio source
-        if (audioSource == null)
+        // Initialize music audio source
+        if (musicAudioSource == null)
         {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
+            // Try to find existing AudioSource components
+            AudioSource[] sources = GetComponents<AudioSource>();
+            if (sources.Length > 0)
             {
-                audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.playOnAwake = false;
-                audioSource.loop = true;
+                musicAudioSource = sources[0];
             }
+            else
+            {
+                musicAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+            musicAudioSource.playOnAwake = false;
+            musicAudioSource.loop = true;
+        }
+
+        // Initialize SFX audio source
+        if (sfxAudioSource == null)
+        {
+            // Try to find a second AudioSource, or create a new one
+            AudioSource[] sources = GetComponents<AudioSource>();
+            if (sources.Length > 1)
+            {
+                sfxAudioSource = sources[1];
+            }
+            else
+            {
+                sfxAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+            sfxAudioSource.playOnAwake = false;
+            sfxAudioSource.loop = false;
         }
     }
 
     private void Start()
     {
         // Play background music
-        if (audioSource != null && backgroundMusic != null)
+        if (musicAudioSource != null && backgroundMusic != null)
         {
-            audioSource.volume = musicVolume;
-            audioSource.clip = backgroundMusic;
-            audioSource.loop = true;
-            audioSource.Play();
+            musicAudioSource.volume = musicVolume;
+            musicAudioSource.clip = backgroundMusic;
+            musicAudioSource.loop = true;
+            musicAudioSource.Play();
         }
 
         if (titleText != null)
@@ -118,9 +143,9 @@ public class LevelSelectionUI : MonoBehaviour
     private void OnDestroy()
     {
         // Stop music when leaving scene
-        if (audioSource != null && audioSource.isPlaying)
+        if (musicAudioSource != null && musicAudioSource.isPlaying)
         {
-            audioSource.Stop();
+            musicAudioSource.Stop();
         }
     }
 
@@ -129,9 +154,9 @@ public class LevelSelectionUI : MonoBehaviour
     /// </summary>
     private void PlaySound(AudioClip clip)
     {
-        if (audioSource != null && clip != null)
+        if (sfxAudioSource != null && clip != null)
         {
-            audioSource.PlayOneShot(clip, soundVolume);
+            sfxAudioSource.PlayOneShot(clip, soundVolume);
         }
     }
 
