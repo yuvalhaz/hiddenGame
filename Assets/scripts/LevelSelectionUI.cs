@@ -49,6 +49,8 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private float buttonAnimationDelay = 0.5f;
     [SerializeField] private float buttonPopDuration = 0.3f;
     [SerializeField] private AnimationCurve buttonPopCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+    [SerializeField] private float lockShakeDelay = 0.3f;
+    [Tooltip("Delay before lock shake animation starts (in seconds)")]
 
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
@@ -435,7 +437,7 @@ public class LevelSelectionUI : MonoBehaviour
     private IEnumerator ShakeLock(Transform lockTransform)
     {
         // Wait before starting shake
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSeconds(lockShakeDelay);
 
         Vector3 originalRotation = lockTransform.localEulerAngles;
         float shakeDuration = 0.6f;
