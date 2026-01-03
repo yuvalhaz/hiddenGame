@@ -304,7 +304,8 @@ public class LevelSelectionUI : MonoBehaviour
 
         int capturedLevelNum = levelNumber;
         bool capturedIsUnlocked = isUnlocked;
-        button.onClick.AddListener(() => OnLevelButtonClicked(capturedLevelNum, capturedIsUnlocked));
+        Button capturedButton = button;
+        button.onClick.AddListener(() => OnLevelButtonClicked(capturedLevelNum, capturedIsUnlocked, capturedButton));
     }
 
     /// <summary>
@@ -327,12 +328,20 @@ public class LevelSelectionUI : MonoBehaviour
         return PlayerPrefs.GetInt(key, 0) == 1;
     }
 
-    private void OnLevelButtonClicked(int levelNumber, bool isUnlocked)
+    private void OnLevelButtonClicked(int levelNumber, bool isUnlocked, Button button)
     {
         if (!isUnlocked)
         {
             // Play locked button sound
             PlaySound(lockedButtonSound);
+
+            // Shake the lock icon
+            Transform lockTransform = button.transform.Find("lock");
+            if (lockTransform != null)
+            {
+                StartCoroutine(ShakeLock(lockTransform));
+            }
+
             return;
         }
 
@@ -421,6 +430,38 @@ public class LevelSelectionUI : MonoBehaviour
         }
 
         buttonTransform.localScale = targetScale;
+    }
+
+    private IEnumerator ShakeLock(Transform lockTransform)
+    {
+        Vector3 originalRotation = lockTransform.localEulerAngles;
+        float shakeDuration = 0.4f;
+        float shakeAmount = 15f; // degrees
+        int shakeCount = 3;
+        float timePerShake = shakeDuration / shakeCount;
+
+        for (int i = 0; i < shakeCount; i++)
+        {
+            float elapsed = 0f;
+            while (elapsed < timePerShake)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / timePerShake;
+
+                // Shake left and right using sine wave
+                float angle = Mathf.Sin(t * Mathf.PI * 2) * shakeAmount * (1f - t);
+                lockTransform.localEulerAngles = new Vector3(
+                    originalRotation.x,
+                    originalRotation.y,
+                    originalRotation.z + angle
+                );
+
+                yield return null;
+            }
+        }
+
+        // Reset to original rotation
+        lockTransform.localEulerAngles = originalRotation;
     }
 
     /// <summary>
