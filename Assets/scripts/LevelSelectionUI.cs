@@ -355,13 +355,46 @@ public class LevelSelectionUI : MonoBehaviour
 
     private IEnumerator AnimateButtonsSequence()
     {
-        for (int i = 0; i < levelButtons.Count; i++)
+        float currentDelay = 0f;
+
+        // First 2 buttons
+        for (int i = 0; i < 2 && i < levelButtons.Count; i++)
         {
             if (levelButtons[i] != null)
             {
-                StartCoroutine(AnimateButtonPopIn(levelButtons[i].transform, i * buttonAnimationDelay));
+                StartCoroutine(AnimateButtonPopIn(levelButtons[i].transform, currentDelay));
+                currentDelay += buttonAnimationDelay;
             }
         }
+
+        // Wait for animations to finish + pause
+        yield return new WaitForSeconds(currentDelay + 0.4f);
+        currentDelay = 0f;
+
+        // Next 3 buttons (buttons 2, 3, 4)
+        for (int i = 2; i < 5 && i < levelButtons.Count; i++)
+        {
+            if (levelButtons[i] != null)
+            {
+                StartCoroutine(AnimateButtonPopIn(levelButtons[i].transform, currentDelay));
+                currentDelay += buttonAnimationDelay;
+            }
+        }
+
+        // Wait for animations to finish + pause
+        yield return new WaitForSeconds(currentDelay + 0.4f);
+        currentDelay = 0f;
+
+        // Rest of the buttons (from button 5 onwards)
+        for (int i = 5; i < levelButtons.Count; i++)
+        {
+            if (levelButtons[i] != null)
+            {
+                StartCoroutine(AnimateButtonPopIn(levelButtons[i].transform, currentDelay));
+                currentDelay += buttonAnimationDelay;
+            }
+        }
+
         yield return null;
     }
 
