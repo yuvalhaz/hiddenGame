@@ -234,7 +234,7 @@ public class LevelSelectionUI : MonoBehaviour
         bool isCompleted = IsLevelCompleted(levelNumber);
 
         // Find and show/hide the lock GameObject
-        Transform lockTransform = button.transform.Find("lock");
+        Transform lockTransform = button.transform.Find("lock parent");
         if (lockTransform != null)
         {
             lockTransform.gameObject.SetActive(!isUnlocked);
@@ -336,7 +336,7 @@ public class LevelSelectionUI : MonoBehaviour
             PlaySound(lockedButtonSound);
 
             // Shake the lock icon
-            Transform lockTransform = button.transform.Find("lock");
+            Transform lockTransform = button.transform.Find("lock parent");
             if (lockTransform != null)
             {
                 StartCoroutine(ShakeLock(lockTransform));
