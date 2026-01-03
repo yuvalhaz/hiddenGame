@@ -58,6 +58,8 @@ public class LevelSelectionUI : MonoBehaviour
     [Tooltip("Sound when button pops in during animation")]
     [SerializeField] private AudioClip buttonClickSound;
     [Tooltip("Sound when level button is clicked")]
+    [SerializeField] private AudioClip lockedButtonSound;
+    [Tooltip("Sound when trying to click a locked button")]
     [Range(0f, 1f)]
     [SerializeField] private float musicVolume = 0.6f;
     [Range(0f, 1f)]
@@ -238,16 +240,39 @@ public class LevelSelectionUI : MonoBehaviour
             lockTransform.gameObject.SetActive(!isUnlocked);
         }
 
-        // Set text
+        // Set text - keep original name and add number
         if (buttonText != null)
         {
+            // Store original text (the custom name the user set)
+            string originalName = buttonText.text;
+
+            // If text is empty or already has a number pattern, use level number only
+            if (string.IsNullOrEmpty(originalName) || originalName == $"{levelNumber}" || originalName == $"{levelNumber}\n✓")
+            {
+                originalName = "";
+            }
+
             if (isCompleted)
             {
-                buttonText.text = $"{levelNumber}\n✓";
+                if (string.IsNullOrEmpty(originalName))
+                {
+                    buttonText.text = $"{levelNumber}\n✓";
+                }
+                else
+                {
+                    buttonText.text = $"{originalName}\n{levelNumber} ✓";
+                }
             }
             else
             {
-                buttonText.text = $"{levelNumber}";
+                if (string.IsNullOrEmpty(originalName))
+                {
+                    buttonText.text = $"{levelNumber}";
+                }
+                else
+                {
+                    buttonText.text = $"{originalName}\n{levelNumber}";
+                }
             }
         }
 
@@ -271,14 +296,15 @@ public class LevelSelectionUI : MonoBehaviour
             }
         }
 
-        // Setup button click
-        button.interactable = isUnlocked;
+        // Setup button click - make all buttons clickable (locked buttons will play sound)
+        button.interactable = true;
 
         // Remove old listeners to prevent duplicates
         button.onClick.RemoveAllListeners();
 
         int capturedLevelNum = levelNumber;
-        button.onClick.AddListener(() => OnLevelButtonClicked(capturedLevelNum));
+        bool capturedIsUnlocked = isUnlocked;
+        button.onClick.AddListener(() => OnLevelButtonClicked(capturedLevelNum, capturedIsUnlocked));
     }
 
     /// <summary>
@@ -301,10 +327,12 @@ public class LevelSelectionUI : MonoBehaviour
         return PlayerPrefs.GetInt(key, 0) == 1;
     }
 
-    private void OnLevelButtonClicked(int levelNumber)
+    private void OnLevelButtonClicked(int levelNumber, bool isUnlocked)
     {
-        if (!IsLevelUnlocked(levelNumber))
+        if (!isUnlocked)
         {
+            // Play locked button sound
+            PlaySound(lockedButtonSound);
             return;
         }
 
