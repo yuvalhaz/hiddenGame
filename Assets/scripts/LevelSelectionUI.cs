@@ -77,35 +77,19 @@ public class LevelSelectionUI : MonoBehaviour
         // Initialize music audio source
         if (musicAudioSource == null)
         {
-            // Try to find existing AudioSource components
-            AudioSource[] sources = GetComponents<AudioSource>();
-            if (sources.Length > 0)
-            {
-                musicAudioSource = sources[0];
-            }
-            else
-            {
-                musicAudioSource = gameObject.AddComponent<AudioSource>();
-            }
+            musicAudioSource = gameObject.AddComponent<AudioSource>();
             musicAudioSource.playOnAwake = false;
             musicAudioSource.loop = true;
+            Debug.Log("[LevelSelectionUI] Created music AudioSource");
         }
 
         // Initialize SFX audio source
         if (sfxAudioSource == null)
         {
-            // Try to find a second AudioSource, or create a new one
-            AudioSource[] sources = GetComponents<AudioSource>();
-            if (sources.Length > 1)
-            {
-                sfxAudioSource = sources[1];
-            }
-            else
-            {
-                sfxAudioSource = gameObject.AddComponent<AudioSource>();
-            }
+            sfxAudioSource = gameObject.AddComponent<AudioSource>();
             sfxAudioSource.playOnAwake = false;
             sfxAudioSource.loop = false;
+            Debug.Log("[LevelSelectionUI] Created SFX AudioSource");
         }
     }
 
