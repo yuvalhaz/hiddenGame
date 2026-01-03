@@ -434,8 +434,11 @@ public class LevelSelectionUI : MonoBehaviour
 
     private IEnumerator ShakeLock(Transform lockTransform)
     {
+        // Wait before starting shake
+        yield return new WaitForSeconds(0.3f);
+
         Vector3 originalRotation = lockTransform.localEulerAngles;
-        float shakeDuration = 0.4f;
+        float shakeDuration = 0.6f;
         float shakeAmount = 15f; // degrees
         int shakeCount = 3;
         float timePerShake = shakeDuration / shakeCount;
