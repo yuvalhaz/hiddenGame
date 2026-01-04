@@ -318,7 +318,7 @@ public class ScrollableButtonBar : MonoBehaviour
         if (index >= 0 && index < buttonDataList.Count && index < buttons.Count)
         {
             buttonDataList[index].buttonSprite = sprite;
-            
+
             GameObject buttonObj = buttons[index].gameObject;
             if (buttonObj != null)
             {
@@ -329,5 +329,48 @@ public class ScrollableButtonBar : MonoBehaviour
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Scrolls the button bar to bring the specified button into view
+    /// </summary>
+    public IEnumerator ScrollToButtonCoroutine(DraggableButton button, float duration)
+    {
+        if (scrollRect == null || button == null)
+        {
+            Debug.LogWarning("[ScrollableButtonBar] ScrollRect or button is null - skipping scroll");
+            yield break;
+        }
+
+        RectTransform buttonRT = button.GetComponent<RectTransform>();
+        if (buttonRT == null) yield break;
+
+        // Calculate the normalized horizontal position to scroll to
+        Canvas.ForceUpdateCanvases();
+
+        float buttonPosX = buttonRT.anchoredPosition.x;
+        float viewportWidth = scrollRect.viewport.rect.width;
+        float contentWidth = contentPanel.rect.width;
+
+        // Calculate target normalized position (0 = left, 1 = right)
+        float targetNormalizedPos = Mathf.Clamp01(buttonPosX / (contentWidth - viewportWidth));
+
+        float startPos = scrollRect.horizontalNormalizedPosition;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            // Smooth easing
+            float easedT = 1f - (1f - t) * (1f - t);
+
+            scrollRect.horizontalNormalizedPosition = Mathf.Lerp(startPos, targetNormalizedPos, easedT);
+            yield return null;
+        }
+
+        scrollRect.horizontalNormalizedPosition = targetNormalizedPos;
+        Debug.Log($"[ScrollableButtonBar] Scrolled to button at position {targetNormalizedPos}");
     }
 }
