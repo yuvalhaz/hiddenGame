@@ -373,4 +373,31 @@ public class ScrollableButtonBar : MonoBehaviour
         scrollRect.horizontalNormalizedPosition = targetNormalizedPos;
         Debug.Log($"[ScrollableButtonBar] Scrolled to button at position {targetNormalizedPos}");
     }
+
+    /// <summary>
+    /// Marks a button as destroyed and updates the bar layout
+    /// Called by GameProgressManager when restoring saved progress
+    /// </summary>
+    public void MarkButtonAsDestroyed(DraggableButton button)
+    {
+        if (button == null) return;
+
+        // Find the button's index
+        int index = -1;
+        for (int i = 0; i < buttons.Count; i++)
+        {
+            if (buttons[i] == button)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index >= 0 && index < buttonStates.Count)
+        {
+            Debug.Log($"[ScrollableButtonBar] Marking button {index} as destroyed");
+            buttonStates[index] = false;
+            RecalculateAllPositions();
+        }
+    }
 }
