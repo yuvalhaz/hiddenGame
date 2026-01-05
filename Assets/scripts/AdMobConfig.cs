@@ -13,7 +13,7 @@ public class AdMobConfig : MonoBehaviour
     [Tooltip("Rewarded test ad unit (Google sample)")]
     [SerializeField] private string testRewardedAdUnitId_Android = "ca-app-pub-3940256099942544/5224354917";
     [SerializeField] private string testRewardedAdUnitId_iOS = "ca-app-pub-3940256099942544/1712485313";
-    
+
     [Tooltip("Interstitial test ad unit (Google sample)")]
     [SerializeField] private string testInterstitialAdUnitId_Android = "ca-app-pub-3940256099942544/1033173712";
     [SerializeField] private string testInterstitialAdUnitId_iOS = "ca-app-pub-3940256099942544/4411468910";
@@ -23,7 +23,7 @@ public class AdMobConfig : MonoBehaviour
     [SerializeField] private string productionRewardedAdUnitId_Android = "ca-app-pub-7861548436347890/9905311499";
     [Tooltip("REAL Rewarded Ad Unit ID from your AdMob account (iOS, if you use it)")]
     [SerializeField] private string productionRewardedAdUnitId_iOS = "";
-    
+
     [Tooltip("REAL Interstitial Ad Unit ID from your AdMob account (Android)")]
     [SerializeField] private string productionInterstitialAdUnitId_Android = "ca-app-pub-7861548436347890/1100930228";
     [Tooltip("REAL Interstitial Ad Unit ID from your AdMob account (iOS, if you use it)")]

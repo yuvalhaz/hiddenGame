@@ -54,103 +54,88 @@ public class ScrollableButtonBar : MonoBehaviour
 
     void Update()
     {
-        // Smooth continuous animation
+        // ✅ אנימציה חלקה ורציפה בלי קפיצות!
         List<RectTransform> toRemove = new List<RectTransform>();
-
+        
         foreach (var kvp in buttonsAnimating)
         {
-            try
+            RectTransform rect = kvp.Key;
+            if (rect == null)
             {
-                RectTransform rect = kvp.Key;
-                if (rect == null)
+                toRemove.Add(rect);
+                continue;
+            }
+            
+            // מצא את האינדקס של הכפתור
+            int index = -1;
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                if (buttons[i] != null && buttons[i].GetComponent<RectTransform>() == rect)
                 {
-                    toRemove.Add(rect);
-                    continue;
-                }
-
-                // מצא את האינדקס של הכפתור
-                int index = -1;
-                for (int i = 0; i < buttons.Count; i++)
-                {
-                    if (buttons[i] != null && buttons[i].GetComponent<RectTransform>() == rect)
-                    {
-                        index = i;
-                        break;
-                    }
-                }
-
-                if (index == -1 || index >= targetPositions.Count)
-                {
-                    toRemove.Add(rect);
-                    continue;
-                }
-
-                // בדוק אם הכפתור בגרירה
-                if (buttons[index] != null && buttons[index].IsDragging())
-                {
-                    toRemove.Add(rect);
-                    continue;
-                }
-
-                // Smooth movement with MoveTowards
-                Vector2 currentPos = rect.anchoredPosition;
-                Vector2 targetPos = targetPositions[index];
-
-                float distance = Vector2.Distance(currentPos, targetPos);
-
-                if (distance < 0.5f)
-                {
-                    rect.anchoredPosition = targetPos;
-                    toRemove.Add(rect);
-                }
-                else
-                {
-                    // Smooth movement at constant speed
-                    float speed = animationSpeed * 100f; // Multiply by 100 (pixels per second)
-                    Vector2 newPos = Vector2.MoveTowards(currentPos, targetPos, speed * Time.deltaTime);
-                    rect.anchoredPosition = newPos;
+                    index = i;
+                    break;
                 }
             }
-            catch (System.Exception e)
+            
+            if (index == -1 || index >= targetPositions.Count)
             {
-                Debug.LogWarning($"[ScrollableButtonBar] Exception in Update loop: {e.Message}");
-                toRemove.Add(kvp.Key);
+                toRemove.Add(rect);
+                continue;
+            }
+            
+            // בדוק אם הכפתור בגרירה
+            if (buttons[index] != null && buttons[index].IsDragging())
+            {
+                toRemove.Add(rect);
+                continue;
+            }
+            
+            // ✅ תנועה חלקה עם MoveTowards - אין קפיצות!
+            Vector2 currentPos = rect.anchoredPosition;
+            Vector2 targetPos = targetPositions[index];
+            
+            float distance = Vector2.Distance(currentPos, targetPos);
+            
+            if (distance < 0.5f)
+            {
+                rect.anchoredPosition = targetPos;
+                toRemove.Add(rect);
+            }
+            else
+            {
+                // ✅ תנועה חלקה במהירות קבועה
+                float speed = animationSpeed * 100f; // כפול 100 כי זה פיקסלים לשנייה
+                Vector2 newPos = Vector2.MoveTowards(currentPos, targetPos, speed * Time.deltaTime);
+                rect.anchoredPosition = newPos;
             }
         }
-
+        
         foreach (var rect in toRemove)
         {
             buttonsAnimating.Remove(rect);
         }
     }
 
-    /// <summary>
-    /// Public method to refresh the button bar. Checks for destroyed buttons and recalculates positions.
-    /// </summary>
+    // ✅ פונקציה ציבורית שיכולה להיקרא מבחוץ
     public void RefreshBar()
     {
         Debug.Log("[ScrollableButtonBar] RefreshBar called");
 
-        // Check all buttons and mark destroyed ones as inactive
-        // Only mark as false if we're sure the button is destroyed (null check)
-        int nullCount = 0;
+        // ✅ עבור על כל הכפתורים ובדוק אם הם קיימים
         for (int i = 0; i < buttons.Count; i++)
         {
             if (buttons[i] == null)
             {
+                // הכפתור נמחק - סמן אותו כלא פעיל
                 buttonStates[i] = false;
-                nullCount++;
                 Debug.Log($"[ScrollableButtonBar] Button {i} is null - marking inactive");
             }
         }
 
-        // Only recalculate if there were actual changes
-        if (nullCount > 0)
-        {
-            RecalculateAllPositions();
-        }
+        // ✅ חשב מחדש את כל המיקומים
+        RecalculateAllPositions();
 
-        Debug.Log($"[ScrollableButtonBar] Bar refreshed! ({nullCount} null buttons found)");
+        Debug.Log("[ScrollableButtonBar] ✅ Bar refreshed!");
     }
 
 
@@ -184,7 +169,6 @@ public class ScrollableButtonBar : MonoBehaviour
             if (buttonImage != null && buttonDataList[i].buttonSprite != null)
             {
                 buttonImage.sprite = buttonDataList[i].buttonSprite;
-                buttonImage.SetNativeSize(); // Set image to sprite's native size
             }
             
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
@@ -212,23 +196,26 @@ public class ScrollableButtonBar : MonoBehaviour
 
     public void OnButtonDragStarted(DraggableButton button, int index)
     {
-        Debug.Log($"[ScrollableButtonBar] OnButtonDragStarted for button: {index}");
-
-        // Stop animation for this button
+        Debug.Log("OnButtonDragStarted נקרא לכפתור: " + index);
+        
+        // ✅ רק עוצר אנימציות - לא משנה מצבים ולא מחשב מחדש!
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null && buttonsAnimating.ContainsKey(rect))
         {
             buttonsAnimating.Remove(rect);
         }
+        
+        // ✅ זהו! לא עושים כלום אחר כאן
     }
 
     public void OnButtonDraggedOut(DraggableButton button, int index)
     {
-        Debug.Log($"[ScrollableButtonBar] OnButtonDraggedOut for button: {index}");
-
-        // Mark button as inactive and recalculate positions (only once)
+        Debug.Log("OnButtonDraggedOut נקרא לכפתור: " + index);
+        
+        // ✅ רק כאן משנים מצב וממקמים מחדש - פעם אחת בלבד!
         if (index >= 0 && index < buttonStates.Count)
         {
+            // מוודא שלא נקרא פעמיים
             if (buttonStates[index] == true)
             {
                 buttonStates[index] = false;
@@ -241,8 +228,8 @@ public class ScrollableButtonBar : MonoBehaviour
     {
         buttonStates[index] = true;
         RecalculateAllPositions();
-
-        // Mark for animation - Update will handle it
+        
+        // ✅ פשוט סמן שצריך להניע - Update יטפל בזה
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null)
         {
@@ -252,40 +239,40 @@ public class ScrollableButtonBar : MonoBehaviour
 
     public void OnButtonSuccessfullyPlaced(DraggableButton button, int index)
     {
-        Debug.Log($"[ScrollableButtonBar] OnButtonSuccessfullyPlaced for button {index}");
-
+        Debug.Log($"OnButtonSuccessfullyPlaced נקרא לכפתור {index}");
+        
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null && buttonsAnimating.ContainsKey(rect))
         {
             buttonsAnimating.Remove(rect);
         }
-
+        
         if (index >= 0 && index < buttonStates.Count)
         {
             buttonStates[index] = false;
         }
-
+        
         RecalculateAllPositions();
     }
 
     void RecalculateAllPositions()
     {
-        Debug.Log("[ScrollableButtonBar] RecalculateAllPositions called");
-
+        Debug.Log("RecalculateAllPositions נקרא");
+        
         int positionIndex = 0;
-
+        
         for (int i = 0; i < buttons.Count; i++)
         {
             if (buttonStates[i])
             {
                 float xPos = buttonSpacing + (positionIndex * (buttonWidth + buttonSpacing));
                 Vector2 newTarget = new Vector2(xPos, 0);
-
+                
                 targetPositions[i] = newTarget;
-
-                Debug.Log($"[ScrollableButtonBar] Button {i}: new target position = {xPos}");
-
-                // Update target position - Update() will animate it
+                
+                Debug.Log($"כפתור {i}: מיקום יעד חדש = {xPos}");
+                
+                // ✅ פשוט עדכן את המיקום היעד - Update יטפל בשאר
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
                     RectTransform rect = buttons[i].GetComponent<RectTransform>();
@@ -294,31 +281,23 @@ public class ScrollableButtonBar : MonoBehaviour
                         buttonsAnimating[rect] = true;
                     }
                 }
-
+                
                 positionIndex++;
             }
         }
-
+        
         UpdateContentSize();
     }
 
     void UpdateContentSize()
     {
-        // Count actual active buttons, not just buttonStates
         int buttonsInBar = 0;
-        for (int i = 0; i < buttonStates.Count; i++)
+        foreach (bool state in buttonStates)
         {
-            if (i < buttons.Count && buttonStates[i] && buttons[i] != null)
-            {
-                buttonsInBar++;
-            }
+            if (state) buttonsInBar++;
         }
-
-        // Ensure minimum width to prevent panel from disappearing
+        
         float totalWidth = buttonSpacing + (buttonsInBar * (buttonWidth + buttonSpacing));
-        float minWidth = buttonSpacing * 2; // Minimum reasonable width
-        totalWidth = Mathf.Max(totalWidth, minWidth);
-
         contentPanel.sizeDelta = new Vector2(totalWidth, contentPanel.sizeDelta.y);
     }
 
@@ -347,169 +326,37 @@ public class ScrollableButtonBar : MonoBehaviour
                 if (img != null)
                 {
                     img.sprite = sprite;
-                    img.SetNativeSize(); // Set image to sprite's native size
                 }
             }
         }
     }
 
     /// <summary>
-    /// Scroll to button by ID (instant).
+    /// Scrolls the button bar to bring the specified button into view
     /// </summary>
-    public void ScrollToButton(string buttonID)
+    public IEnumerator ScrollToButtonCoroutine(DraggableButton button, float duration)
     {
-        ScrollToButton(buttonID, 0f);
-    }
-
-    /// <summary>
-    /// Scroll to button by ID with animation.
-    /// </summary>
-    /// <param name="buttonID">The button ID to scroll to</param>
-    /// <param name="duration">Animation duration in seconds (0 = instant)</param>
-    public void ScrollToButton(string buttonID, float duration)
-    {
-        if (string.IsNullOrEmpty(buttonID))
-            return;
-
-        // Find button with matching ID
-        DraggableButton targetButton = buttons.Find(b => b != null && b.GetButtonID() == buttonID);
-        if (targetButton != null)
+        if (scrollRect == null || button == null)
         {
-            ScrollToButton(targetButton, duration);
-        }
-    }
-
-    /// <summary>
-    /// Scroll the ScrollRect to make a specific button visible (instant).
-    /// </summary>
-    public void ScrollToButton(DraggableButton button)
-    {
-        ScrollToButton(button, 0f);
-    }
-
-    /// <summary>
-    /// Scroll the ScrollRect to make a specific button visible with animation.
-    /// </summary>
-    /// <param name="button">The button to scroll to</param>
-    /// <param name="duration">Animation duration in seconds (0 = instant)</param>
-    public void ScrollToButton(DraggableButton button, float duration)
-    {
-        if (button == null || scrollRect == null || contentPanel == null)
-            return;
-
-        // Find the button's index
-        int index = buttons.IndexOf(button);
-        if (index < 0) return;
-
-        // Get button's RectTransform
-        RectTransform buttonRT = button.GetComponent<RectTransform>();
-        if (buttonRT == null) return;
-
-        // Calculate the normalized position (0-1) to scroll to
-        float buttonX = buttonRT.anchoredPosition.x;
-        float contentWidth = contentPanel.rect.width;
-        float viewportWidth = scrollRect.viewport.rect.width;
-
-        if (contentWidth <= viewportWidth)
-        {
-            // Content fits in viewport, no need to scroll
-            scrollRect.horizontalNormalizedPosition = 0f;
-            return;
-        }
-
-        // Calculate normalized position to center the button
-        float normalizedPos = Mathf.Clamp01(buttonX / (contentWidth - viewportWidth));
-
-        if (duration > 0f)
-        {
-            // Animated scroll - start coroutine
-            StartCoroutine(AnimateScrollTo(normalizedPos, duration));
-        }
-        else
-        {
-            // Instant scroll
-            scrollRect.horizontalNormalizedPosition = normalizedPos;
-        }
-    }
-
-    /// <summary>
-    /// Scroll to button with index (instant).
-    /// </summary>
-    public void ScrollToButton(int index)
-    {
-        ScrollToButton(index, 0f);
-    }
-
-    /// <summary>
-    /// Scroll to button with index with animation.
-    /// </summary>
-    /// <param name="index">Index of the button</param>
-    /// <param name="duration">Animation duration in seconds (0 = instant)</param>
-    public void ScrollToButton(int index, float duration)
-    {
-        if (index >= 0 && index < buttons.Count)
-        {
-            ScrollToButton(buttons[index], duration);
-        }
-    }
-
-    /// <summary>
-    /// Coroutine version of ScrollToButton for use with yield return.
-    /// Returns IEnumerator so it can be yielded on.
-    /// Use this when you need to wait for scroll completion in a coroutine.
-    /// </summary>
-    /// <param name="button">The button to scroll to</param>
-    /// <param name="duration">Animation duration in seconds (0 = instant)</param>
-    public System.Collections.IEnumerator ScrollToButtonCoroutine(DraggableButton button, float duration)
-    {
-        if (button == null || scrollRect == null || contentPanel == null)
+            Debug.LogWarning("[ScrollableButtonBar] ScrollRect or button is null - skipping scroll");
             yield break;
+        }
 
-        // Find the button's index
-        int index = buttons.IndexOf(button);
-        if (index < 0) yield break;
-
-        // Get button's RectTransform
         RectTransform buttonRT = button.GetComponent<RectTransform>();
         if (buttonRT == null) yield break;
 
-        // Calculate the normalized position (0-1) to scroll to
-        float buttonX = buttonRT.anchoredPosition.x;
-        float contentWidth = contentPanel.rect.width;
+        // Calculate the normalized horizontal position to scroll to
+        Canvas.ForceUpdateCanvases();
+
+        float buttonPosX = buttonRT.anchoredPosition.x;
         float viewportWidth = scrollRect.viewport.rect.width;
+        float contentWidth = contentPanel.rect.width;
 
-        if (contentWidth <= viewportWidth)
-        {
-            // Content fits in viewport, no need to scroll
-            scrollRect.horizontalNormalizedPosition = 0f;
-            yield break;
-        }
+        // Calculate target normalized position (0 = left, 1 = right)
+        float targetNormalizedPos = Mathf.Clamp01(buttonPosX / (contentWidth - viewportWidth));
 
-        // Calculate normalized position to center the button
-        float normalizedPos = Mathf.Clamp01(buttonX / (contentWidth - viewportWidth));
-
-        if (duration > 0f)
-        {
-            // Animated scroll - yield the animation coroutine
-            yield return StartCoroutine(AnimateScrollTo(normalizedPos, duration));
-        }
-        else
-        {
-            // Instant scroll
-            scrollRect.horizontalNormalizedPosition = normalizedPos;
-        }
-    }
-
-    /// <summary>
-    /// Smoothly animate scrolling to a target position.
-    /// </summary>
-    private System.Collections.IEnumerator AnimateScrollTo(float targetNormalizedPos, float duration)
-    {
         float startPos = scrollRect.horizontalNormalizedPosition;
         float elapsed = 0f;
-
-        // Clamp duration to reasonable values
-        duration = Mathf.Max(0.1f, duration);
 
         while (elapsed < duration)
         {
@@ -517,24 +364,25 @@ public class ScrollableButtonBar : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / duration);
 
             // Smooth easing
-            float easedT = t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+            float easedT = 1f - (1f - t) * (1f - t);
 
             scrollRect.horizontalNormalizedPosition = Mathf.Lerp(startPos, targetNormalizedPos, easedT);
-
             yield return null;
         }
 
         scrollRect.horizontalNormalizedPosition = targetNormalizedPos;
+        Debug.Log($"[ScrollableButtonBar] Scrolled to button at position {targetNormalizedPos}");
     }
 
     /// <summary>
-    /// PERFORMANCE FIX: Public API to replace reflection usage in GameProgressManager.
-    /// Mark a button as destroyed and recalculate positions.
+    /// Marks a button as destroyed and updates the bar layout
+    /// Called by GameProgressManager when restoring saved progress
     /// </summary>
     public void MarkButtonAsDestroyed(int index)
     {
         if (index >= 0 && index < buttonStates.Count)
         {
+            Debug.Log($"[ScrollableButtonBar] Marking button {index} as destroyed");
             buttonStates[index] = false;
             RecalculateAllPositions();
         }

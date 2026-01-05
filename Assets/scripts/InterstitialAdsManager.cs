@@ -1,17 +1,15 @@
 using System;
-using System.Collections;
 using UnityEngine;
 #if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
 using GoogleMobileAds.Api;
 #endif
 
 /// <summary>
-/// Manages Interstitial Ads (full-screen ads shown between batches/levels)
+/// ✅ FIXED: Manages Interstitial Ads with main thread dispatcher for callbacks
 /// </summary>
 public class InterstitialAdsManager : MonoBehaviour
 {
     public static InterstitialAdsManager Instance;
-
 
     /// <summary>נורה כשהפרסומת נסגרת.</summary>
     public event Action<bool> OnAdClosed; // bool = האם הפרסומת הושלמה
@@ -22,10 +20,10 @@ public class InterstitialAdsManager : MonoBehaviour
 #if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
     private InterstitialAd interstitialAd;
     private bool isAdLoading = false;
-
-    // Main thread flags for callbacks
-    private Action pendingOnMainThread = null;
 #endif
+
+    // ✅ FIXED: Main thread dispatcher to prevent crashes
+    private Action mainThreadAction;
 
     void Awake()
     {
@@ -44,46 +42,15 @@ public class InterstitialAdsManager : MonoBehaviour
         }
     }
 
-    void Start()
-    {
-#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
-        InitializeAdMob();
-#endif
-    }
-
-#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+    // ✅ FIXED: Update loop to execute main thread actions safely
     void Update()
     {
-        // Execute pending callbacks on main thread
-        if (pendingOnMainThread != null)
+        if (mainThreadAction != null)
         {
-            Action action = pendingOnMainThread;
-            pendingOnMainThread = null;
-            action.Invoke();
+            mainThreadAction.Invoke();
+            mainThreadAction = null;
         }
     }
-#endif
-
-#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
-    private void InitializeAdMob()
-    {
-        if (adMobConfig == null)
-        {
-            Debug.LogError("[InterstitialAdsManager] AdMobConfig not found! Add it to the scene.");
-            return;
-        }
-
-        // אתחול Google Mobile Ads SDK (אם עוד לא אותחל)
-        MobileAds.Initialize(initStatus =>
-        {
-            Debug.Log($"[InterstitialAdsManager] AdMob initialized for Interstitial ads");
-            if (adMobConfig.IsTestMode())
-            {
-                Debug.Log("[InterstitialAdsManager] Running in TEST MODE with Google demo ads");
-            }
-        });
-    }
-#endif
 
     // ===================== Availability / Preload =====================
 
@@ -145,14 +112,16 @@ public class InterstitialAdsManager : MonoBehaviour
             if (error != null || ad == null)
             {
                 Debug.LogError($"[InterstitialAdsManager] Failed to load ad: {error}");
-                SafeInvoke(onLoaded, false);
+                // ✅ Use main thread dispatcher for callback
+                mainThreadAction = () => SafeInvoke(onLoaded, false);
                 return;
             }
 
             interstitialAd = ad;
             Debug.Log("[InterstitialAdsManager] Ad loaded successfully!");
 
-            SafeInvoke(onLoaded, true);
+            // ✅ Use main thread dispatcher for callback
+            mainThreadAction = () => SafeInvoke(onLoaded, true);
         });
     }
 #endif
@@ -162,9 +131,6 @@ public class InterstitialAdsManager : MonoBehaviour
     /// <summary>
     /// Show interstitial ad with optional callbacks
     /// </summary>
-    /// <param name="onClosed">Called when ad is closed - receives bool indicating if completed</param>
-    /// <param name="onFailed">Called if ad fails to show - receives error message</param>
-    /// <param name="onOpened">Called when ad opens</param>
     public void ShowInterstitial(
         Action<bool> onClosed = null,
         Action<string> onFailed = null,
@@ -199,45 +165,38 @@ public class InterstitialAdsManager : MonoBehaviour
 
         bool adWasShown = false;
 
-        // רישום callbacks - ✅ Run on main thread to avoid Android UI issues
+        // ✅ FIXED: Use main thread dispatcher for all callbacks
         interstitialAd.OnAdFullScreenContentOpened += () =>
         {
-            pendingOnMainThread = () =>
-            {
-                Debug.Log("[InterstitialAdsManager] Ad opened");
-                adWasShown = true;
-                SafeInvoke(onOpened);
-            };
+            Debug.Log("[InterstitialAdsManager] Ad opened");
+            adWasShown = true;
+            mainThreadAction = () => SafeInvoke(onOpened);
         };
 
         interstitialAd.OnAdFullScreenContentClosed += () =>
         {
-            pendingOnMainThread = () =>
+            Debug.Log($"[InterstitialAdsManager] Ad closed. Was shown: {adWasShown}");
+            mainThreadAction = () =>
             {
-                Debug.Log($"[InterstitialAdsManager] Ad closed. Was shown: {adWasShown}");
                 SafeInvoke(OnAdClosed, adWasShown);
                 SafeInvoke(onClosed, adWasShown);
-
-                // טען פרסומת חדשה אוטומטית
-                Preload();
             };
+
+            // טען פרסומת חדשה אוטומטית
+            Preload();
         };
 
         interstitialAd.OnAdFullScreenContentFailed += (AdError error) =>
         {
             string errorMsg = $"Failed to show ad: {error}";
-            pendingOnMainThread = () =>
-            {
-                Debug.LogError($"[InterstitialAdsManager] {errorMsg}");
-                SafeInvoke(onFailed, errorMsg);
+            Debug.LogError($"[InterstitialAdsManager] {errorMsg}");
+            mainThreadAction = () => SafeInvoke(onFailed, errorMsg);
 
-                // טען פרסומת חדשה אוטומטית
-                Preload();
-            };
+            // טען פרסומת חדשה אוטומטית
+            Preload();
         };
 
-        // הצג פרסומת - ✅ Must be called on main thread
-        Debug.Log("[InterstitialAdsManager] Calling Show() on main thread");
+        // הצג פרסומת
         interstitialAd.Show();
     }
 #endif

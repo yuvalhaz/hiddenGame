@@ -4,6 +4,9 @@ using UnityEngine;
 using GoogleMobileAds.Api;
 #endif
 
+/// <summary>
+/// ✅ FIXED: Manages Rewarded Ads with main thread dispatcher for callbacks
+/// </summary>
 public class RewardedAdsManager : MonoBehaviour
 {
     public static RewardedAdsManager Instance;
@@ -18,6 +21,9 @@ public class RewardedAdsManager : MonoBehaviour
     private RewardedAd rewardedAd;
     private bool isAdLoading = false;
 #endif
+
+    // ✅ FIXED: Main thread dispatcher to prevent crashes
+    private Action mainThreadAction;
 
     void Awake()
     {
@@ -36,33 +42,15 @@ public class RewardedAdsManager : MonoBehaviour
         }
     }
 
-    void Start()
+    // ✅ FIXED: Update loop to execute main thread actions safely
+    void Update()
     {
-#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
-        InitializeAdMob();
-#endif
-    }
-
-#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
-    private void InitializeAdMob()
-    {
-        if (adMobConfig == null)
+        if (mainThreadAction != null)
         {
-            Debug.LogError("[RewardedAdsManager] AdMobConfig not found! Add it to the scene.");
-            return;
+            mainThreadAction.Invoke();
+            mainThreadAction = null;
         }
-
-        // אתחול Google Mobile Ads SDK
-        MobileAds.Initialize(initStatus =>
-        {
-            Debug.Log($"[RewardedAdsManager] AdMob initialized. Status: {initStatus}");
-            if (adMobConfig.IsTestMode())
-            {
-                Debug.Log("[RewardedAdsManager] Running in TEST MODE with Google demo ads");
-            }
-        });
     }
-#endif
 
     // ===================== Availability / Preload =====================
 
@@ -124,27 +112,25 @@ public class RewardedAdsManager : MonoBehaviour
             if (error != null || ad == null)
             {
                 Debug.LogError($"[RewardedAdsManager] Failed to load ad: {error}");
-                SafeInvoke(onLoaded, false);
+                // ✅ Use main thread dispatcher for callback
+                mainThreadAction = () => SafeInvoke(onLoaded, false);
                 return;
             }
 
             rewardedAd = ad;
             Debug.Log("[RewardedAdsManager] Ad loaded successfully!");
 
-            SafeInvoke(onLoaded, true);
+            // ✅ Use main thread dispatcher for callback
+            mainThreadAction = () => SafeInvoke(onLoaded, true);
         });
     }
 #endif
 
-    // ===================== MAIN API - Single method with optional parameters =====================
+    // ===================== MAIN API =====================
 
     /// <summary>
     /// Show rewarded ad with optional callbacks
     /// </summary>
-    /// <param name="onReward">Called when user earns reward</param>
-    /// <param name="onClosed">Called when ad is closed - receives bool indicating if completed</param>
-    /// <param name="onFailed">Called if ad fails to show - receives error message</param>
-    /// <param name="onOpened">Called when ad opens</param>
     public void ShowRewarded(
         Action onReward = null,
         Action<bool> onClosed = null,
@@ -182,17 +168,17 @@ public class RewardedAdsManager : MonoBehaviour
 
         bool rewardGranted = false;
 
-        // רישום callbacks
+        // ✅ FIXED: Use main thread dispatcher for all callbacks
         rewardedAd.OnAdFullScreenContentOpened += () =>
         {
             Debug.Log("[RewardedAdsManager] Ad opened");
-            SafeInvoke(onOpened);
+            mainThreadAction = () => SafeInvoke(onOpened);
         };
 
         rewardedAd.OnAdFullScreenContentClosed += () =>
         {
             Debug.Log($"[RewardedAdsManager] Ad closed. Reward granted: {rewardGranted}");
-            SafeInvoke(onClosed, rewardGranted);
+            mainThreadAction = () => SafeInvoke(onClosed, rewardGranted);
 
             // טען פרסומת חדשה אוטומטית
             Preload();
@@ -202,19 +188,24 @@ public class RewardedAdsManager : MonoBehaviour
         {
             string errorMsg = $"Failed to show ad: {error}";
             Debug.LogError($"[RewardedAdsManager] {errorMsg}");
-            SafeInvoke(onFailed, errorMsg);
+            mainThreadAction = () => SafeInvoke(onFailed, errorMsg);
 
             // טען פרסומת חדשה אוטומטית
             Preload();
         };
 
-        // הצג פרסומת
+        // ✅ CRITICAL FIX: Show ad and handle reward on main thread
         rewardedAd.Show((Reward reward) =>
         {
             rewardGranted = true;
             Debug.Log($"[RewardedAdsManager] Reward earned: {reward.Type}, {reward.Amount}");
-            SafeInvoke(OnRewardGranted);
-            SafeInvoke(onReward);
+
+            // ✅ FIXED: Execute reward logic on main thread to prevent crashes
+            mainThreadAction = () =>
+            {
+                SafeInvoke(OnRewardGranted);
+                SafeInvoke(onReward);
+            };
         });
     }
 #endif

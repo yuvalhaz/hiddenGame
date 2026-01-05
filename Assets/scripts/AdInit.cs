@@ -1,26 +1,31 @@
 using UnityEngine;
-using System.Collections;
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+using GoogleMobileAds.Api;
+#endif
 
 /// <summary>
-/// אתחול פרסומות - מטעין פרסומות מראש ושומר אותן זמינות.
-/// הערה: דאג שיש AdMobConfig ו-RewardedAdsManager בסצנה הראשונה.
+/// ✅ FIXED: Centralized AdMob initialization - initializes SDK once and preloads ads when ready
 /// </summary>
 [DisallowMultipleComponent]
 public class AdInit : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private RewardedAdsManager rewardedAds;
-    [SerializeField] private InterstitialAdsManager interstitialAds;
     [SerializeField] private AdMobConfig adMobConfig;
 
     [Header("Config")]
     [Tooltip("לטעון מודעת Rewarded מראש עם התחלת הסצנה.")]
-    [SerializeField] private bool preloadOnStart = true;
+    [SerializeField] private bool preloadRewardedOnInit = true;
+
+    [Tooltip("לטעון מודעת Interstitial מראש עם התחלת הסצנה.")]
+    [SerializeField] private bool preloadInterstitialOnInit = true;
 
     [Tooltip("להשאיר את אובייקט האתחול חי בין סצנות.")]
     [SerializeField] private bool dontDestroyOnLoad = true;
 
-    private void Awake()
+    private bool isInitialized = false;
+
+    void Awake()
     {
         if (dontDestroyOnLoad)
             DontDestroyOnLoad(gameObject);
@@ -29,14 +34,11 @@ public class AdInit : MonoBehaviour
         if (!rewardedAds)
             rewardedAds = FindObjectOfType<RewardedAdsManager>(true);
 
-        if (!interstitialAds)
-            interstitialAds = FindObjectOfType<InterstitialAdsManager>(true);
-
         if (!adMobConfig)
             adMobConfig = FindObjectOfType<AdMobConfig>(true);
     }
 
-    private void Start()
+    void Start()
     {
         // בדיקות אבחון
         if (!adMobConfig)
@@ -45,72 +47,83 @@ public class AdInit : MonoBehaviour
             return;
         }
 
+        if (!rewardedAds)
+        {
+            Debug.LogWarning("[AdInit] RewardedAdsManager not found in scene.");
+        }
+
+#if UNITY_EDITOR
+        Debug.Log("[AdInit] Editor mode - skipping AdMob initialization");
+        OnAdMobInitialized();
+#else
+        InitializeAdMob();
+#endif
+    }
+
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+    /// <summary>
+    /// ✅ FIXED: Centralized AdMob initialization with proper callback
+    /// </summary>
+    private void InitializeAdMob()
+    {
+        Debug.Log("[AdInit] Initializing AdMob SDK...");
+
         // הצג מידע על מצב הפרסומות
         if (adMobConfig.IsTestMode())
         {
-            Debug.Log($"[AdInit] Test Mode enabled. Using Test Ad Unit: {adMobConfig.GetRewardedAdUnitId()}");
+            Debug.Log($"[AdInit] Test Mode enabled. Rewarded: {adMobConfig.GetRewardedAdUnitId()}, Interstitial: {adMobConfig.GetInterstitialAdUnitId()}");
         }
         else
         {
             Debug.Log("[AdInit] Production Mode - using REAL Ad Units");
         }
 
-        // ✅ FIX: Wait for MobileAds.Initialize() to complete before preloading
-        if (preloadOnStart)
+        // ✅ Initialize SDK and wait for callback before preloading
+        MobileAds.Initialize(initStatus =>
         {
-            StartCoroutine(PreloadAdsAfterDelay());
-        }
+            Debug.Log($"[AdInit] ✅ AdMob initialized successfully! Status: {initStatus}");
+            isInitialized = true;
+
+            // ✅ Only preload AFTER initialization is complete
+            OnAdMobInitialized();
+        });
     }
+#endif
 
     /// <summary>
-    /// Wait for MobileAds to initialize, then preload ads
+    /// Called when AdMob is fully initialized and ready
     /// </summary>
-    private IEnumerator PreloadAdsAfterDelay()
+    private void OnAdMobInitialized()
     {
-        // Wait 2 seconds for MobileAds.Initialize() to complete
-        Debug.Log("[AdInit] Waiting for MobileAds initialization...");
-        yield return new WaitForSeconds(2f);
+        Debug.Log("[AdInit] AdMob ready - preloading ads...");
 
-        Debug.Log("[AdInit] Starting ad preload...");
-
-        // Preload rewarded ads (for hints)
-        if (rewardedAds)
+        // Preload rewarded ad
+        if (preloadRewardedOnInit && rewardedAds != null)
         {
             rewardedAds.Preload(success =>
             {
                 if (success)
-                    Debug.Log("[AdInit] Rewarded ad preloaded successfully!");
+                    Debug.Log("[AdInit] ✅ Rewarded ad preloaded successfully!");
                 else
-                    Debug.LogWarning("[AdInit] Failed to preload rewarded ad");
+                    Debug.LogWarning("[AdInit] ⚠️ Failed to preload rewarded ad");
             });
         }
-        else
-        {
-            Debug.LogWarning("[AdInit] RewardedAdsManager not found - skipping rewarded ad preload");
-        }
 
-        // Wait a bit between preloads
-        yield return new WaitForSeconds(0.5f);
-
-        // Preload interstitial ads (for batch completions)
-        if (interstitialAds)
+        // Preload interstitial ad
+        if (preloadInterstitialOnInit && InterstitialAdsManager.Instance != null)
         {
-            interstitialAds.Preload(success =>
+            InterstitialAdsManager.Instance.Preload(success =>
             {
                 if (success)
-                    Debug.Log("[AdInit] Interstitial ad preloaded successfully!");
+                    Debug.Log("[AdInit] ✅ Interstitial ad preloaded successfully!");
                 else
-                    Debug.LogWarning("[AdInit] Failed to preload interstitial ad");
+                    Debug.LogWarning("[AdInit] ⚠️ Failed to preload interstitial ad");
             });
-        }
-        else
-        {
-            Debug.LogWarning("[AdInit] InterstitialAdsManager not found - skipping interstitial ad preload");
         }
     }
 
     /// <summary>
-    /// ניתן לקרוא מפאנל/כפתור כדי לטעון rewarded ad מראש בכל רגע.
+    /// ניתן לקרוא מפאנל/כפתור כדי לטעון מראש בכל רגע.
     /// </summary>
     public void PreloadRewardedNow()
     {
@@ -127,24 +140,7 @@ public class AdInit : MonoBehaviour
     }
 
     /// <summary>
-    /// ניתן לקרוא כדי לטעון interstitial ad מראש בכל רגע.
-    /// </summary>
-    public void PreloadInterstitialNow()
-    {
-        if (!interstitialAds)
-        {
-            interstitialAds = FindObjectOfType<InterstitialAdsManager>(true);
-            if (!interstitialAds)
-            {
-                Debug.LogWarning("[AdInit] Cannot preload – InterstitialAdsManager missing.");
-                return;
-            }
-        }
-        interstitialAds.Preload();
-    }
-
-    /// <summary>
-    /// בדיקת מוכנות rewarded ad – שימושי לפני הצגה.
+    /// בדיקת מוכנות – שימושי לפני הצגה.
     /// </summary>
     public bool IsRewardedReady()
     {
@@ -152,10 +148,10 @@ public class AdInit : MonoBehaviour
     }
 
     /// <summary>
-    /// בדיקת מוכנות interstitial ad – שימושי לפני הצגה.
+    /// בדיקה אם AdMob אותחל
     /// </summary>
-    public bool IsInterstitialReady()
+    public bool IsAdMobInitialized()
     {
-        return interstitialAds != null && interstitialAds.IsReady();
+        return isInitialized;
     }
 }

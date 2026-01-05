@@ -390,9 +390,15 @@ public class TutorialSlideManager : MonoBehaviour
         StopHintButtonBlink();
 
         // Special handling for stage 4: Hide the tutorial slide when hint is clicked
-        if (currentStage == 4 && !hintClickedInStage4)
+        if (currentStage == 4)
         {
-            hintClickedInStage4 = true;
+            if (!hintClickedInStage4)
+            {
+                hintClickedInStage4 = true;
+                Debug.Log("[TutorialSlideManager] ✅ Stage 4: First hint click - marking as clicked");
+            }
+            
+            // Always hide slides when hint is clicked in stage 4
             HideAllSlides();
             Debug.Log("[TutorialSlideManager] ✅ Stage 4: Hint button clicked! Player can now place the item.");
         }
@@ -405,8 +411,24 @@ public class TutorialSlideManager : MonoBehaviour
     public bool CanStartDrag()
     {
         // Stage 4: Must click hint button first!
-        if (currentStage == 4 && !hintClickedInStage4)
+        // Check both the flag AND if the stage 4 slide is still showing
+        if (currentStage == 4)
         {
+            // If stage 4 slide is hidden, user clicked hint - allow dragging
+            if (stage4Slide != null && !stage4Slide.activeSelf)
+            {
+                Debug.Log("[TutorialSlideManager] ✅ Stage 4 slide hidden - dragging allowed");
+                return true;
+            }
+            
+            // If hint was clicked, allow dragging
+            if (hintClickedInStage4)
+            {
+                Debug.Log("[TutorialSlideManager] ✅ Hint clicked - dragging allowed");
+                return true;
+            }
+            
+            // Neither condition met - block dragging
             Debug.Log("[TutorialSlideManager] ⚠️ Stage 4: Cannot drag yet - must click hint button first!");
             return false;
         }

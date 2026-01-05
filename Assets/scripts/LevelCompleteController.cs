@@ -44,10 +44,35 @@ public class LevelCompleteController : MonoBehaviour
     [SerializeField] private bool isTutorialLevel = false;
     [Tooltip("Set to true for tutorial levels - will not require LevelManager")]
 
+    [Header("🔊 Audio Settings")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip levelCompleteSound;
+    [Tooltip("Sound effect when level is completed")]
+    [SerializeField] private AudioClip victoryMusic;
+    [Tooltip("Background music for completion screen (optional, looped)")]
+    [SerializeField] private AudioClip buttonClickSound;
+    [Tooltip("Sound when clicking buttons")]
+    [Range(0f, 1f)]
+    [SerializeField] private float sfxVolume = 0.6f;
+    [Range(0f, 1f)]
+    [SerializeField] private float musicVolume = 0.6f;
+
     private bool isCompleted = false;
 
     private void Start()
     {
+        // Initialize audio source
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+                audioSource.loop = false;
+            }
+        }
+
         // Hide completion panel at start
         if (completionPanel != null)
             completionPanel.SetActive(false);
@@ -62,11 +87,42 @@ public class LevelCompleteController : MonoBehaviour
 
     private void OnDestroy()
     {
+        // Stop audio
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
+
         if (nextLevelButton != null)
             nextLevelButton.onClick.RemoveListener(OnNextLevelButtonClicked);
 
         if (menuButton != null)
             menuButton.onClick.RemoveListener(LoadMenu);
+    }
+
+    /// <summary>
+    /// Play a sound effect
+    /// </summary>
+    private void PlaySound(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+        {
+            audioSource.PlayOneShot(clip, sfxVolume);
+        }
+    }
+
+    /// <summary>
+    /// Play victory music (looped)
+    /// </summary>
+    private void PlayVictoryMusic()
+    {
+        if (audioSource != null && victoryMusic != null)
+        {
+            audioSource.clip = victoryMusic;
+            audioSource.volume = musicVolume;
+            audioSource.loop = true;
+            audioSource.Play();
+        }
     }
 
     /// <summary>
@@ -83,6 +139,9 @@ public class LevelCompleteController : MonoBehaviour
 
         isCompleted = true;
         Debug.Log("[LevelCompleteController] 🎉 Level Complete triggered!");
+
+        // Play level complete sound
+        PlaySound(levelCompleteSound);
 
         // Use ending dialog if enabled
         if (useEndingDialog && endingDialog != null)
@@ -236,6 +295,9 @@ public class LevelCompleteController : MonoBehaviour
             completionPanel.SetActive(true);
         }
 
+        // Play victory music
+        PlayVictoryMusic();
+
         if (completionText != null)
         {
             if (currentLevelData != null)
@@ -289,6 +351,7 @@ public class LevelCompleteController : MonoBehaviour
     private void OnNextLevelButtonClicked()
     {
         Debug.Log("[LevelCompleteController] Next button clicked");
+        PlaySound(buttonClickSound);
         ProceedToNextLevel();
     }
 
@@ -320,6 +383,7 @@ public class LevelCompleteController : MonoBehaviour
     private void LoadMenu()
     {
         Debug.Log($"[LevelCompleteController] Loading {levelSelectionSceneName}...");
+        PlaySound(buttonClickSound);
         SceneManager.LoadScene(levelSelectionSceneName);
     }
 
