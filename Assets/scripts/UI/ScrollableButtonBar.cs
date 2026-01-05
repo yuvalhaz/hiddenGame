@@ -165,20 +165,28 @@ public class ScrollableButtonBar : MonoBehaviour
             buttonObj.name = buttonDataList[i].buttonID;
             
             RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
-            buttonRect.sizeDelta = new Vector2(buttonWidth, buttonWidth);
-            
+
             buttonRect.anchorMin = new Vector2(0, 0.5f);
             buttonRect.anchorMax = new Vector2(0, 0.5f);
             buttonRect.pivot = new Vector2(0, 0.5f);
-            
-            float xPos = buttonSpacing + (i * (buttonWidth + buttonSpacing));
-            buttonRect.anchoredPosition = new Vector2(xPos, 0);
-            
+
             Image buttonImage = buttonObj.GetComponent<Image>();
             if (buttonImage != null && buttonDataList[i].buttonSprite != null)
             {
                 buttonImage.sprite = buttonDataList[i].buttonSprite;
+                // ✅ Use native size of the sprite
+                buttonImage.SetNativeSize();
             }
+            else if (buttonImage != null)
+            {
+                // Fallback to buttonWidth if no sprite
+                buttonRect.sizeDelta = new Vector2(buttonWidth, buttonWidth);
+            }
+
+            // Calculate position based on actual button width
+            float actualWidth = buttonRect.sizeDelta.x;
+            float xPos = buttonSpacing + (i * (actualWidth + buttonSpacing));
+            buttonRect.anchoredPosition = new Vector2(xPos, 0);
             
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
             if (draggable == null)
@@ -355,6 +363,11 @@ public class ScrollableButtonBar : MonoBehaviour
                 if (img != null)
                 {
                     img.sprite = sprite;
+                    // ✅ Use native size of the sprite
+                    if (sprite != null)
+                    {
+                        img.SetNativeSize();
+                    }
                 }
             }
         }
