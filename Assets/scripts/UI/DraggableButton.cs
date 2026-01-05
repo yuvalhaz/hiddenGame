@@ -82,6 +82,20 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     void Start()
     {
+        // Auto-find topCanvas if not set in Inspector
+        if (topCanvas == null)
+        {
+            topCanvas = FindTopCanvas();
+            if (topCanvas != null)
+            {
+                Debug.Log($"[DraggableButton] Auto-found Canvas: {topCanvas.name}");
+            }
+            else
+            {
+                Debug.LogWarning("[DraggableButton] No Canvas found! Ghost dragging may not work.");
+            }
+        }
+
         // Initialize helper classes
         visualManager = new DragVisualManager(buttonID, topCanvas, sizeAnimationDuration, debugMode);
 
@@ -397,6 +411,38 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                 }
             )
         );
+    }
+
+    #endregion
+
+    #region Canvas Finding
+
+    /// <summary>
+    /// Find the top-level Canvas for drag visuals
+    /// </summary>
+    private Canvas FindTopCanvas()
+    {
+        // First try to find a ScreenSpaceOverlay canvas
+        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        foreach (var c in canvases)
+        {
+            if (c.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                return c;
+            }
+        }
+
+        // Fallback to any root canvas
+        foreach (var c in canvases)
+        {
+            if (c.isRootCanvas)
+            {
+                return c;
+            }
+        }
+
+        // Last resort - use parent canvas
+        return GetComponentInParent<Canvas>();
     }
 
     #endregion
