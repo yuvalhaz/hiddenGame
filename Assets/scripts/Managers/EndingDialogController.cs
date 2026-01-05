@@ -13,7 +13,6 @@ public class EndingDialogController : MonoBehaviour
 
     [Header("Animation Settings")]
     [SerializeField] private float delayBetweenBubbles = 0.3f;
-    [SerializeField] private float allBubblesDisplayTime = 2.0f;
     [SerializeField] private bool autoAdvance = true;
     [SerializeField] private bool allowClickToSkip = true;
     [Tooltip("Allow clicking on bubbles to skip to ad and next scene")]
@@ -40,7 +39,6 @@ public class EndingDialogController : MonoBehaviour
 
     private int currentDialog = 0;
     private Coroutine autoAdvanceCoroutine = null;
-    private bool skipRequested = false;
 
     void Start()
     {
@@ -293,14 +291,13 @@ public class EndingDialogController : MonoBehaviour
     public void StartEndingDialog()
     {
         Debug.Log("[EndingDialogController] ✅ StartEndingDialog called!");
-        
+
         if (isTutorialMode)
         {
             Debug.Log("[EndingDialogController] 🎓 Starting tutorial ending dialog");
         }
-        
+
         currentDialog = 0;
-        skipRequested = false;
 
         if (bubbleMaster != null)
         {

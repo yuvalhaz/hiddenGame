@@ -15,8 +15,6 @@ public class DropSpot : MonoBehaviour
     [Header("State (נקבע אוטומטית)")]
     public bool IsSettled { get; set; }
 
-    private RectTransform settledItem;
-
     private void Awake()
     {
         if (revealController == null)
@@ -32,7 +30,6 @@ public class DropSpot : MonoBehaviour
 
     public void SettleItem(RectTransform placed)
     {
-        settledItem = null;
         Destroy(placed.gameObject);
         IsSettled = true;
 
@@ -100,12 +97,6 @@ public class DropSpot : MonoBehaviour
 
     public void ResetSpot()
     {
-        if (settledItem != null)
-        {
-            Destroy(settledItem.gameObject);
-            settledItem = null;
-        }
-        
         IsSettled = false;
 
         // 🎯 החדש - אפס את ה-reveal

@@ -31,7 +31,6 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<DraggableButton> buttons = new List<DraggableButton>();
     private List<bool> buttonStates = new List<bool>();
     private List<Vector2> targetPositions = new List<Vector2>();
-    private List<Vector2> originalPositions = new List<Vector2>();
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
 
@@ -182,8 +181,7 @@ public class ScrollableButtonBar : MonoBehaviour
             buttons.Add(draggable);
             buttonStates.Add(true);
             targetPositions.Add(buttonRect.anchoredPosition);
-            originalPositions.Add(buttonRect.anchoredPosition);
-            
+
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
             if (buttonText != null)
             {

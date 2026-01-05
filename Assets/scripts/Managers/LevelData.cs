@@ -30,13 +30,6 @@ public class LevelData : ScriptableObject
     [Tooltip("Background color for level button")]
     public Color buttonColor = Color.white;
 
-    [Header("Gameplay")]
-    [Tooltip("Number of items to find in this level")]
-    public int totalItems = 7;
-
-    [Tooltip("Optional: specific item IDs for this level")]
-    public string[] itemIds;
-
     /// <summary>
     /// Check if this level is unlocked
     /// </summary>

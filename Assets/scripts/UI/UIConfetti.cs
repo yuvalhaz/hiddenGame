@@ -286,4 +286,13 @@ public class UIConfetti : MonoBehaviour
         if (pieces.Count == 0)
             Destroy(gameObject);
     }
+
+    void OnDestroy()
+    {
+        if (cachedWhiteSprite != null)
+        {
+            Destroy(cachedWhiteSprite);
+            cachedWhiteSprite = null;
+        }
+    }
 }

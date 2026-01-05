@@ -11,9 +11,6 @@ public class HintButton : MonoBehaviour
     [SerializeField] private VisualHintSystem visualHintSystem;
     [Tooltip("גרור כאן את VisualHintSystem - נדרש לאנימציית הרמז")]
 
-    [Header("Target UI (CanvasGroup to show)")]
-    [SerializeField] private CanvasGroup targetGroup; // גרור כאן את CanvasGroup של UI ההינט
-
     [Header("Hint Dialog (for Rewarded Ads)")]
     [SerializeField] private HintDialog hintDialog;
     [Tooltip("Dialog that shows rewarded ad option. Leave empty for direct hints.")]
@@ -111,14 +108,5 @@ public class HintButton : MonoBehaviour
         {
             Debug.LogError("❌ [HintButton] VisualHintSystem not assigned!");
         }
-    }
-
-    // ניתן לקרוא מבחוץ כדי להסתיר מיד
-    public void HideImmediate()
-    {
-        if (targetGroup == null) return;
-        targetGroup.alpha = 0f;
-        targetGroup.interactable = false;
-        targetGroup.blocksRaycasts = false;
     }
 }

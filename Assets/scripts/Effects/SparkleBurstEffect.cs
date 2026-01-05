@@ -311,4 +311,13 @@ public class SparkleBurstEffect : MonoBehaviour
         if (sparkles.Count == 0)
             Destroy(gameObject);
     }
+
+    void OnDestroy()
+    {
+        if (cachedSparkleSprite != null)
+        {
+            Destroy(cachedSparkleSprite);
+            cachedSparkleSprite = null;
+        }
+    }
 }

@@ -61,19 +61,6 @@ public class BatchMessageController : MonoBehaviour
         "INCREDIBLE!"
     };
 
-    [Header("Object Completion Messages")]
-    [SerializeField] private bool useObjectCompletionMessages = true;
-    [Tooltip("Use different messages when completing a batch with only 1 object")]
-    [SerializeField] private List<string> objectCompletionMessages = new List<string>()
-    {
-        "WELL DONE!",
-        "OBJECT COMPLETE!",
-        "NICE!",
-        "GOOD JOB!",
-        "EXCELLENT!",
-        "PERFECT!"
-    };
-
     [Header("Random Colors")]
     [SerializeField] private bool useRandomColors = true;
     [SerializeField] private List<Color> messageColors = new List<Color>()
@@ -381,14 +368,6 @@ public class BatchMessageController : MonoBehaviour
             return randomMessages[Random.Range(0, randomMessages.Count)];
 
         return "GREAT!";
-    }
-
-    private string GetObjectCompletionMessage()
-    {
-        if (objectCompletionMessages.Count > 0)
-            return objectCompletionMessages[Random.Range(0, objectCompletionMessages.Count)];
-
-        return "WELL DONE!";
     }
 
     private void PlaySound()

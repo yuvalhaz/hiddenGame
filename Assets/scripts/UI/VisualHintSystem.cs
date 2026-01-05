@@ -425,7 +425,7 @@ public class VisualHintSystem : MonoBehaviour
 
             elapsed += Time.deltaTime;
             float t = elapsed / flyDuration;
-            float easedT = EaseOutQuad(t);
+            float easedT = DragAnimator.EaseOutQuad(t);
 
             // תנועה בקשת
             Vector3 currentPos = Vector3.Lerp(startPos, endPos, easedT);
@@ -556,12 +556,6 @@ public class VisualHintSystem : MonoBehaviour
         ghostCG.interactable = false;
 
         return ghost;
-    }
-
-    // EaseOutQuad - בדיוק כמו ב-DraggableButton!
-    private float EaseOutQuad(float t)
-    {
-        return 1f - (1f - t) * (1f - t);
     }
 
     private void AddGlowEffect(GameObject target)

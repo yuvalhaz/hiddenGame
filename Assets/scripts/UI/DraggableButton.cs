@@ -17,7 +17,6 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     [SerializeField] private Canvas topCanvas;
 
     [Header("Animation")]
-    [SerializeField] private bool animateSizeChange = true;
     [SerializeField] private float sizeAnimationDuration = 0.5f;
 
     [Header("Success Effects")]

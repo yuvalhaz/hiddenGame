@@ -20,9 +20,7 @@ public class LevelSelectionUI : MonoBehaviour
     [Tooltip("Manual: Connect your own buttons. Auto: Generate buttons automatically")]
 
     [Header("🎨 Visual Settings")]
-    [SerializeField] private Image gameLogo;
     [SerializeField] private Text titleText;
-    [SerializeField] private Image backgroundImage;
 
     [Header("Level Configuration")]
     [SerializeField] private int totalLevels = 10;
