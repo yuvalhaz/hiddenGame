@@ -13,5 +13,10 @@
 !Assets/scripts/
 !Assets/scripts/**
 
+# אל תתעלם מ-AndroidManifest
+!Assets/Plugins/
+!Assets/Plugins/Android/
+!Assets/Plugins/Android/AndroidManifest.xml
+
 # התעלם מקבצי meta
 *.meta
