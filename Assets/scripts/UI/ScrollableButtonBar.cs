@@ -20,7 +20,11 @@ public class ScrollableButtonBar : MonoBehaviour
     
     [Header("Button Data")]
     [SerializeField] private List<ButtonData> buttonDataList = new List<ButtonData>();
-    
+
+    [Header("Shuffle Settings")]
+    [SerializeField] private bool shuffleButtons = false;
+    [Tooltip("Shuffle button order randomly at start")]
+
     [Header("Animation Settings")]
     [SerializeField] private float animationSpeed = 10f;
     
@@ -149,6 +153,12 @@ public class ScrollableButtonBar : MonoBehaviour
             });
         }
 
+        // 🎲 Shuffle buttons if enabled
+        if (shuffleButtons)
+        {
+            ShuffleButtonData();
+        }
+
         for (int i = 0; i < numberOfButtons; i++)
         {
             GameObject buttonObj = Instantiate(buttonPrefab, contentPanel);
@@ -190,6 +200,27 @@ public class ScrollableButtonBar : MonoBehaviour
         }
         
         UpdateContentSize();
+    }
+
+    /// <summary>
+    /// Shuffles the button data list randomly using Fisher-Yates algorithm
+    /// </summary>
+    private void ShuffleButtonData()
+    {
+        Debug.Log("[ScrollableButtonBar] 🎲 Shuffling buttons...");
+
+        int n = buttonDataList.Count;
+        for (int i = n - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+
+            // Swap
+            ButtonData temp = buttonDataList[i];
+            buttonDataList[i] = buttonDataList[j];
+            buttonDataList[j] = temp;
+        }
+
+        Debug.Log("[ScrollableButtonBar] ✅ Buttons shuffled!");
     }
 
     public void OnButtonDragStarted(DraggableButton button, int index)
