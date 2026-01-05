@@ -168,14 +168,6 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         if (topCanvas == null)
         {
             topCanvas = FindTopCanvas();
-            if (topCanvas != null)
-            {
-                Debug.Log($"[DraggableButton] Auto-found Canvas: {topCanvas.name}");
-            }
-            else
-            {
-                Debug.LogWarning("[DraggableButton] No Canvas found! Ghost dragging may not work.");
-            }
         }
 
         // Initialize helper classes if not already done
@@ -227,23 +219,9 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         // Create drag visual when threshold is crossed
         if (!wasOut && isDraggingOut)
         {
-            Debug.Log($"[DraggableButton] 🎯 Threshold crossed for {buttonID}! Creating ghost...");
-
             buttonBar?.OnButtonDraggedOut(this, originalIndex);
-
             visualManager.Create(rectTransform, this);
-
-            if (visualManager.IsActive)
-            {
-                Debug.Log($"[DraggableButton] ✅ Ghost created successfully!");
-                Debug.Log($"[DraggableButton] Hiding original button (setting alpha to 0)... Current alpha: {canvasGroup.alpha}");
-                canvasGroup.alpha = 0f;
-                Debug.Log($"[DraggableButton] Alpha after setting: {canvasGroup.alpha}");
-            }
-            else
-            {
-                Debug.LogError($"[DraggableButton] ❌ Ghost creation FAILED for {buttonID}!");
-            }
+            canvasGroup.alpha = 0f;
 
             // Play drag start sound
             PlaySound(dragStartSound);
@@ -440,18 +418,13 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     /// </summary>
     private Canvas FindTopCanvas()
     {
-        Debug.Log($"[DraggableButton] Searching for Canvas...");
-
         // First try to find a ScreenSpaceOverlay canvas
         Canvas[] canvases = FindObjectsOfType<Canvas>();
-        Debug.Log($"[DraggableButton] Found {canvases.Length} canvases in scene");
 
         foreach (var c in canvases)
         {
-            Debug.Log($"[DraggableButton] Canvas: {c.name}, RenderMode: {c.renderMode}, isRootCanvas: {c.isRootCanvas}");
             if (c.renderMode == RenderMode.ScreenSpaceOverlay)
             {
-                Debug.Log($"[DraggableButton] ✅ Selected ScreenSpaceOverlay canvas: {c.name}");
                 return c;
             }
         }
@@ -461,22 +434,12 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         {
             if (c.isRootCanvas)
             {
-                Debug.Log($"[DraggableButton] ✅ Selected root canvas: {c.name}");
                 return c;
             }
         }
 
         // Last resort - use parent canvas
-        Canvas parentCanvas = GetComponentInParent<Canvas>();
-        if (parentCanvas != null)
-        {
-            Debug.Log($"[DraggableButton] ✅ Using parent canvas: {parentCanvas.name}");
-        }
-        else
-        {
-            Debug.LogError($"[DraggableButton] ❌ NO CANVAS FOUND AT ALL!");
-        }
-        return parentCanvas;
+        return GetComponentInParent<Canvas>();
     }
 
     #endregion

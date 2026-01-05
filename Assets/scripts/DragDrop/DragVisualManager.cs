@@ -175,40 +175,15 @@ public class DragVisualManager
 
     private Sprite GetRealPhotoSprite()
     {
-        Debug.Log($"[DragVisualManager] Getting real photo sprite for buttonID: {buttonID}");
-
         DropSpot spot = DropSpotCache.Get(buttonID);
-        if (spot == null)
-        {
-            Debug.LogWarning($"[DragVisualManager] ❌ DropSpot not found in cache for {buttonID}");
-            return null;
-        }
-
-        Debug.Log($"[DragVisualManager] ✅ Found DropSpot: {spot.name}");
+        if (spot == null) return null;
 
         var revealController = spot.GetComponent<ImageRevealController>();
-        if (revealController == null)
-        {
-            Debug.LogWarning($"[DragVisualManager] ❌ ImageRevealController not found on {spot.name}");
-            return null;
-        }
-
-        Debug.Log($"[DragVisualManager] ✅ Found ImageRevealController");
+        if (revealController == null) return null;
 
         var backgroundImage = revealController.GetBackgroundImage();
-        if (backgroundImage == null)
-        {
-            Debug.LogWarning($"[DragVisualManager] ❌ Background image is null");
-            return null;
-        }
+        if (backgroundImage == null) return null;
 
-        if (backgroundImage.sprite == null)
-        {
-            Debug.LogWarning($"[DragVisualManager] ❌ Background image sprite is null");
-            return null;
-        }
-
-        Debug.Log($"[DragVisualManager] ✅ Got real photo sprite: {backgroundImage.sprite.name}");
         return backgroundImage.sprite;
     }
 

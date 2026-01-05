@@ -17,12 +17,10 @@ public static class DropSpotCache
     private static void Initialize()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
-        Debug.Log("[DropSpotCache] Initialized - will auto-clear on scene load");
     }
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        Debug.Log($"[DropSpotCache] Scene loaded: {scene.name} - clearing cache");
         Clear();
     }
 

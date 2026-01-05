@@ -122,8 +122,6 @@ public class ScrollableButtonBar : MonoBehaviour
     // ✅ פונקציה ציבורית שיכולה להיקרא מבחוץ
     public void RefreshBar()
     {
-        Debug.Log("[ScrollableButtonBar] RefreshBar called");
-
         // ✅ עבור על כל הכפתורים ובדוק אם הם קיימים
         for (int i = 0; i < buttons.Count; i++)
         {
@@ -131,14 +129,11 @@ public class ScrollableButtonBar : MonoBehaviour
             {
                 // הכפתור נמחק - סמן אותו כלא פעיל
                 buttonStates[i] = false;
-                Debug.Log($"[ScrollableButtonBar] Button {i} is null - marking inactive");
             }
         }
 
         // ✅ חשב מחדש את כל המיקומים
         RecalculateAllPositions();
-
-        Debug.Log("[ScrollableButtonBar] ✅ Bar refreshed!");
     }
 
 
@@ -215,8 +210,6 @@ public class ScrollableButtonBar : MonoBehaviour
     /// </summary>
     private void ShuffleButtonData()
     {
-        Debug.Log("[ScrollableButtonBar] 🎲 Shuffling buttons...");
-
         int n = buttonDataList.Count;
         for (int i = n - 1; i > 0; i--)
         {
@@ -227,28 +220,20 @@ public class ScrollableButtonBar : MonoBehaviour
             buttonDataList[i] = buttonDataList[j];
             buttonDataList[j] = temp;
         }
-
-        Debug.Log("[ScrollableButtonBar] ✅ Buttons shuffled!");
     }
 
     public void OnButtonDragStarted(DraggableButton button, int index)
     {
-        Debug.Log("OnButtonDragStarted נקרא לכפתור: " + index);
-        
         // ✅ רק עוצר אנימציות - לא משנה מצבים ולא מחשב מחדש!
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null && buttonsAnimating.ContainsKey(rect))
         {
             buttonsAnimating.Remove(rect);
         }
-        
-        // ✅ זהו! לא עושים כלום אחר כאן
     }
 
     public void OnButtonDraggedOut(DraggableButton button, int index)
     {
-        Debug.Log("OnButtonDraggedOut נקרא לכפתור: " + index);
-        
         // ✅ רק כאן משנים מצב וממקמים מחדש - פעם אחת בלבד!
         if (index >= 0 && index < buttonStates.Count)
         {
@@ -276,39 +261,33 @@ public class ScrollableButtonBar : MonoBehaviour
 
     public void OnButtonSuccessfullyPlaced(DraggableButton button, int index)
     {
-        Debug.Log($"OnButtonSuccessfullyPlaced נקרא לכפתור {index}");
-        
         RectTransform rect = button.GetComponent<RectTransform>();
         if (rect != null && buttonsAnimating.ContainsKey(rect))
         {
             buttonsAnimating.Remove(rect);
         }
-        
+
         if (index >= 0 && index < buttonStates.Count)
         {
             buttonStates[index] = false;
         }
-        
+
         RecalculateAllPositions();
     }
 
     void RecalculateAllPositions()
     {
-        Debug.Log("RecalculateAllPositions נקרא");
-        
         int positionIndex = 0;
-        
+
         for (int i = 0; i < buttons.Count; i++)
         {
             if (buttonStates[i])
             {
                 float xPos = buttonSpacing + (positionIndex * (buttonWidth + buttonSpacing));
                 Vector2 newTarget = new Vector2(xPos, 0);
-                
+
                 targetPositions[i] = newTarget;
-                
-                Debug.Log($"כפתור {i}: מיקום יעד חדש = {xPos}");
-                
+
                 // ✅ פשוט עדכן את המיקום היעד - Update יטפל בשאר
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
@@ -318,11 +297,11 @@ public class ScrollableButtonBar : MonoBehaviour
                         buttonsAnimating[rect] = true;
                     }
                 }
-                
+
                 positionIndex++;
             }
         }
-        
+
         UpdateContentSize();
     }
 
@@ -380,7 +359,6 @@ public class ScrollableButtonBar : MonoBehaviour
     {
         if (scrollRect == null || button == null)
         {
-            Debug.LogWarning("[ScrollableButtonBar] ScrollRect or button is null - skipping scroll");
             yield break;
         }
 
@@ -413,7 +391,6 @@ public class ScrollableButtonBar : MonoBehaviour
         }
 
         scrollRect.horizontalNormalizedPosition = targetNormalizedPos;
-        Debug.Log($"[ScrollableButtonBar] Scrolled to button at position {targetNormalizedPos}");
     }
 
     /// <summary>
@@ -424,7 +401,6 @@ public class ScrollableButtonBar : MonoBehaviour
     {
         if (index >= 0 && index < buttonStates.Count)
         {
-            Debug.Log($"[ScrollableButtonBar] Marking button {index} as destroyed");
             buttonStates[index] = false;
             RecalculateAllPositions();
         }
