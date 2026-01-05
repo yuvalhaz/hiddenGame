@@ -236,7 +236,9 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             if (visualManager.IsActive)
             {
                 Debug.Log($"[DraggableButton] ✅ Ghost created successfully!");
+                Debug.Log($"[DraggableButton] Hiding original button (setting alpha to 0)... Current alpha: {canvasGroup.alpha}");
                 canvasGroup.alpha = 0f;
+                Debug.Log($"[DraggableButton] Alpha after setting: {canvasGroup.alpha}");
             }
             else
             {
