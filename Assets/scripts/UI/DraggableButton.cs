@@ -82,25 +82,8 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     void Start()
     {
-        // Auto-find topCanvas if not set in Inspector
-        if (topCanvas == null)
-        {
-            topCanvas = FindTopCanvas();
-            if (topCanvas != null)
-            {
-                Debug.Log($"[DraggableButton] Auto-found Canvas: {topCanvas.name}");
-            }
-            else
-            {
-                Debug.LogWarning("[DraggableButton] No Canvas found! Ghost dragging may not work.");
-            }
-        }
-
-        // Initialize helper classes
-        visualManager = new DragVisualManager(buttonID, topCanvas, sizeAnimationDuration, debugMode);
-
-        Canvas canvas = topCanvas != null ? topCanvas : GetComponentInParent<Canvas>();
-        dropValidator = new DragDropValidator(canvas, dropDistanceThreshold, debugMode);
+        // Don't initialize topCanvas here - wait until we need it (lazy init)
+        // This fixes the issue when coming from Level Selection scene
     }
 
     void OnDestroy()
@@ -178,6 +161,33 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                 #endif
                 return; // BLOCK THE DRAG!
             }
+        }
+
+        // ✅ LAZY INIT: Initialize Canvas and managers on first drag
+        // This ensures scene is fully loaded (fixes issue when coming from Level Selection)
+        if (topCanvas == null)
+        {
+            topCanvas = FindTopCanvas();
+            if (topCanvas != null)
+            {
+                Debug.Log($"[DraggableButton] Auto-found Canvas: {topCanvas.name}");
+            }
+            else
+            {
+                Debug.LogWarning("[DraggableButton] No Canvas found! Ghost dragging may not work.");
+            }
+        }
+
+        // Initialize helper classes if not already done
+        if (visualManager == null)
+        {
+            visualManager = new DragVisualManager(buttonID, topCanvas, sizeAnimationDuration, debugMode);
+        }
+
+        if (dropValidator == null)
+        {
+            Canvas canvas = topCanvas != null ? topCanvas : GetComponentInParent<Canvas>();
+            dropValidator = new DragDropValidator(canvas, dropDistanceThreshold, debugMode);
         }
 
         originalPosition = rectTransform.anchoredPosition;
