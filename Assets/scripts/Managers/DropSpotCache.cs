@@ -1,14 +1,30 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Centralized cache for DropSpots to avoid repeated FindObjectsOfType calls.
 /// Provides fast lookup by spotId.
+/// Auto-clears when scenes change.
 /// </summary>
 public static class DropSpotCache
 {
     private static Dictionary<string, DropSpot> cache;
     private static bool isInitialized = false;
+
+    // Auto-subscribe to scene changes
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Initialize()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        Debug.Log("[DropSpotCache] Initialized - will auto-clear on scene load");
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Debug.Log($"[DropSpotCache] Scene loaded: {scene.name} - clearing cache");
+        Clear();
+    }
 
     /// <summary>
     /// Get a DropSpot by its spotId. Refreshes cache if needed.
