@@ -78,6 +78,17 @@ public class AdInit : MonoBehaviour
             Debug.Log("[AdInit] Production Mode - using REAL Ad Units");
         }
 
+        // ✅ Configure test device (CRITICAL for test ads to work on real phone!)
+        RequestConfiguration requestConfiguration = new RequestConfiguration
+            .Builder()
+            .SetTestDeviceIds(new System.Collections.Generic.List<string> {
+                AdRequest.TestDeviceSimulator, // Include emulator
+                // Add your real device ID from Logcat here if needed
+            })
+            .build();
+        MobileAds.SetRequestConfiguration(requestConfiguration);
+        Debug.Log("[AdInit] ✅ Test device configuration set");
+
         // ✅ Initialize SDK and wait for callback before preloading
         MobileAds.Initialize(initStatus =>
         {
