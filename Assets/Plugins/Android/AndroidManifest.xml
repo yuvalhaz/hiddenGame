@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.DefaultCompany.hiddenGame"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:theme="@style/UnityThemeSelector"
+        android:icon="@mipmap/app_icon"
+        android:label="@string/app_name"
+        android:isGame="true"
+        android:banner="@drawable/app_banner"
+        tools:replace="android:icon">
+
+        <!-- AdMob App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-7861548436347890~8618538845"/>
+
+        <!-- Main Unity Activity -->
+        <activity
+            android:name="com.unity3d.player.UnityPlayerActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTask"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize|fontScale|layoutDirection|density"
+            android:hardwareAccelerated="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
+        </activity>
+
+    </application>
+</manifest>

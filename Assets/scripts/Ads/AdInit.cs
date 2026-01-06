@@ -40,10 +40,6 @@ public class AdInit : MonoBehaviour
 
     void Start()
     {
-        // ⛔ TEMPORARILY DISABLED - Skip ad initialization for initial release
-        Debug.Log("[AdInit] Ad initialization disabled for release without ads");
-        return;
-
         // בדיקות אבחון
         if (!adMobConfig)
         {
