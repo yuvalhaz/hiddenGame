@@ -79,13 +79,12 @@ public class AdInit : MonoBehaviour
         }
 
         // ✅ Configure test device (CRITICAL for test ads to work on real phone!)
-        RequestConfiguration requestConfiguration = new RequestConfiguration
-            .Builder()
+        RequestConfiguration requestConfiguration = new RequestConfiguration.Builder()
             .SetTestDeviceIds(new System.Collections.Generic.List<string> {
                 AdRequest.TestDeviceSimulator, // Include emulator
                 "f8a502bf-0bb6-4ad5-974f-80295916dbaa" // Your real device
             })
-            .build();
+            .Build();
         MobileAds.SetRequestConfiguration(requestConfiguration);
         Debug.Log("[AdInit] ✅ Test device configuration set");
 
