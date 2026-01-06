@@ -35,7 +35,7 @@ public class LevelCompleteController : MonoBehaviour
     [SerializeField] private bool useEndingDialog = true;
 
     [Header("Ad Integration")]
-    [SerializeField] private bool showAdOnCompletion = true;
+    [SerializeField] private bool showAdOnCompletion = false;
     [Tooltip("Show rewarded ad after level completion")]
     [SerializeField] private bool skipAdsInEditor = true;
     [Tooltip("Skip ads when running in Unity Editor")]
