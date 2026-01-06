@@ -11,7 +11,7 @@ public class BatchAdController : MonoBehaviour
     [Tooltip("Enable this for Level0 - completely disables all ads in this level")]
 
     [Header("Ad Settings")]
-    [SerializeField] private bool showAdsOnBatchComplete = false;
+    [SerializeField] private bool showAdsOnBatchComplete = true;
     [Tooltip("Show ads when completing batches")]
 
     [SerializeField] private int adFrequency = 1;
