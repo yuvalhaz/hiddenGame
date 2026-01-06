@@ -83,7 +83,7 @@ public class AdInit : MonoBehaviour
             .Builder()
             .SetTestDeviceIds(new System.Collections.Generic.List<string> {
                 AdRequest.TestDeviceSimulator, // Include emulator
-                // Add your real device ID from Logcat here if needed
+                "f8a502bf-0bb6-4ad5-974f-80295916dbaa" // Your real device
             })
             .build();
         MobileAds.SetRequestConfiguration(requestConfiguration);
