@@ -29,9 +29,15 @@
         android:usesCleartextTraffic="false"
         android:hardwareAccelerated="true"
         android:supportsRtl="true"
-        android:theme="@style/UnityThemeSelector">
+        android:theme="@style/UnityThemeSelector"
+        tools:replace="android:icon">
 
-        <!-- ℹ️ AdMob App ID is configured by Google Mobile Ads Plugin -->
+        <!-- ✅ AdMob App ID - REQUIRED for ads to work -->
+        <!-- tools:replace tells Gradle to use this value if there's a conflict -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-7861548436347890~7127282529"
+            tools:replace="android:value" />
 
         <!-- ✅ Main Unity Activity -->
         <activity
