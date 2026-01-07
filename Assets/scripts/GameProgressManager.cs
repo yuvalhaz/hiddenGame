@@ -18,10 +18,10 @@ public class GameProgressData
     public List<PlacedItemData> placedItems = new List<PlacedItemData>();
     public int currentLevel = 0;
     public int totalItemsPlaced = 0;
-    
+
     // For future features
     public float totalPlayTime = 0f;
-    public System.DateTime lastPlayDate;
+    public string lastPlayDate = ""; // Changed from DateTime to string for JSON serialization (fixes Samsung crash)
 }
 
 public class GameProgressManager : MonoBehaviour
@@ -322,7 +322,7 @@ public class GameProgressManager : MonoBehaviour
     {
         try
         {
-            progressData.lastPlayDate = System.DateTime.Now;
+            progressData.lastPlayDate = System.DateTime.Now.ToString("o"); // ISO 8601 format - fixes Samsung crash
             string jsonData = JsonUtility.ToJson(progressData, true);
 
             string saveKey = GetCurrentSaveKey();
