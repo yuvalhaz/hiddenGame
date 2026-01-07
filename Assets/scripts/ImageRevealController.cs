@@ -18,49 +18,34 @@ public class ImageRevealController : MonoBehaviour
     private bool isRevealed = false;
     private Coroutine revealCoroutine;
 
-    // ✅ תיקון: הסתר הכל מיד ב-Awake!
-    // ✅ אל תסתיר ב-Awake - תן ל-Start להחליט!
-    private void Awake()
-    {
-        // ✅ לא עושים כלום כאן!
-    }
-
 
     private void Start()
     {
         var dropSpot = GetComponent<DropSpot>();
-        string spotId = dropSpot != null ? dropSpot.spotId : "UNKNOWN";
-
-        // ✅ דיבאג מפורט!
-        Debug.Log($"🔍 [{spotId}] ImageRevealController.Start() - BEGIN");
 
         if (dropSpot != null &&
             GameProgressManager.Instance != null &&
             GameProgressManager.Instance.IsItemPlaced(dropSpot.spotId))
         {
-            Debug.Log($"✅ [{spotId}] Item is PLACED - revealing instantly!");
-
+            // Item already placed - reveal instantly
             dropSpot.IsSettled = true;
 
             if (placeholderImage != null)
             {
                 placeholderImage.color = new Color(1, 1, 1, 0);
-                Debug.Log($"✅ [{spotId}] Placeholder hidden");
             }
 
             if (backgroundImage != null)
             {
                 backgroundImage.color = Color.white;
                 backgroundImage.raycastTarget = false;
-                Debug.Log($"✅ [{spotId}] Background revealed!");
             }
 
             isRevealed = true;
         }
         else
         {
-            Debug.Log($"❌ [{spotId}] Item NOT placed - hiding");
-
+            // Item not placed - hide background
             if (backgroundImage != null)
             {
                 backgroundImage.color = new Color(1f, 1f, 1f, 0f);
@@ -71,46 +56,7 @@ public class ImageRevealController : MonoBehaviour
                 placeholderImage.color = Color.white;
             }
         }
-
-        Debug.Log($"🔍 [{spotId}] ImageRevealController.Start() - END");
     }
-
-
-
-    private IEnumerator CheckAfterDelay()
-    {
-        // ✅ המתן frame אחד
-        yield return null;
-
-        var dropSpot = GetComponent<DropSpot>();
-
-        if (dropSpot != null &&
-            GameProgressManager.Instance != null &&
-            GameProgressManager.Instance.IsItemPlaced(dropSpot.spotId))
-        {
-            // ✅ הפריט שמור - הצג הכל מיד!
-            dropSpot.IsSettled = true;
-
-            // ✅ הסתר placeholder
-            if (placeholderImage != null)
-            {
-                placeholderImage.color = new Color(1, 1, 1, 0);
-            }
-
-            // ✅ הצג תמונה
-            if (backgroundImage != null)
-            {
-                backgroundImage.color = Color.white;
-            }
-
-            isRevealed = true;
-
-            Debug.Log($"[ImageRevealController] {dropSpot.spotId} restored instantly!");
-        }
-        // ✅ אם לא שמור - הכל כבר מוסתר מ-Awake, אין צורך לעשות כלום!
-    }
-
-    // ✅ מחק את InitializeHiddenState() - לא צריך יותר!
 
     public void Reveal()
     {
@@ -185,6 +131,7 @@ public class ImageRevealController : MonoBehaviour
             yield return null;
         }
 
+        // Finalize
         if (backgroundImage != null)
             backgroundImage.color = targetBgColor;
 
@@ -205,7 +152,7 @@ public class ImageRevealController : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
         }
-
+        audioSource.volume = 0.5f;
         audioSource.PlayOneShot(clipToPlay);
     }
 
