@@ -13,5 +13,9 @@
 !Assets/scripts/
 !Assets/scripts/**
 
+# אל תתעלם מתיקיית Plugins שבתוך Assets
+!Assets/Plugins/
+!Assets/Plugins/**
+
 # התעלם מקבצי meta
 *.meta
