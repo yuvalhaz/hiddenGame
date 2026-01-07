@@ -31,11 +31,7 @@
         android:supportsRtl="true"
         android:theme="@style/UnityThemeSelector">
 
-        <!-- ✅ CRITICAL: AdMob App ID (test ID for now) -->
-        <!-- Replace this with your real AdMob App ID from Google AdMob console -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+        <!-- ℹ️ AdMob App ID is configured by Google Mobile Ads Plugin -->
 
         <!-- ✅ Main Unity Activity -->
         <activity
