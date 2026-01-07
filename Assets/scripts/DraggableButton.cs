@@ -7,12 +7,16 @@ using System.Collections.Generic;
 public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     [Header("Settings")]
-    [SerializeField] private float dragThreshold = 50f;
-    [SerializeField] private float dropDistanceThreshold = 150f;
+    [SerializeField] private float baseDragThreshold = 50f; // ✅ Base value, will be adjusted by device
+    [SerializeField] private float baseDropDistanceThreshold = 150f; // ✅ Base value, will be adjusted
     [SerializeField] private Canvas topCanvas;
     [SerializeField] private bool debugMode = false;
     [SerializeField] private bool animateSizeChange = true;
     [SerializeField] private float sizeAnimationDuration = 0.5f;
+
+    // ✅ Adjusted thresholds (calculated at runtime)
+    private float dragThreshold;
+    private float dropDistanceThreshold;
     
     [Header("Success Effects")]
     [SerializeField] private bool showConfettiOnSuccess = true;
@@ -43,14 +47,45 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         rectTransform = GetComponent<RectTransform>();
         canvas = GetComponentInParent<Canvas>();
         canvasGroup = GetComponent<CanvasGroup>();
-        
+
         if (canvasGroup == null)
         {
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
-        
+
         // ✅ מצא את ה-ScrollRect ההורה
         parentScrollRect = GetComponentInParent<ScrollRect>();
+
+        // ✅ חשב thresholds מותאמים למכשיר
+        InitializeDeviceSettings();
+    }
+
+    private void InitializeDeviceSettings()
+    {
+        // אם יש DeviceCompatibilityManager - השתמש בו
+        if (DeviceCompatibilityManager.Instance != null)
+        {
+            dragThreshold = DeviceCompatibilityManager.Instance.GetAdjustedDragThreshold(baseDragThreshold);
+            dropDistanceThreshold = DeviceCompatibilityManager.Instance.GetAdjustedDropThreshold(baseDropDistanceThreshold);
+
+            if (debugMode)
+            {
+                Debug.Log($"[DraggableButton] Device-adjusted thresholds:");
+                Debug.Log($"  Drag: {baseDragThreshold} → {dragThreshold}");
+                Debug.Log($"  Drop: {baseDropDistanceThreshold} → {dropDistanceThreshold}");
+            }
+        }
+        else
+        {
+            // אם אין מנהל תאימות - השתמש בערכים הבסיסיים
+            dragThreshold = baseDragThreshold;
+            dropDistanceThreshold = baseDropDistanceThreshold;
+
+            if (debugMode)
+            {
+                Debug.LogWarning($"[DraggableButton] DeviceCompatibilityManager not found, using base thresholds");
+            }
+        }
     }
 
     void OnDestroy()
@@ -305,11 +340,19 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         
         Vector2 targetSize = GetRealPhotoSizeFromDropSpot();
         Vector2 startSize = targetSize * 0.3f;
-        
+
         Debug.Log($"[DraggableButton] 📏 Animating size from {startSize} to {targetSize}");
-        
+
+        // ✅ התאם את מהירות האנימציה למכשיר
+        float adjustedDuration = sizeAnimationDuration;
+        if (DeviceCompatibilityManager.Instance != null)
+        {
+            float speedMultiplier = DeviceCompatibilityManager.Instance.GetAnimationSpeedMultiplier();
+            adjustedDuration = sizeAnimationDuration / speedMultiplier;
+        }
+
         activeDragRT.sizeDelta = startSize;
-        StartCoroutine(AnimateSizeCoroutine(activeDragRT, startSize, targetSize, sizeAnimationDuration));
+        StartCoroutine(AnimateSizeCoroutine(activeDragRT, startSize, targetSize, adjustedDuration));
         
         activeDragRT.SetAsLastSibling();
         
