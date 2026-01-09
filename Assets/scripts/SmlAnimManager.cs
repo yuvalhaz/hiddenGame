@@ -147,22 +147,26 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // SIMPLEST SOLUTION: Just control btn.enabled
-        // Make sure the button doesn't have any graphics that block raycasts
+        // CRITICAL: Disable ALL graphics in the entire hierarchy!
+        // Not just on the button GameObject, but also on children
 
         btn.enabled = enabled;
 
-        // CRITICAL: Also disable ALL graphics on the same GameObject to prevent blocking
-        var graphics = btn.GetComponents<Graphic>();
-        foreach (var graphic in graphics)
+        // Get ALL graphics on this GameObject AND all children
+        var allGraphics = btn.GetComponentsInChildren<Graphic>(true);
+
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> Found {allGraphics.Length} total graphics (including children)");
+
+        foreach (var graphic in allGraphics)
         {
             if (graphic != null)
             {
                 graphic.raycastTarget = enabled;
+                Debug.Log($"[SmlAnimManager]   - Set {graphic.name}.{graphic.GetType().Name}.raycastTarget = {enabled}");
             }
         }
 
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> btn.enabled={enabled}, graphics raycast={enabled}");
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> btn.enabled={enabled}, all graphics raycast={enabled}");
     }
 
     private void Wire(Button btn)
