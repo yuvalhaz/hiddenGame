@@ -123,6 +123,18 @@ public class SmlAnimManager : MonoBehaviour
     {
         // Control the GameObject's active state - this prevents raycast blocking
         btn.gameObject.SetActive(enabled);
+
+        if (enabled)
+        {
+            // Make sure the button's image has raycastTarget enabled so it can be clicked
+            var img = btn.GetComponent<Image>();
+            if (img != null)
+            {
+                img.raycastTarget = true;
+                Debug.Log($"[SmlAnimManager] Enabled raycastTarget on {btn.name}");
+            }
+        }
+
         Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> GameObject.SetActive({enabled})");
     }
 
