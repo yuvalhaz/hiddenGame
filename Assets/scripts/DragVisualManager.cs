@@ -130,7 +130,7 @@ public class DragVisualManager
     /// Calculate offset above finger, adjusted by screen position.
     /// - USE_PHYSICAL_OFFSET = true: Fixed physical distance (1.5cm ≈ 240px)
     /// - USE_PHYSICAL_OFFSET = false: Adaptive (smaller of 8% screen OR 60% object)
-    /// - Automatically reduces offset when finger is near bottom of screen
+    /// - Automatically reduces offset in bottom third of screen
     /// </summary>
     private float GetAdaptiveOffset(float fingerScreenY)
     {
@@ -150,12 +150,14 @@ public class DragVisualManager
         // Calculate finger position (0 = bottom, 1 = top)
         float fingerPosNormalized = fingerScreenY / Screen.height;
 
-        // Smart offset reduction for bottom 40% of screen
-        // This allows placing objects at the bottom without finger going off-screen
-        if (fingerPosNormalized < 0.4f)
+        // Smart offset reduction ONLY in bottom third (0-33%) of screen
+        // Top 2/3 (33%-100%): Full offset (like original 120f behavior)
+        // Bottom 1/3 (0%-33%): Gradual reduction from 100% to ~1% (minimal offset)
+        if (fingerPosNormalized < 0.33f)
         {
-            // Smoothly reduce offset from 100% to 20% as finger moves to bottom
-            float reductionFactor = Mathf.Lerp(0.2f, 1f, fingerPosNormalized / 0.4f);
+            // Smoothly reduce offset from 100% to ~1% as finger moves to bottom
+            // This allows placing objects at the very bottom without finger going off-screen
+            float reductionFactor = Mathf.Lerp(0.01f, 1f, fingerPosNormalized / 0.33f);
             baseOffset *= reductionFactor;
         }
 
