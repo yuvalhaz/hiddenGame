@@ -85,7 +85,18 @@ public class SmlAnimManager : MonoBehaviour
             colors.fadeDuration = 0f;
             btn.colors = colors;
 
-            Debug.Log($"[SmlAnimManager] Initialized button: {btn.name}");
+            // CRITICAL: Add CanvasGroup and disable raycasts by default!
+            var canvasGroup = btn.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = btn.gameObject.AddComponent<CanvasGroup>();
+            }
+            // Start with raycasts DISABLED to allow drops
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.interactable = true;
+            canvasGroup.alpha = 1f;
+
+            Debug.Log($"[SmlAnimManager] Initialized button: {btn.name} with CanvasGroup (blocksRaycasts=false)");
         }
     }
 
