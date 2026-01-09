@@ -56,7 +56,37 @@ public class SmlAnimManager : MonoBehaviour
 
     private void Start()
     {
+        // Initialize all buttons to prevent Unity from making them transparent
+        InitializeButtons();
         RefreshAll();
+    }
+
+    private void InitializeButtons()
+    {
+        for (int i = 0; i < links.Count; i++)
+        {
+            var link = links[i];
+            if (link == null || link.button == null)
+                continue;
+
+            var btn = link.button;
+
+            // CRITICAL: Set transition to None to prevent alpha changes
+            btn.transition = Selectable.Transition.None;
+
+            // Force full opacity colors
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = Color.white;
+            colors.selectedColor = Color.white;
+            colors.disabledColor = Color.white;
+            colors.colorMultiplier = 1f;
+            colors.fadeDuration = 0f;
+            btn.colors = colors;
+
+            Debug.Log($"[SmlAnimManager] Initialized button: {btn.name}");
+        }
     }
 
     private void Update()
@@ -106,7 +136,8 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        btn.interactable = enabled;
+        // DON'T set interactable - it causes alpha changes!
+        // Instead, just control raycastTarget to block/allow clicks
 
         // IMPORTANT: Only disable raycast on the Button's direct Graphic component
         // NOT on children (like backgroundImage/placeholderImage from ImageRevealController)
@@ -130,8 +161,14 @@ public class SmlAnimManager : MonoBehaviour
         if (btn == null) return;
         if (wired.Contains(btn)) return;
 
-        // Disable button transition to avoid visual feedback interfering
+        // CRITICAL: Disable button transition to prevent Unity from changing alpha/colors
         btn.transition = Selectable.Transition.None;
+
+        // Make sure the button doesn't have color multiplier
+        var colors = btn.colors;
+        colors.disabledColor = Color.white; // Keep full opacity when disabled
+        colors.fadeDuration = 0f;
+        btn.colors = colors;
 
         Button local = btn;
         local.onClick.AddListener(() => OnClicked(local));
