@@ -147,26 +147,19 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // CRITICAL: Disable ALL graphics in the entire hierarchy!
-        // Not just on the button GameObject, but also on children
+        // DON'T touch btn.enabled or graphics at all!
+        // Just use the CanvasGroup that we already added in InitializeButtons
 
-        btn.enabled = enabled;
-
-        // Get ALL graphics on this GameObject AND all children
-        var allGraphics = btn.GetComponentsInChildren<Graphic>(true);
-
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> Found {allGraphics.Length} total graphics (including children)");
-
-        foreach (var graphic in allGraphics)
+        var canvasGroup = btn.GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
         {
-            if (graphic != null)
-            {
-                graphic.raycastTarget = enabled;
-                Debug.Log($"[SmlAnimManager]   - Set {graphic.name}.{graphic.GetType().Name}.raycastTarget = {enabled}");
-            }
+            canvasGroup.blocksRaycasts = enabled;
+            Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> CanvasGroup.blocksRaycasts = {enabled}");
         }
-
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> btn.enabled={enabled}, all graphics raycast={enabled}");
+        else
+        {
+            Debug.LogWarning($"[SmlAnimManager] No CanvasGroup on {btn.name}!");
+        }
     }
 
     private void Wire(Button btn)
