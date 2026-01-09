@@ -136,8 +136,9 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // DON'T set interactable - it causes alpha changes!
-        // Instead, just control raycastTarget to block/allow clicks
+        // CRITICAL: Always keep interactable = true to prevent alpha changes!
+        // We control clicks via raycastTarget instead
+        btn.interactable = true;
 
         // IMPORTANT: Only disable raycast on the Button's direct Graphic component
         // NOT on children (like backgroundImage/placeholderImage from ImageRevealController)
@@ -153,7 +154,7 @@ public class SmlAnimManager : MonoBehaviour
             btn.targetGraphic.raycastTarget = enabled;
         }
 
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> enabled={enabled}");
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> raycast={enabled}");
     }
 
     private void Wire(Button btn)
