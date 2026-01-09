@@ -10,8 +10,8 @@ public class SmlAnimManager : MonoBehaviour
     [System.Serializable]
     public class SpotButtonLink
     {
-        public DropSpot spot;     // הספוט שקובע אם "דלוק"
-        public Button button;     // הכפתור של הדמות (על אותו אובייקט יש גם Image)
+        public DropSpot spot;
+        public Button button;
     }
 
     [Header("Links (drag Spot + Button pairs here)")]
@@ -56,7 +56,6 @@ public class SmlAnimManager : MonoBehaviour
 
     private void Start()
     {
-        // חבר קליקים + תן מצב התחלתי לפי הספוטים
         RefreshAll();
     }
 
@@ -66,10 +65,6 @@ public class SmlAnimManager : MonoBehaviour
             RefreshAll();
     }
 
-    /// <summary>
-    /// מרענן את כל הכפתורים לפי IsSettled של הספוט שלהם.
-    /// call מומלץ: פעם אחת בתחילת שלב, ואחרי Settle מוצלח.
-    /// </summary>
     public void RefreshAll()
     {
         for (int i = 0; i < links.Count; i++)
@@ -80,14 +75,11 @@ public class SmlAnimManager : MonoBehaviour
 
             Wire(link.button);
 
-            bool on = link.spot.IsSettled;   // <-- "אם הספוט דלוק"
+            bool on = link.spot.IsSettled;
             ApplyState(link.button, on);
         }
     }
 
-    /// <summary>
-    /// אם אתה רוצה לרענן רק ספוט אחד (יותר נקי ומהיר).
-    /// </summary>
     public void RefreshSpot(DropSpot spot)
     {
         if (spot == null) return;
@@ -108,7 +100,6 @@ public class SmlAnimManager : MonoBehaviour
     {
         btn.interactable = enabled;
 
-        // על אותו אובייקט בדרך כלל יש Image (Graphic)
         var g = btn.GetComponent<Graphic>();
         if (g != null)
             g.raycastTarget = enabled;
@@ -163,12 +154,10 @@ public class SmlAnimManager : MonoBehaviour
         {
             float u = time / duration;
 
-            // Pulse: 1 -> pulseScale -> 1
             float pulseT = (u <= 0.5f) ? (u / 0.5f) : ((1f - u) / 0.5f);
             float s = Mathf.Lerp(1f, pulseScale, pulseT);
             rt.localScale = startScale * s;
 
-            // Wiggle: 0 -> -A -> +A -> -A -> +A -> 0
             float angle = ComputeWiggle(u, wiggleAngle);
             rt.localRotation = startRot * Quaternion.Euler(0f, 0f, angle);
 
@@ -201,21 +190,15 @@ public class SmlAnimManager : MonoBehaviour
         return Mathf.Lerp(k0, k1, t);
     }
 
-    /// <summary>
-    /// Called when level is complete. Plays confetti + sound.
-    /// Call this method manually when level is complete, or subscribe it to LevelManager.OnLevelCompleted event.
-    /// </summary>
     public void OnLevelComplete(int levelIndex)
     {
         Debug.Log($"[SmlAnimManager] Level {levelIndex} complete! Triggering confetti.");
 
-        // Play level complete sound
         if (levelCompleteSound != null && audioSource != null)
         {
             audioSource.PlayOneShot(levelCompleteSound);
         }
 
-        // Trigger confetti
         if (canvas != null)
         {
             RectTransform canvasRect = canvas.GetComponent<RectTransform>();
@@ -226,9 +209,6 @@ public class SmlAnimManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Overload to trigger level complete without index
-    /// </summary>
     public void TriggerLevelComplete()
     {
         OnLevelComplete(0);
