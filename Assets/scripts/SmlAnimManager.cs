@@ -108,6 +108,18 @@ public class SmlAnimManager : MonoBehaviour
     {
         // Enable/disable the button GameObject based on whether spot is settled
         btn.gameObject.SetActive(enabled);
+
+        // Enable raycastTarget ONLY for buttons linked to SmlAnimManager
+        if (enabled)
+        {
+            var img = btn.GetComponent<Image>();
+            if (img != null)
+            {
+                img.raycastTarget = true;
+                Debug.Log($"[SmlAnimManager] Enabled raycastTarget on {btn.name}");
+            }
+        }
+
         Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> SetActive({enabled})");
     }
 
