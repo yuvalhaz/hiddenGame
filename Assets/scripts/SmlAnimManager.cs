@@ -136,21 +136,24 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // CRITICAL: Disable the Button component itself when not settled!
-        // This prevents it from blocking drag & drop entirely
-        btn.enabled = enabled;
+        // CRITICAL SOLUTION: Use CanvasGroup to block ALL raycasts!
+        // This is the only reliable way to prevent the button from blocking drops
 
-        // Also control raycast on graphics for extra safety
-        var graphics = btn.GetComponents<Graphic>();
-        foreach (var graphic in graphics)
+        var canvasGroup = btn.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
         {
-            if (graphic != null)
-            {
-                graphic.raycastTarget = enabled;
-            }
+            canvasGroup = btn.gameObject.AddComponent<CanvasGroup>();
+            Debug.Log($"[SmlAnimManager] Added CanvasGroup to {btn.name}");
         }
 
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> btn.enabled={enabled}, raycastTarget={enabled}");
+        // When not settled: block all raycasts (allows drops to pass through)
+        // When settled: allow raycasts (allows clicks)
+        canvasGroup.blocksRaycasts = enabled;
+
+        // Also disable the button component for extra safety
+        btn.enabled = enabled;
+
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> CanvasGroup.blocksRaycasts={enabled}, btn.enabled={enabled}");
     }
 
     private void Wire(Button btn)
