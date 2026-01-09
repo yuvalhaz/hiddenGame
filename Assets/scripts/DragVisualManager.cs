@@ -13,8 +13,15 @@ public class DragVisualManager
     private readonly float sizeAnimationDuration;
     private readonly bool debugMode;
 
-    // Offset above finger/cursor (in pixels)
-    private const float FINGER_OFFSET = 120f;
+    // Offset configuration - physical distance above finger
+    // Using approximate conversion: 1cm ≈ 160px on typical phones (420 DPI)
+    private const float FINGER_OFFSET_CM = 1.5f;      // Target: 1.5cm above finger
+    private const float CM_TO_PX = 160f;               // Conversion factor (adjust based on device DPI)
+
+    // Alternative: Adaptive offset based on screen/object ratio (more flexible)
+    private const float SCREEN_HEIGHT_RATIO = 0.08f;  // 8% of screen height
+    private const float OBJECT_HEIGHT_RATIO = 0.6f;   // 60% of object height
+    private const bool USE_PHYSICAL_OFFSET = false;    // Toggle: true = fixed cm, false = adaptive %
 
     private RectTransform dragVisualRT;
     private Image dragVisualImage;
@@ -120,6 +127,27 @@ public class DragVisualManager
     }
 
     /// <summary>
+    /// Calculate offset above finger.
+    /// - USE_PHYSICAL_OFFSET = true: Fixed physical distance (1.5cm ≈ 240px)
+    /// - USE_PHYSICAL_OFFSET = false: Adaptive (smaller of 8% screen OR 60% object)
+    /// </summary>
+    private float GetAdaptiveOffset()
+    {
+        if (USE_PHYSICAL_OFFSET)
+        {
+            // Fixed physical distance (good for consistent UX across devices)
+            return FINGER_OFFSET_CM * CM_TO_PX;
+        }
+        else
+        {
+            // Adaptive offset (good for varying object sizes)
+            float screenBased = Screen.height * SCREEN_HEIGHT_RATIO;
+            float objectBased = dragVisualRT.rect.height * OBJECT_HEIGHT_RATIO;
+            return Mathf.Min(screenBased, objectBased);
+        }
+    }
+
+    /// <summary>
     /// Update the position of the drag visual - follows finger with offset above.
     /// PERFORMANCE: This is called 60 times per second during drag - must be fast!
     /// </summary>
@@ -139,8 +167,9 @@ public class DragVisualManager
         );
 
         // Position the image above the finger/cursor
-        // Center it (half height) + additional offset to keep it above the finger
-        Vector3 offset = new Vector3(0, dragVisualRT.rect.height * 0.5f + FINGER_OFFSET, 0);
+        // Center it (half height) + adaptive offset based on screen/object size
+        float adaptiveOffset = GetAdaptiveOffset();
+        Vector3 offset = new Vector3(0, dragVisualRT.rect.height * 0.5f + adaptiveOffset, 0);
         dragVisualRT.position = worldPos + offset;
     }
 
