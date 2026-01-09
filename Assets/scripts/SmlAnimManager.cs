@@ -51,21 +51,23 @@ public class SmlAnimManager : MonoBehaviour
         {
             Debug.LogWarning("[SmlAnimManager] Multiple instances detected! Destroying duplicate.");
             Destroy(gameObject);
+            return;
+        }
+
+        // Disable all button GameObjects IMMEDIATELY in Awake so they don't block drops
+        for (int i = 0; i < links.Count; i++)
+        {
+            var link = links[i];
+            if (link == null || link.button == null) continue;
+
+            link.button.gameObject.SetActive(false);
+            Debug.Log($"[SmlAnimManager] Awake: Disabled button GameObject: {link.button.name}");
         }
     }
 
     private void Start()
     {
-        // Initialize all buttons to prevent Unity from making them transparent
-        InitializeButtons();
         RefreshAll();
-    }
-
-    private void InitializeButtons()
-    {
-        // DON'T do anything here!
-        // Let buttons exist naturally, we'll only add onClick when settled
-        Debug.Log("[SmlAnimManager] InitializeButtons - doing nothing, waiting for settled spots");
     }
 
     private void Update()
@@ -115,9 +117,9 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // DON'T do anything!
-        // We only care about wiring onClick when settled, nothing else
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> enabled={enabled} (doing nothing)");
+        // Enable/disable the button GameObject based on whether spot is settled
+        btn.gameObject.SetActive(enabled);
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> SetActive({enabled})");
     }
 
     private void Wire(Button btn)
