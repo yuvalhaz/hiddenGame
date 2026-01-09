@@ -52,6 +52,13 @@ public class DropSpot : MonoBehaviour
             Debug.LogWarning($"[DropSpot] No RevealController on {spotId}!");
         }
 
+        // ✅ Notify SmlAnimManager to enable click on this spot
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.RefreshSpot(this);
+            Debug.Log($"[DropSpot] Refreshed SmlAnimManager for {spotId}");
+        }
+
         Debug.Log($"DropSpot {spotId} - Ghost destroyed, revealing background");
     }
 
@@ -77,13 +84,19 @@ public class DropSpot : MonoBehaviour
             Destroy(settledItem.gameObject);
             settledItem = null;
         }
-        
+
         IsSettled = false;
 
         // 🎯 החדש - אפס את ה-reveal
         if (revealController != null)
         {
             revealController.ResetReveal();
+        }
+
+        // ✅ Notify SmlAnimManager to disable click on this spot
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.RefreshSpot(this);
         }
     }
 }
