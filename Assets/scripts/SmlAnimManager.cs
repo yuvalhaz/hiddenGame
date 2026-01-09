@@ -106,18 +106,18 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // Control both GameObject active state AND raycastTarget
-        btn.gameObject.SetActive(enabled);
+        // Disable the Button component (not the GameObject!)
+        // This prevents it from blocking drops while keeping the image visible
+        btn.enabled = enabled;
 
-        if (enabled)
+        // Also control raycastTarget
+        var img = btn.GetComponent<Image>();
+        if (img != null)
         {
-            var img = btn.GetComponent<Image>();
-            if (img != null)
-            {
-                img.raycastTarget = true;
-                Debug.Log($"[SmlAnimManager] {btn.name} -> SetActive(true) + raycastTarget=true");
-            }
+            img.raycastTarget = enabled;
         }
+
+        Debug.Log($"[SmlAnimManager] {btn.name} -> btn.enabled={enabled}, raycastTarget={enabled}");
     }
 
     private void Wire(Button btn)
