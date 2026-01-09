@@ -150,14 +150,21 @@ public class DragVisualManager
         // Calculate finger position (0 = bottom, 1 = top)
         float fingerPosNormalized = fingerScreenY / Screen.height;
 
-        // Smart offset reduction ONLY in bottom third (0-33%) of screen
+        // Special case: In bottom 5% of screen, offset is exactly 0
+        // This allows precise placement at the very bottom without finger going off-screen
+        if (fingerPosNormalized < 0.05f)
+        {
+            return 0f;
+        }
+
+        // Smart offset reduction in bottom third (5%-33%) of screen
         // Top 2/3 (33%-100%): Full offset (like original 120f behavior)
-        // Bottom 1/3 (0%-33%): Gradual reduction from 100% to ~1% (minimal offset)
+        // Bottom third (5%-33%): Gradual reduction from 100% to 0%
         if (fingerPosNormalized < 0.33f)
         {
-            // Smoothly reduce offset from 100% to ~1% as finger moves to bottom
-            // This allows placing objects at the very bottom without finger going off-screen
-            float reductionFactor = Mathf.Lerp(0.01f, 1f, fingerPosNormalized / 0.33f);
+            // Smoothly reduce offset from 100% at 33% down to 0% at 5%
+            // Maps 5%-33% range to 0-1 reduction factor
+            float reductionFactor = (fingerPosNormalized - 0.05f) / (0.33f - 0.05f);
             baseOffset *= reductionFactor;
         }
 
