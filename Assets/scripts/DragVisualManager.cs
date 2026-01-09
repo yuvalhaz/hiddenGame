@@ -150,22 +150,26 @@ public class DragVisualManager
         // Calculate finger position (0 = bottom, 1 = top)
         float fingerPosNormalized = fingerScreenY / Screen.height;
 
-        // Special case: In bottom 5% of screen, offset is exactly 0
-        // This allows precise placement at the very bottom without finger going off-screen
-        if (fingerPosNormalized < 0.05f)
+        // Special case: In bottom 10% of screen, finger is at 20% from object bottom
+        // This means finger is right on the lower part of the object for precise placement
+        if (fingerPosNormalized < 0.1f)
         {
-            return 0f;
+            // Offset = -0.2 * object height (finger at 20% from bottom)
+            // Combined with the base 0.5*height centering, finger ends up at 0.3*height from center
+            // Which is 20% from the bottom of the object
+            return -0.2f * dragVisualRT.rect.height;
         }
 
-        // Smart offset reduction in bottom third (5%-33%) of screen
+        // Smart offset reduction in bottom third (10%-33%) of screen
         // Top 2/3 (33%-100%): Full offset (like original 120f behavior)
-        // Bottom third (5%-33%): Gradual reduction from 100% to 0%
+        // Bottom third (10%-33%): Gradual reduction from 100% to the 10% threshold
         if (fingerPosNormalized < 0.33f)
         {
-            // Smoothly reduce offset from 100% at 33% down to 0% at 5%
-            // Maps 5%-33% range to 0-1 reduction factor
-            float reductionFactor = (fingerPosNormalized - 0.05f) / (0.33f - 0.05f);
-            baseOffset *= reductionFactor;
+            // Smoothly reduce offset from 100% at 33% down to the 10% special case
+            // Maps 10%-33% range to 0-1 where 0 = special case, 1 = full offset
+            float bottomThresholdOffset = -0.2f * dragVisualRT.rect.height;
+            float t = (fingerPosNormalized - 0.1f) / (0.33f - 0.1f);
+            return Mathf.Lerp(bottomThresholdOffset, baseOffset, t);
         }
 
         return baseOffset;
