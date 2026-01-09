@@ -63,41 +63,9 @@ public class SmlAnimManager : MonoBehaviour
 
     private void InitializeButtons()
     {
-        for (int i = 0; i < links.Count; i++)
-        {
-            var link = links[i];
-            if (link == null || link.button == null)
-                continue;
-
-            var btn = link.button;
-
-            // CRITICAL: Set transition to None to prevent alpha changes
-            btn.transition = Selectable.Transition.None;
-
-            // Force full opacity colors
-            var colors = btn.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = Color.white;
-            colors.pressedColor = Color.white;
-            colors.selectedColor = Color.white;
-            colors.disabledColor = Color.white;
-            colors.colorMultiplier = 1f;
-            colors.fadeDuration = 0f;
-            btn.colors = colors;
-
-            // CRITICAL: Add CanvasGroup and disable raycasts by default!
-            var canvasGroup = btn.GetComponent<CanvasGroup>();
-            if (canvasGroup == null)
-            {
-                canvasGroup = btn.gameObject.AddComponent<CanvasGroup>();
-            }
-            // Start with raycasts DISABLED to allow drops
-            canvasGroup.blocksRaycasts = false;
-            canvasGroup.interactable = true;
-            canvasGroup.alpha = 1f;
-
-            Debug.Log($"[SmlAnimManager] Initialized button: {btn.name} with CanvasGroup (blocksRaycasts=false)");
-        }
+        // DON'T do anything here!
+        // Let buttons exist naturally, we'll only add onClick when settled
+        Debug.Log("[SmlAnimManager] InitializeButtons - doing nothing, waiting for settled spots");
     }
 
     private void Update()
@@ -147,19 +115,9 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // DON'T touch btn.enabled or graphics at all!
-        // Just use the CanvasGroup that we already added in InitializeButtons
-
-        var canvasGroup = btn.GetComponent<CanvasGroup>();
-        if (canvasGroup != null)
-        {
-            canvasGroup.blocksRaycasts = enabled;
-            Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> CanvasGroup.blocksRaycasts = {enabled}");
-        }
-        else
-        {
-            Debug.LogWarning($"[SmlAnimManager] No CanvasGroup on {btn.name}!");
-        }
+        // DON'T do anything!
+        // We only care about wiring onClick when settled, nothing else
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> enabled={enabled} (doing nothing)");
     }
 
     private void Wire(Button btn)
@@ -167,21 +125,13 @@ public class SmlAnimManager : MonoBehaviour
         if (btn == null) return;
         if (wired.Contains(btn)) return;
 
-        // CRITICAL: Disable button transition to prevent Unity from changing alpha/colors
-        btn.transition = Selectable.Transition.None;
-
-        // Make sure the button doesn't have color multiplier
-        var colors = btn.colors;
-        colors.disabledColor = Color.white; // Keep full opacity when disabled
-        colors.fadeDuration = 0f;
-        btn.colors = colors;
-
+        // Simply add the onClick listener, nothing else!
         Button local = btn;
         local.onClick.AddListener(() => OnClicked(local));
 
         wired.Add(btn);
 
-        Debug.Log($"[SmlAnimManager] Wired button: {btn.name}");
+        Debug.Log($"[SmlAnimManager] Wired button: {btn.name} - onClick listener added");
     }
 
     private void OnClicked(Button btn)
