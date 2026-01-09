@@ -38,7 +38,6 @@ public class ImageRevealController : MonoBehaviour
             if (backgroundImage != null)
             {
                 backgroundImage.color = Color.white;
-                backgroundImage.raycastTarget = false; // Don't block button clicks
             }
 
             isRevealed = true;
@@ -79,12 +78,6 @@ public class ImageRevealController : MonoBehaviour
         isRevealed = true;
         PlayRevealSound();
         yield return StartCoroutine(AnimateReveal());
-
-        // Disable raycast on backgroundImage so it doesn't block button clicks
-        if (backgroundImage != null)
-        {
-            backgroundImage.raycastTarget = false;
-        }
 
         revealCoroutine = null;
     }
@@ -187,7 +180,6 @@ public class ImageRevealController : MonoBehaviour
         if (backgroundImage != null)
         {
             backgroundImage.color = Color.white;
-            backgroundImage.raycastTarget = false; // Don't block button clicks
         }
 
         if (placeholderImage != null)

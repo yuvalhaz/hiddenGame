@@ -36,13 +36,6 @@ public class DropSpot : MonoBehaviour
         if (revealController != null)
         {
             revealController.Reveal();
-
-            // Make sure backgroundImage doesn't block button clicks
-            var backgroundImage = revealController.GetBackgroundImage();
-            if (backgroundImage != null)
-            {
-                backgroundImage.raycastTarget = false;
-            }
         }
         else
         {
