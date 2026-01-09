@@ -51,17 +51,6 @@ public class SmlAnimManager : MonoBehaviour
         {
             Debug.LogWarning("[SmlAnimManager] Multiple instances detected! Destroying duplicate.");
             Destroy(gameObject);
-            return;
-        }
-
-        // Disable all button GameObjects IMMEDIATELY in Awake so they don't block drops
-        for (int i = 0; i < links.Count; i++)
-        {
-            var link = links[i];
-            if (link == null || link.button == null) continue;
-
-            link.button.gameObject.SetActive(false);
-            Debug.Log($"[SmlAnimManager] Awake: Disabled button GameObject: {link.button.name}");
         }
     }
 
