@@ -106,14 +106,17 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // DON'T disable GameObject - it will hide the image!
-        // Instead, just control raycastTarget
+        // Control both GameObject active state AND raycastTarget
+        btn.gameObject.SetActive(enabled);
 
-        var img = btn.GetComponent<Image>();
-        if (img != null)
+        if (enabled)
         {
-            img.raycastTarget = enabled;
-            Debug.Log($"[SmlAnimManager] {btn.name} -> raycastTarget={enabled}");
+            var img = btn.GetComponent<Image>();
+            if (img != null)
+            {
+                img.raycastTarget = true;
+                Debug.Log($"[SmlAnimManager] {btn.name} -> SetActive(true) + raycastTarget=true");
+            }
         }
     }
 
