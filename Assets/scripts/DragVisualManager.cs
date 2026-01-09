@@ -127,29 +127,45 @@ public class DragVisualManager
     }
 
     /// <summary>
-    /// Calculate offset above finger.
+    /// Calculate offset above finger, adjusted by screen position.
     /// - USE_PHYSICAL_OFFSET = true: Fixed physical distance (1.5cm ≈ 240px)
     /// - USE_PHYSICAL_OFFSET = false: Adaptive (smaller of 8% screen OR 60% object)
+    /// - Automatically reduces offset when finger is near bottom of screen
     /// </summary>
-    private float GetAdaptiveOffset()
+    private float GetAdaptiveOffset(float fingerScreenY)
     {
+        // Calculate base offset
+        float baseOffset;
         if (USE_PHYSICAL_OFFSET)
         {
-            // Fixed physical distance (good for consistent UX across devices)
-            return FINGER_OFFSET_CM * CM_TO_PX;
+            baseOffset = FINGER_OFFSET_CM * CM_TO_PX;
         }
         else
         {
-            // Adaptive offset (good for varying object sizes)
             float screenBased = Screen.height * SCREEN_HEIGHT_RATIO;
             float objectBased = dragVisualRT.rect.height * OBJECT_HEIGHT_RATIO;
-            return Mathf.Min(screenBased, objectBased);
+            baseOffset = Mathf.Min(screenBased, objectBased);
         }
+
+        // Calculate finger position (0 = bottom, 1 = top)
+        float fingerPosNormalized = fingerScreenY / Screen.height;
+
+        // Smart offset reduction for bottom 40% of screen
+        // This allows placing objects at the bottom without finger going off-screen
+        if (fingerPosNormalized < 0.4f)
+        {
+            // Smoothly reduce offset from 100% to 20% as finger moves to bottom
+            float reductionFactor = Mathf.Lerp(0.2f, 1f, fingerPosNormalized / 0.4f);
+            baseOffset *= reductionFactor;
+        }
+
+        return baseOffset;
     }
 
     /// <summary>
     /// Update the position of the drag visual - follows finger with offset above.
     /// PERFORMANCE: This is called 60 times per second during drag - must be fast!
+    /// Smart offset: Automatically reduces when finger is near bottom of screen.
     /// </summary>
     public void UpdatePosition(PointerEventData eventData)
     {
@@ -167,8 +183,8 @@ public class DragVisualManager
         );
 
         // Position the image above the finger/cursor
-        // Center it (half height) + adaptive offset based on screen/object size
-        float adaptiveOffset = GetAdaptiveOffset();
+        // Center it (half height) + adaptive offset that reduces near screen bottom
+        float adaptiveOffset = GetAdaptiveOffset(eventData.position.y);
         Vector3 offset = new Vector3(0, dragVisualRT.rect.height * 0.5f + adaptiveOffset, 0);
         dragVisualRT.position = worldPos + offset;
     }
