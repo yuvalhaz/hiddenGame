@@ -89,9 +89,6 @@ public class DropSpot : MonoBehaviour
         }
     }
 
-
-
-
     public Vector3 GetWorldHintPosition()
     {
         var rt = transform as RectTransform;
