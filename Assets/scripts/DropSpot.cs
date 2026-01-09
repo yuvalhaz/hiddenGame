@@ -5,6 +5,8 @@ public class DropSpot : MonoBehaviour
 {
     [Header("Identity")]
     [Tooltip("חייב להיות זהה ל-itemId של הכפתור התואם בבר")]
+
+    public string discription;
     public string spotId;
 
     [Header("Reveal System")]
@@ -12,8 +14,6 @@ public class DropSpot : MonoBehaviour
 
     [Header("State (נקבע אוטומטית)")]
     public bool IsSettled { get; set; }
-
-    private RectTransform settledItem;
 
     private void Awake()
     {
@@ -30,7 +30,6 @@ public class DropSpot : MonoBehaviour
 
     public void SettleItem(RectTransform placed)
     {
-        settledItem = null;
         Destroy(placed.gameObject);
         IsSettled = true;
 
@@ -52,11 +51,37 @@ public class DropSpot : MonoBehaviour
             Debug.LogWarning($"[DropSpot] No RevealController on {spotId}!");
         }
 
+        // ✨ הפעל אפקט נצנצים עדין!
+        TriggerSparkles();
+
+        // 🎓 עדכן את מנהל השקופיות שפריט נכון הונח
+        if (TutorialSlideManager.Instance != null)
+        {
+            TutorialSlideManager.Instance.OnCorrectDrop(spotId);
+            Debug.Log($"[DropSpot] Tutorial notified: {spotId} placed correctly");
+        }
+
         Debug.Log($"DropSpot {spotId} - Ghost destroyed, revealing background");
     }
 
+    private void TriggerSparkles()
+    {
+        // מצא את ה-Canvas
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+        {
+            Debug.LogWarning($"[DropSpot] No Canvas found for sparkles on {spotId}");
+            return;
+        }
 
-
+        RectTransform rectTransform = transform as RectTransform;
+        if (rectTransform != null)
+        {
+            // הפעל burst של נצנצים קטנים מהמיקום של ה-DropSpot
+            SparkleBurstEffect.Burst(canvas, rectTransform, count: 20, duration: 0.8f);
+            Debug.Log($"[DropSpot] Sparkles triggered on {spotId}");
+        }
+    }
 
     public Vector3 GetWorldHintPosition()
     {
@@ -72,12 +97,6 @@ public class DropSpot : MonoBehaviour
 
     public void ResetSpot()
     {
-        if (settledItem != null)
-        {
-            Destroy(settledItem.gameObject);
-            settledItem = null;
-        }
-        
         IsSettled = false;
 
         // 🎯 החדש - אפס את ה-reveal

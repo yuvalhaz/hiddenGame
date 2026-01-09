@@ -7,9 +7,9 @@
 # אל תתעלם מתיקיית Assets
 !Assets/
 
-# אל תתעלם מתיקיית Scripts שבתוך Assets
-!Assets/Scripts/
-!Assets/Scripts/**
+# אל תתעלם מתיקיית scripts שבתוך Assets
+!Assets/scripts/
+!Assets/scripts/**
 
 # אל תתעלם מקבצי Markdown בשורש
 !*.md

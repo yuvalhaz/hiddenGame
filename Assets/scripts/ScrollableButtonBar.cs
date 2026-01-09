@@ -20,7 +20,11 @@ public class ScrollableButtonBar : MonoBehaviour
     
     [Header("Button Data")]
     [SerializeField] private List<ButtonData> buttonDataList = new List<ButtonData>();
-    
+
+    [Header("Shuffle Settings")]
+    [SerializeField] private bool shuffleButtons = false;
+    [Tooltip("Shuffle button order randomly at start")]
+
     [Header("Animation Settings")]
     [SerializeField] private float animationSpeed = 10f;
     
@@ -31,7 +35,6 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<DraggableButton> buttons = new List<DraggableButton>();
     private List<bool> buttonStates = new List<bool>();
     private List<Vector2> targetPositions = new List<Vector2>();
-    private List<Vector2> originalPositions = new List<Vector2>();
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
 
@@ -150,26 +153,40 @@ public class ScrollableButtonBar : MonoBehaviour
             });
         }
 
+        // 🎲 Shuffle buttons if enabled
+        if (shuffleButtons)
+        {
+            ShuffleButtonData();
+        }
+
         for (int i = 0; i < numberOfButtons; i++)
         {
             GameObject buttonObj = Instantiate(buttonPrefab, contentPanel);
             buttonObj.name = buttonDataList[i].buttonID;
             
             RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
-            buttonRect.sizeDelta = new Vector2(buttonWidth, buttonWidth);
-            
+
             buttonRect.anchorMin = new Vector2(0, 0.5f);
             buttonRect.anchorMax = new Vector2(0, 0.5f);
             buttonRect.pivot = new Vector2(0, 0.5f);
-            
-            float xPos = buttonSpacing + (i * (buttonWidth + buttonSpacing));
-            buttonRect.anchoredPosition = new Vector2(xPos, 0);
-            
+
             Image buttonImage = buttonObj.GetComponent<Image>();
             if (buttonImage != null && buttonDataList[i].buttonSprite != null)
             {
                 buttonImage.sprite = buttonDataList[i].buttonSprite;
+                // ✅ Use native size of the sprite
+                buttonImage.SetNativeSize();
             }
+            else if (buttonImage != null)
+            {
+                // Fallback to buttonWidth if no sprite
+                buttonRect.sizeDelta = new Vector2(buttonWidth, buttonWidth);
+            }
+
+            // Calculate position based on actual button width
+            float actualWidth = buttonRect.sizeDelta.x;
+            float xPos = buttonSpacing + (i * (actualWidth + buttonSpacing));
+            buttonRect.anchoredPosition = new Vector2(xPos, 0);
             
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
             if (draggable == null)
@@ -182,8 +199,7 @@ public class ScrollableButtonBar : MonoBehaviour
             buttons.Add(draggable);
             buttonStates.Add(true);
             targetPositions.Add(buttonRect.anchoredPosition);
-            originalPositions.Add(buttonRect.anchoredPosition);
-            
+
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
             if (buttonText != null)
             {
@@ -192,6 +208,27 @@ public class ScrollableButtonBar : MonoBehaviour
         }
         
         UpdateContentSize();
+    }
+
+    /// <summary>
+    /// Shuffles the button data list randomly using Fisher-Yates algorithm
+    /// </summary>
+    private void ShuffleButtonData()
+    {
+        Debug.Log("[ScrollableButtonBar] 🎲 Shuffling buttons...");
+
+        int n = buttonDataList.Count;
+        for (int i = n - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+
+            // Swap
+            ButtonData temp = buttonDataList[i];
+            buttonDataList[i] = buttonDataList[j];
+            buttonDataList[j] = temp;
+        }
+
+        Debug.Log("[ScrollableButtonBar] ✅ Buttons shuffled!");
     }
 
     public void OnButtonDragStarted(DraggableButton button, int index)
@@ -318,7 +355,7 @@ public class ScrollableButtonBar : MonoBehaviour
         if (index >= 0 && index < buttonDataList.Count && index < buttons.Count)
         {
             buttonDataList[index].buttonSprite = sprite;
-            
+
             GameObject buttonObj = buttons[index].gameObject;
             if (buttonObj != null)
             {
@@ -326,8 +363,70 @@ public class ScrollableButtonBar : MonoBehaviour
                 if (img != null)
                 {
                     img.sprite = sprite;
+                    // ✅ Use native size of the sprite
+                    if (sprite != null)
+                    {
+                        img.SetNativeSize();
+                    }
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Scrolls the button bar to bring the specified button into view
+    /// </summary>
+    public IEnumerator ScrollToButtonCoroutine(DraggableButton button, float duration)
+    {
+        if (scrollRect == null || button == null)
+        {
+            Debug.LogWarning("[ScrollableButtonBar] ScrollRect or button is null - skipping scroll");
+            yield break;
+        }
+
+        RectTransform buttonRT = button.GetComponent<RectTransform>();
+        if (buttonRT == null) yield break;
+
+        // Calculate the normalized horizontal position to scroll to
+        Canvas.ForceUpdateCanvases();
+
+        float buttonPosX = buttonRT.anchoredPosition.x;
+        float viewportWidth = scrollRect.viewport.rect.width;
+        float contentWidth = contentPanel.rect.width;
+
+        // Calculate target normalized position (0 = left, 1 = right)
+        float targetNormalizedPos = Mathf.Clamp01(buttonPosX / (contentWidth - viewportWidth));
+
+        float startPos = scrollRect.horizontalNormalizedPosition;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            // Smooth easing
+            float easedT = 1f - (1f - t) * (1f - t);
+
+            scrollRect.horizontalNormalizedPosition = Mathf.Lerp(startPos, targetNormalizedPos, easedT);
+            yield return null;
+        }
+
+        scrollRect.horizontalNormalizedPosition = targetNormalizedPos;
+        Debug.Log($"[ScrollableButtonBar] Scrolled to button at position {targetNormalizedPos}");
+    }
+
+    /// <summary>
+    /// Marks a button as destroyed and updates the bar layout
+    /// Called by GameProgressManager when restoring saved progress
+    /// </summary>
+    public void MarkButtonAsDestroyed(int index)
+    {
+        if (index >= 0 && index < buttonStates.Count)
+        {
+            Debug.Log($"[ScrollableButtonBar] Marking button {index} as destroyed");
+            buttonStates[index] = false;
+            RecalculateAllPositions();
         }
     }
 }
