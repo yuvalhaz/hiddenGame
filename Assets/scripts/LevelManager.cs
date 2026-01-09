@@ -166,6 +166,12 @@ public class LevelManager : MonoBehaviour
         // Fire event
         OnLevelCompleted?.Invoke(currentLevelIndex);
 
+        // Trigger SmlAnimManager confetti + sound
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.OnLevelComplete(currentLevelIndex);
+        }
+
         // Show ad if ads manager is available
         if (adsManager != null && adsManager.IsReady())
         {

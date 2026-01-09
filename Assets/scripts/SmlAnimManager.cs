@@ -56,12 +56,6 @@ public class SmlAnimManager : MonoBehaviour
 
     private void Start()
     {
-        // Subscribe to level complete event
-        if (LevelManager.Instance != null)
-        {
-            LevelManager.Instance.OnLevelCompleted += OnLevelComplete;
-        }
-
         // חבר קליקים + תן מצב התחלתי לפי הספוטים
         RefreshAll();
     }
@@ -70,14 +64,6 @@ public class SmlAnimManager : MonoBehaviour
     {
         if (autoRefreshEachFrame)
             RefreshAll();
-    }
-
-    private void OnDestroy()
-    {
-        if (LevelManager.Instance != null)
-        {
-            LevelManager.Instance.OnLevelCompleted -= OnLevelComplete;
-        }
     }
 
     /// <summary>
@@ -217,8 +203,9 @@ public class SmlAnimManager : MonoBehaviour
 
     /// <summary>
     /// Called when level is complete. Plays confetti + sound.
+    /// Call this method manually when level is complete, or subscribe it to LevelManager.OnLevelCompleted event.
     /// </summary>
-    private void OnLevelComplete(int levelIndex)
+    public void OnLevelComplete(int levelIndex)
     {
         Debug.Log($"[SmlAnimManager] Level {levelIndex} complete! Triggering confetti.");
 
@@ -237,5 +224,13 @@ public class SmlAnimManager : MonoBehaviour
                 UIConfetti.Burst(canvas, canvasRect, confettiCount, confettiDuration);
             }
         }
+    }
+
+    /// <summary>
+    /// Overload to trigger level complete without index
+    /// </summary>
+    public void TriggerLevelComplete()
+    {
+        OnLevelComplete(0);
     }
 }
