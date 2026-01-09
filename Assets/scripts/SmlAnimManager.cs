@@ -73,9 +73,12 @@ public class SmlAnimManager : MonoBehaviour
             if (link == null || link.spot == null || link.button == null)
                 continue;
 
-            Wire(link.button);
-
             bool on = link.spot.IsSettled;
+
+            // Only wire the button if the spot is settled
+            if (on)
+                Wire(link.button);
+
             ApplyState(link.button, on);
         }
     }
@@ -90,8 +93,13 @@ public class SmlAnimManager : MonoBehaviour
             if (link == null || link.spot != spot || link.button == null)
                 continue;
 
-            Wire(link.button);
-            ApplyState(link.button, spot.IsSettled);
+            bool on = spot.IsSettled;
+
+            // Only wire the button if the spot is settled
+            if (on)
+                Wire(link.button);
+
+            ApplyState(link.button, on);
             return;
         }
     }
@@ -100,9 +108,21 @@ public class SmlAnimManager : MonoBehaviour
     {
         btn.interactable = enabled;
 
-        var g = btn.GetComponent<Graphic>();
-        if (g != null)
-            g.raycastTarget = enabled;
+        // IMPORTANT: Only disable raycast on the Button's direct Graphic component
+        // NOT on children (like backgroundImage/placeholderImage from ImageRevealController)
+        var btnGraphic = btn.GetComponent<Graphic>();
+        if (btnGraphic != null)
+        {
+            btnGraphic.raycastTarget = enabled;
+        }
+
+        // Also set the button's image target graphic if it exists
+        if (btn.targetGraphic != null)
+        {
+            btn.targetGraphic.raycastTarget = enabled;
+        }
+
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> enabled={enabled}");
     }
 
     private void Wire(Button btn)
@@ -110,12 +130,15 @@ public class SmlAnimManager : MonoBehaviour
         if (btn == null) return;
         if (wired.Contains(btn)) return;
 
+        // Disable button transition to avoid visual feedback interfering
         btn.transition = Selectable.Transition.None;
 
         Button local = btn;
         local.onClick.AddListener(() => OnClicked(local));
 
         wired.Add(btn);
+
+        Debug.Log($"[SmlAnimManager] Wired button: {btn.name}");
     }
 
     private void OnClicked(Button btn)
