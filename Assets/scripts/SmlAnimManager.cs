@@ -139,20 +139,19 @@ public class SmlAnimManager : MonoBehaviour
         // Control via raycastTarget only - don't touch btn.enabled or btn.interactable
         // This allows clicks when enabled, blocks when disabled, without affecting graphics
 
-        // Get the Button's graphic component
-        var btnGraphic = btn.GetComponent<Graphic>();
-        if (btnGraphic != null)
+        // IMPORTANT: Disable raycast on ALL Graphics components on the same GameObject
+        // to prevent any graphic from blocking the drag & drop
+        var graphics = btn.GetComponents<Graphic>();
+        foreach (var graphic in graphics)
         {
-            btnGraphic.raycastTarget = enabled;
+            if (graphic != null)
+            {
+                graphic.raycastTarget = enabled;
+                Debug.Log($"[SmlAnimManager] Set raycastTarget={enabled} on {graphic.GetType().Name} in {btn.name}");
+            }
         }
 
-        // Also set the target graphic if it exists
-        if (btn.targetGraphic != null)
-        {
-            btn.targetGraphic.raycastTarget = enabled;
-        }
-
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> raycastTarget={enabled}");
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> raycastTarget={enabled} (total graphics: {graphics.Length})");
     }
 
     private void Wire(Button btn)
