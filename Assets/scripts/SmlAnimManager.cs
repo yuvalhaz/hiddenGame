@@ -63,9 +63,15 @@ public class SmlAnimManager : MonoBehaviour
 
     private void InitializeButtons()
     {
-        // DON'T do anything here!
-        // Let buttons exist naturally, we'll only add onClick when settled
-        Debug.Log("[SmlAnimManager] InitializeButtons - doing nothing, waiting for settled spots");
+        // Disable all button GameObjects initially - they'll be enabled when spots are settled
+        for (int i = 0; i < links.Count; i++)
+        {
+            var link = links[i];
+            if (link == null || link.button == null) continue;
+
+            link.button.gameObject.SetActive(false);
+            Debug.Log($"[SmlAnimManager] Disabled button GameObject: {link.button.name}");
+        }
     }
 
     private void Update()
@@ -115,9 +121,9 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // DON'T do anything!
-        // We only care about wiring onClick when settled, nothing else
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> enabled={enabled} (doing nothing)");
+        // Control the GameObject's active state - this prevents raycast blocking
+        btn.gameObject.SetActive(enabled);
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> GameObject.SetActive({enabled})");
     }
 
     private void Wire(Button btn)
