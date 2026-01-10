@@ -125,6 +125,14 @@ public class SmlAnimManager : MonoBehaviour
         }
 
         // When enabled (spot is settled), ensure button is clickable
+        // Enable CanvasGroup blocksRaycasts
+        CanvasGroup cg = btn.GetComponent<CanvasGroup>();
+        if (cg != null)
+        {
+            cg.blocksRaycasts = true;
+        }
+
+        // Enable raycastTarget on button image
         var img = btn.GetComponent<Image>();
         if (img != null)
         {
@@ -138,7 +146,7 @@ public class SmlAnimManager : MonoBehaviour
             graphic.raycastTarget = true;
         }
 
-        Debug.Log($"[SmlAnimManager] {btn.name} -> enabled, raycastTarget=true");
+        Debug.Log($"[SmlAnimManager] {btn.name} -> enabled, blocksRaycasts=true, raycastTarget=true");
     }
 
     private void Wire(Button btn)
