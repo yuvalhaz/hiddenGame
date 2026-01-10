@@ -66,17 +66,9 @@ public class SmlAnimManager : MonoBehaviour
 
     private void InitializeButtons()
     {
-        // Disable ALL buttons at start to prevent blocking drops
-        for (int i = 0; i < links.Count; i++)
-        {
-            var link = links[i];
-            if (link == null || link.button == null) continue;
-
-            // Apply disabled state immediately
-            ApplyState(link.button, false);
-        }
-
-        Debug.Log($"[SmlAnimManager] Initialized {links.Count} buttons to disabled state");
+        // DON'T do anything here!
+        // Let buttons exist naturally, we'll only add onClick when settled
+        Debug.Log("[SmlAnimManager] InitializeButtons - doing nothing, waiting for settled spots");
     }
 
     private void Update()
@@ -126,27 +118,9 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // Use CanvasGroup to completely block/unblock raycasts
-        CanvasGroup cg = btn.GetComponent<CanvasGroup>();
-        if (cg == null)
-        {
-            cg = btn.gameObject.AddComponent<CanvasGroup>();
-        }
-
-        // Control raycast blocking
-        cg.blocksRaycasts = enabled;
-
-        // Also control button component
-        btn.enabled = enabled;
-
-        // Control raycastTarget on ALL graphics (including children)
-        var graphics = btn.GetComponentsInChildren<Graphic>(true);
-        foreach (var graphic in graphics)
-        {
-            graphic.raycastTarget = enabled;
-        }
-
-        Debug.Log($"[SmlAnimManager] {btn.name} -> btn.enabled={enabled}, blocksRaycasts={enabled}, {graphics.Length} graphics");
+        // DON'T do anything!
+        // We only care about wiring onClick when settled, nothing else
+        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> enabled={enabled} (doing nothing)");
     }
 
     private void Wire(Button btn)
