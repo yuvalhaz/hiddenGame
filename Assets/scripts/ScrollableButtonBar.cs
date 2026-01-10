@@ -18,6 +18,12 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private float buttonSpacing = 40f;
     [SerializeField] private float buttonWidth = 100f;
 
+    [Header("Auto Spacing (Optional)")]
+    [SerializeField] private bool useAutoSpacing = false;
+    [Tooltip("Automatically calculate spacing to fit exactly N buttons on screen")]
+    [SerializeField] private int buttonsToFitOnScreen = 3;
+    [Tooltip("How many buttons should be visible on screen at once")]
+
     [Header("Drag Area Settings")]
     [SerializeField] private bool useCenterDragArea = true;
     [Tooltip("If true, only the center area of button can be dragged")]
@@ -62,6 +68,39 @@ public class ScrollableButtonBar : MonoBehaviour
         }
 
         CreateButtons();
+
+        // Calculate auto spacing AFTER creating buttons (so we know actual button sizes)
+        if (useAutoSpacing && scrollRect != null && scrollRect.viewport != null && buttons.Count > 0)
+        {
+            float viewportWidth = scrollRect.viewport.rect.width;
+
+            // Calculate average button width from first few buttons
+            float totalWidth = 0f;
+            int sampled = Mathf.Min(buttonsToFitOnScreen, buttons.Count);
+            for (int i = 0; i < sampled; i++)
+            {
+                if (buttons[i] != null)
+                {
+                    RectTransform rect = buttons[i].GetComponent<RectTransform>();
+                    if (rect != null)
+                    {
+                        totalWidth += rect.sizeDelta.x;
+                    }
+                }
+            }
+            float avgButtonWidth = totalWidth / sampled;
+
+            // Calculate spacing to fit exactly N buttons on screen
+            // Formula: viewportWidth = (N * avgWidth) + ((N + 1) * spacing)
+            // Solving for spacing: spacing = (viewportWidth - (N * avgWidth)) / (N + 1)
+            float totalButtonWidth = buttonsToFitOnScreen * avgButtonWidth;
+            buttonSpacing = (viewportWidth - totalButtonWidth) / (buttonsToFitOnScreen + 1);
+
+            Debug.Log($"[ScrollableButtonBar] Auto spacing calculated: {buttonSpacing}px (viewport: {viewportWidth}px, avg button: {avgButtonWidth}px, {buttonsToFitOnScreen} buttons to fit)");
+
+            // Recalculate positions with new spacing
+            RecalculateAllPositions();
+        }
     }
 
     void Update()
