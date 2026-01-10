@@ -269,6 +269,13 @@ public class SmlAnimManager : MonoBehaviour
             var link = links[i];
             if (link == null || link.button == null) continue;
 
+            // Disable CanvasGroup blocksRaycasts
+            CanvasGroup cg = link.button.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.blocksRaycasts = false;
+            }
+
             // Disable raycast on all graphics (button won't block drops)
             var graphics = link.button.GetComponentsInChildren<Graphic>(true);
             foreach (var graphic in graphics)
@@ -291,6 +298,14 @@ public class SmlAnimManager : MonoBehaviour
             // Only enable raycast for settled spots
             bool shouldEnable = link.spot.IsSettled;
 
+            // Restore CanvasGroup blocksRaycasts
+            CanvasGroup cg = link.button.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.blocksRaycasts = shouldEnable;
+            }
+
+            // Restore raycast on graphics
             var graphics = link.button.GetComponentsInChildren<Graphic>(true);
             foreach (var graphic in graphics)
             {
