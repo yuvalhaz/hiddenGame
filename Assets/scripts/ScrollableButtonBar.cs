@@ -38,8 +38,10 @@ public class ScrollableButtonBar : MonoBehaviour
     [Tooltip("Shuffle button order randomly at start")]
 
     [Header("Animation Settings")]
-    [SerializeField] private float animationSpeed = 10f;
-    
+    [SerializeField] private float initialAnimationSpeed = 50f;
+    [SerializeField] private float normalAnimationSpeed = 10f;
+    [SerializeField] private float speedChangeDelay = 30f; // Half a minute
+
     [Header("References")]
     [SerializeField] private RectTransform contentPanel;
     [SerializeField] private ScrollRect scrollRect;
@@ -50,8 +52,14 @@ public class ScrollableButtonBar : MonoBehaviour
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
 
+    private float currentAnimationSpeed;
+    private float startTime;
+
     void Start()
     {
+        // Initialize animation speed and start time
+        currentAnimationSpeed = initialAnimationSpeed;
+        startTime = Time.time;
 
         if (buttonDataList.Count == 0)
         {
@@ -125,6 +133,13 @@ public class ScrollableButtonBar : MonoBehaviour
 
     void Update()
     {
+        // Check if it's time to reduce animation speed
+        if (currentAnimationSpeed == initialAnimationSpeed && Time.time - startTime >= speedChangeDelay)
+        {
+            currentAnimationSpeed = normalAnimationSpeed;
+            Debug.Log($"[ScrollableButtonBar] Animation speed reduced from {initialAnimationSpeed} to {normalAnimationSpeed}");
+        }
+
         // ✅ אנימציה חלקה ורציפה בלי קפיצות!
         List<RectTransform> toRemove = new List<RectTransform>();
         
@@ -175,7 +190,7 @@ public class ScrollableButtonBar : MonoBehaviour
             else
             {
                 // ✅ תנועה חלקה במהירות קבועה
-                float speed = animationSpeed * 100f; // כפול 100 כי זה פיקסלים לשנייה
+                float speed = currentAnimationSpeed * 100f; // כפול 100 כי זה פיקסלים לשנייה
                 Vector2 newPos = Vector2.MoveTowards(currentPos, targetPos, speed * Time.deltaTime);
                 rect.anchoredPosition = newPos;
             }
