@@ -176,9 +176,6 @@ public class ScrollableButtonBar : MonoBehaviour
                 buttonImage.sprite = buttonDataList[i].buttonSprite;
                 // ✅ Use native size of the sprite
                 buttonImage.SetNativeSize();
-
-                // ✅ Enable alpha hit testing - only non-transparent pixels can be clicked/dragged
-                buttonImage.alphaHitTestMinimumThreshold = 0.1f;
             }
             else if (buttonImage != null)
             {
@@ -370,8 +367,6 @@ public class ScrollableButtonBar : MonoBehaviour
                     if (sprite != null)
                     {
                         img.SetNativeSize();
-                        // ✅ Enable alpha hit testing
-                        img.alphaHitTestMinimumThreshold = 0.1f;
                     }
                 }
             }
