@@ -137,16 +137,18 @@ public class SmlAnimManager : MonoBehaviour
         // When disabled, completely don't block raycasts
         cg.blocksRaycasts = enabled;
 
-        // Also control button and raycastTarget
+        // Also control button
         btn.enabled = enabled;
 
-        var img = btn.GetComponent<Image>();
-        if (img != null)
+        // Disable raycastTarget on ALL graphics (including children)
+        // This handles overlapping objects with raycast
+        var graphics = btn.GetComponentsInChildren<Graphic>(true);
+        foreach (var graphic in graphics)
         {
-            img.raycastTarget = enabled;
+            graphic.raycastTarget = enabled;
         }
 
-        Debug.Log($"[SmlAnimManager] {btn.name} -> blocksRaycasts={enabled}, btn.enabled={enabled}");
+        Debug.Log($"[SmlAnimManager] {btn.name} -> blocksRaycasts={enabled}, {graphics.Length} graphics raycastTarget={enabled}");
     }
 
     private void Wire(Button btn)
