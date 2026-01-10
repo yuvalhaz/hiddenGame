@@ -128,29 +128,27 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // Use CanvasGroup to completely block/unblock raycasts
-        // This is the most reliable way to prevent blocking drops
-        CanvasGroup cg = btn.GetComponent<CanvasGroup>();
-        if (cg == null)
+        // Simply enable/disable the entire GameObject
+        // This is the ONLY reliable way to prevent blocking drops
+        btn.gameObject.SetActive(enabled);
+
+        // When enabling, also ensure raycastTarget is on
+        if (enabled)
         {
-            cg = btn.gameObject.AddComponent<CanvasGroup>();
+            CanvasGroup cg = btn.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.blocksRaycasts = true;
+            }
+
+            var graphics = btn.GetComponentsInChildren<Graphic>(true);
+            foreach (var graphic in graphics)
+            {
+                graphic.raycastTarget = true;
+            }
         }
 
-        // When disabled, completely don't block raycasts
-        cg.blocksRaycasts = enabled;
-
-        // Also control button
-        btn.enabled = enabled;
-
-        // Disable raycastTarget on ALL graphics (including children)
-        // This handles overlapping objects with raycast
-        var graphics = btn.GetComponentsInChildren<Graphic>(true);
-        foreach (var graphic in graphics)
-        {
-            graphic.raycastTarget = enabled;
-        }
-
-        Debug.Log($"[SmlAnimManager] {btn.name} -> blocksRaycasts={enabled}, {graphics.Length} graphics raycastTarget={enabled}");
+        Debug.Log($"[SmlAnimManager] {btn.name} -> SetActive({enabled})");
     }
 
     private void Wire(Button btn)
