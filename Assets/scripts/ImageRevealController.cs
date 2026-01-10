@@ -41,6 +41,13 @@ public class ImageRevealController : MonoBehaviour
             }
 
             isRevealed = true;
+
+            // ✅ Notify SmlAnimManager to enable button clicks
+            if (SmlAnimManager.Instance != null)
+            {
+                SmlAnimManager.Instance.RefreshSpot(dropSpot);
+                Debug.Log($"[ImageRevealController] Notified SmlAnimManager for {dropSpot.spotId}");
+            }
         }
         else
         {
