@@ -43,7 +43,7 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<Vector2> targetPositions = new List<Vector2>();
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
-    private bool isInitialSetup = true; // Skip animation on first load
+    private float speedMultiplier = 10f; // Fast animation on first load, then normal speed
 
     void Start()
     {
@@ -113,8 +113,8 @@ public class ScrollableButtonBar : MonoBehaviour
             }
             else
             {
-                // ✅ תנועה חלקה במהירות קבועה
-                float speed = animationSpeed * 100f; // כפול 100 כי זה פיקסלים לשנייה
+                // ✅ תנועה חלקה במהירות קבועה (מהירה בהתחלה, רגילה אחרי)
+                float speed = animationSpeed * 100f * speedMultiplier; // כפול speedMultiplier להתחלה מהירה
                 Vector2 newPos = Vector2.MoveTowards(currentPos, targetPos, speed * Time.deltaTime);
                 rect.anchoredPosition = newPos;
             }
@@ -348,22 +348,13 @@ public class ScrollableButtonBar : MonoBehaviour
 
                 Debug.Log($"כפתור {i}: מיקום יעד חדש = {xPos}");
 
-                // ✅ Skip animation on initial setup - place immediately
+                // ✅ Animate to new position (fast on first load)
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
                     RectTransform rect = buttons[i].GetComponent<RectTransform>();
                     if (rect != null)
                     {
-                        if (isInitialSetup)
-                        {
-                            // Place immediately without animation
-                            rect.anchoredPosition = newTarget;
-                        }
-                        else
-                        {
-                            // Animate to new position
-                            buttonsAnimating[rect] = true;
-                        }
+                        buttonsAnimating[rect] = true;
                     }
                 }
 
@@ -371,8 +362,12 @@ public class ScrollableButtonBar : MonoBehaviour
             }
         }
 
-        // After first recalculation, enable animations
-        isInitialSetup = false;
+        // After first recalculation, slow down to normal animation speed
+        if (speedMultiplier > 1f)
+        {
+            speedMultiplier = 1f;
+            Debug.Log("[ScrollableButtonBar] Initial setup complete - animation speed now normal");
+        }
 
         UpdateContentSize();
     }
