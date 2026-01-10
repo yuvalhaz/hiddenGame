@@ -43,6 +43,7 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<Vector2> targetPositions = new List<Vector2>();
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
+    private bool isInitialSetup = true; // Skip animation on first load
 
     void Start()
     {
@@ -333,34 +334,46 @@ public class ScrollableButtonBar : MonoBehaviour
     void RecalculateAllPositions()
     {
         Debug.Log("RecalculateAllPositions נקרא");
-        
+
         int positionIndex = 0;
-        
+
         for (int i = 0; i < buttons.Count; i++)
         {
             if (buttonStates[i])
             {
                 float xPos = buttonSpacing + (positionIndex * (buttonWidth + buttonSpacing));
                 Vector2 newTarget = new Vector2(xPos, 0);
-                
+
                 targetPositions[i] = newTarget;
-                
+
                 Debug.Log($"כפתור {i}: מיקום יעד חדש = {xPos}");
-                
-                // ✅ פשוט עדכן את המיקום היעד - Update יטפל בשאר
+
+                // ✅ Skip animation on initial setup - place immediately
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
                     RectTransform rect = buttons[i].GetComponent<RectTransform>();
                     if (rect != null)
                     {
-                        buttonsAnimating[rect] = true;
+                        if (isInitialSetup)
+                        {
+                            // Place immediately without animation
+                            rect.anchoredPosition = newTarget;
+                        }
+                        else
+                        {
+                            // Animate to new position
+                            buttonsAnimating[rect] = true;
+                        }
                     }
                 }
-                
+
                 positionIndex++;
             }
         }
-        
+
+        // After first recalculation, enable animations
+        isInitialSetup = false;
+
         UpdateContentSize();
     }
 
