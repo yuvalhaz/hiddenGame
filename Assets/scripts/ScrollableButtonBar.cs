@@ -15,7 +15,7 @@ public class ScrollableButtonBar : MonoBehaviour
     [Header("Button Settings")]
     [SerializeField] private GameObject buttonPrefab;
     [SerializeField] private int numberOfButtons = 20;
-    [SerializeField] private float buttonSpacing = 40f;
+    [SerializeField] private float buttonSpacing = 80f;
     [SerializeField] private float buttonWidth = 100f;
 
     [Header("Auto Spacing (Optional)")]
