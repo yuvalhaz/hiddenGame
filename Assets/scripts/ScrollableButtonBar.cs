@@ -17,7 +17,13 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private int numberOfButtons = 20;
     [SerializeField] private float buttonSpacing = 40f;
     [SerializeField] private float buttonWidth = 100f;
-    
+
+    [Header("Drag Area Settings")]
+    [SerializeField] private bool useCenterDragArea = true;
+    [Tooltip("If true, only the center area of button can be dragged")]
+    [SerializeField] [Range(0.1f, 1f)] private float dragAreaScale = 0.7f;
+    [Tooltip("Percentage of button size that can be dragged (0.7 = 70%)")]
+
     [Header("Button Data")]
     [SerializeField] private List<ButtonData> buttonDataList = new List<ButtonData>();
 
@@ -187,7 +193,8 @@ public class ScrollableButtonBar : MonoBehaviour
             float actualWidth = buttonRect.sizeDelta.x;
             float xPos = buttonSpacing + (i * (actualWidth + buttonSpacing));
             buttonRect.anchoredPosition = new Vector2(xPos, 0);
-            
+
+            // ✅ Create center drag area if enabled
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
             if (draggable == null)
             {
@@ -195,6 +202,37 @@ public class ScrollableButtonBar : MonoBehaviour
             }
             draggable.SetButtonBar(this, i);
             draggable.SetButtonID(buttonDataList[i].buttonID);
+
+            if (useCenterDragArea)
+            {
+                // Disable raycast on main image
+                if (buttonImage != null)
+                {
+                    buttonImage.raycastTarget = false;
+                }
+
+                // Create child GameObject for drag area
+                GameObject dragArea = new GameObject("DragArea");
+                dragArea.transform.SetParent(buttonObj.transform, false);
+
+                RectTransform dragRect = dragArea.AddComponent<RectTransform>();
+                dragRect.anchorMin = new Vector2(0.5f, 0.5f);
+                dragRect.anchorMax = new Vector2(0.5f, 0.5f);
+                dragRect.pivot = new Vector2(0.5f, 0.5f);
+                dragRect.anchoredPosition = Vector2.zero;
+
+                // Set size to percentage of button size
+                Vector2 dragSize = buttonRect.sizeDelta * dragAreaScale;
+                dragRect.sizeDelta = dragSize;
+
+                // Add transparent Image for raycasting
+                Image dragImage = dragArea.AddComponent<Image>();
+                dragImage.color = new Color(0, 0, 0, 0); // Transparent
+                dragImage.raycastTarget = true;
+
+                // Add proxy to forward drag events to parent DraggableButton
+                dragArea.AddComponent<DragAreaProxy>();
+            }
             
             buttons.Add(draggable);
             buttonStates.Add(true);
