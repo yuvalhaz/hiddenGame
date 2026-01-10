@@ -32,8 +32,8 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private List<ButtonData> buttonDataList = new List<ButtonData>();
 
     [Header("Shuffle Settings")]
-    [SerializeField] private bool shuffleButtons = false;
     [Tooltip("Shuffle button order randomly at start")]
+    [SerializeField] private bool shuffleButtons = false;
 
     [Header("Animation Settings")]
     [Tooltip("מהירות אנימציה בהתחלה (ברירת מחדל: 50)")]
