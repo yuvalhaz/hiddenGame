@@ -337,18 +337,27 @@ public class ScrollableButtonBar : MonoBehaviour
     {
         Debug.Log("RecalculateAllPositions נקרא");
 
-        int positionIndex = 0;
+        float currentX = buttonSpacing; // Start from first spacing
 
         for (int i = 0; i < buttons.Count; i++)
         {
             if (buttonStates[i])
             {
-                float xPos = buttonSpacing + (positionIndex * (buttonWidth + buttonSpacing));
-                Vector2 newTarget = new Vector2(xPos, 0);
+                // Use actual width of this specific button
+                float actualWidth = buttonWidth; // Default
+                if (buttons[i] != null)
+                {
+                    RectTransform rect = buttons[i].GetComponent<RectTransform>();
+                    if (rect != null)
+                    {
+                        actualWidth = rect.sizeDelta.x;
+                    }
+                }
 
+                Vector2 newTarget = new Vector2(currentX, 0);
                 targetPositions[i] = newTarget;
 
-                Debug.Log($"כפתור {i}: מיקום יעד חדש = {xPos}");
+                Debug.Log($"כפתור {i}: מיקום יעד חדש = {currentX}");
 
                 // ✅ During initial frames, place immediately. Otherwise animate.
                 if (buttons[i] != null && !buttons[i].IsDragging())
@@ -373,7 +382,8 @@ public class ScrollableButtonBar : MonoBehaviour
                     }
                 }
 
-                positionIndex++;
+                // Move to next position (current button width + spacing)
+                currentX += actualWidth + buttonSpacing;
             }
         }
 
@@ -382,13 +392,28 @@ public class ScrollableButtonBar : MonoBehaviour
 
     void UpdateContentSize()
     {
-        int buttonsInBar = 0;
-        foreach (bool state in buttonStates)
+        // Calculate total width based on actual button sizes
+        float totalWidth = buttonSpacing; // Start with initial spacing
+
+        for (int i = 0; i < buttons.Count; i++)
         {
-            if (state) buttonsInBar++;
+            if (buttonStates[i])
+            {
+                // Get actual width of this button
+                float actualWidth = buttonWidth; // Default
+                if (buttons[i] != null)
+                {
+                    RectTransform rect = buttons[i].GetComponent<RectTransform>();
+                    if (rect != null)
+                    {
+                        actualWidth = rect.sizeDelta.x;
+                    }
+                }
+
+                totalWidth += actualWidth + buttonSpacing;
+            }
         }
-        
-        float totalWidth = buttonSpacing + (buttonsInBar * (buttonWidth + buttonSpacing));
+
         contentPanel.sizeDelta = new Vector2(totalWidth, contentPanel.sizeDelta.y);
     }
 
