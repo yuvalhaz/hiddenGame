@@ -118,9 +118,27 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // DON'T do anything!
-        // We only care about wiring onClick when settled, nothing else
-        Debug.Log($"[SmlAnimManager] ApplyState: {btn.name} -> enabled={enabled} (doing nothing)");
+        if (!enabled)
+        {
+            // When disabled, do NOTHING - let DisableAllButtonsForDrag handle it during drag
+            return;
+        }
+
+        // When enabled (spot is settled), ensure button is clickable
+        var img = btn.GetComponent<Image>();
+        if (img != null)
+        {
+            img.raycastTarget = true;
+        }
+
+        // Also ensure graphics children have raycastTarget
+        var graphics = btn.GetComponentsInChildren<Graphic>(true);
+        foreach (var graphic in graphics)
+        {
+            graphic.raycastTarget = true;
+        }
+
+        Debug.Log($"[SmlAnimManager] {btn.name} -> enabled, raycastTarget=true");
     }
 
     private void Wire(Button btn)
