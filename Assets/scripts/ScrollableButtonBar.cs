@@ -38,9 +38,12 @@ public class ScrollableButtonBar : MonoBehaviour
     [Tooltip("Shuffle button order randomly at start")]
 
     [Header("Animation Settings")]
+    [Tooltip("מהירות אנימציה בהתחלה (ברירת מחדל: 50)")]
     [SerializeField] private float initialAnimationSpeed = 50f;
+    [Tooltip("מהירות אנימציה רגילה אחרי השינוי (ברירת מחדל: 10)")]
     [SerializeField] private float normalAnimationSpeed = 10f;
-    [SerializeField] private float speedChangeDelay = 30f; // Half a minute
+    [Tooltip("כמה זמן בשניות עד שהמהירות משתנה (ברירת מחדל: 30 = חצי דקה)")]
+    [SerializeField] private float speedChangeDelay = 30f;
 
     [Header("References")]
     [SerializeField] private RectTransform contentPanel;
