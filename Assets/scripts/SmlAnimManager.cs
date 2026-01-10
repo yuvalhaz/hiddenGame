@@ -106,22 +106,27 @@ public class SmlAnimManager : MonoBehaviour
 
     private void ApplyState(Button btn, bool enabled)
     {
-        // Disable the Button component (not the GameObject!)
-        // This prevents it from blocking drops while keeping the image visible
+        // Use CanvasGroup to completely block/unblock raycasts
+        // This is the most reliable way to prevent blocking drops
+        CanvasGroup cg = btn.GetComponent<CanvasGroup>();
+        if (cg == null)
+        {
+            cg = btn.gameObject.AddComponent<CanvasGroup>();
+        }
+
+        // When disabled, completely don't block raycasts
+        cg.blocksRaycasts = enabled;
+
+        // Also control button and raycastTarget
         btn.enabled = enabled;
 
-        // Also control raycastTarget
         var img = btn.GetComponent<Image>();
         if (img != null)
         {
             img.raycastTarget = enabled;
-
-            // Only detect clicks on non-transparent pixels (reduces click area!)
-            // This helps prevent blocking drops in transparent areas
-            img.alphaHitTestMinimumThreshold = 0.5f;
         }
 
-        Debug.Log($"[SmlAnimManager] {btn.name} -> btn.enabled={enabled}, raycastTarget={enabled}");
+        Debug.Log($"[SmlAnimManager] {btn.name} -> blocksRaycasts={enabled}, btn.enabled={enabled}");
     }
 
     private void Wire(Button btn)
