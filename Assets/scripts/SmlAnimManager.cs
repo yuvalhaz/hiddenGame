@@ -51,12 +51,32 @@ public class SmlAnimManager : MonoBehaviour
         {
             Debug.LogWarning("[SmlAnimManager] Multiple instances detected! Destroying duplicate.");
             Destroy(gameObject);
+            return;
         }
+
+        // Disable ALL buttons IMMEDIATELY in Awake
+        InitializeButtons();
     }
 
     private void Start()
     {
+        // Refresh based on settled state
         RefreshAll();
+    }
+
+    private void InitializeButtons()
+    {
+        // Disable ALL buttons at start to prevent blocking drops
+        for (int i = 0; i < links.Count; i++)
+        {
+            var link = links[i];
+            if (link == null || link.button == null) continue;
+
+            // Apply disabled state immediately
+            ApplyState(link.button, false);
+        }
+
+        Debug.Log($"[SmlAnimManager] Initialized {links.Count} buttons to disabled state");
     }
 
     private void Update()
