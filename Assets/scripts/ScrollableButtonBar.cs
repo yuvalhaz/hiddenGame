@@ -49,11 +49,9 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<Vector2> targetPositions = new List<Vector2>();
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
-    private int startFrame = -1; // Frame when Start() was called
 
     void Start()
     {
-        startFrame = Time.frameCount;
 
         if (buttonDataList.Count == 0)
         {
@@ -420,26 +418,13 @@ public class ScrollableButtonBar : MonoBehaviour
 
                 Debug.Log($"כפתור {i}: מיקום יעד חדש = {currentX}");
 
-                // ✅ During initial frames, place immediately. Otherwise animate.
+                // ✅ Always animate buttons to their positions
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
                     RectTransform rect = buttons[i].GetComponent<RectTransform>();
                     if (rect != null)
                     {
-                        // Check if we're within first 3 frames after Start
-                        bool isInitialSetup = (Time.frameCount - startFrame) <= 3;
-
-                        if (isInitialSetup)
-                        {
-                            // Initial setup - place immediately without animation
-                            rect.anchoredPosition = newTarget;
-                            Debug.Log($"[ScrollableButtonBar] Button {i} placed immediately (frame {Time.frameCount - startFrame})");
-                        }
-                        else
-                        {
-                            // Normal operation - animate smoothly
-                            buttonsAnimating[rect] = true;
-                        }
+                        buttonsAnimating[rect] = true;
                     }
                 }
 
