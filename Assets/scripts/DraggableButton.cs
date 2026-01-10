@@ -89,11 +89,11 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     {
         originalPosition = rectTransform.anchoredPosition;
         isDragging = true;
-        
+
         // ✅ כרגע עדיין מאפשרים אינטראקציה (עד שעוברים threshold)
         canvasGroup.interactable = true;
         canvasGroup.blocksRaycasts = false;  // לא חוסמים raycasts כדי לאפשר גרירה
-        
+
         // ✅ השבת את ה-ScrollRect כדי שלא יפריע לגרירה
         if (parentScrollRect != null)
         {
@@ -101,9 +101,15 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             if (debugMode)
                 Debug.Log($"[DraggableButton] ScrollRect disabled");
         }
-        
+
+        // ✅ Disable ALL SmlAnimManager buttons during drag to prevent blocking
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.DisableAllButtonsForDrag();
+        }
+
         buttonBar.OnButtonDragStarted(this, originalIndex);
-        
+
         EnableMatchingDropSpot(true);
     }
 
@@ -150,7 +156,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     public void OnEndDrag(PointerEventData eventData)
     {
         isDragging = false;
-        
+
         // ✅ הפעל מחדש את ה-ScrollRect
         if (parentScrollRect != null)
         {
@@ -158,11 +164,17 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             if (debugMode)
                 Debug.Log($"[DraggableButton] ScrollRect re-enabled");
         }
-        
+
+        // ✅ Restore SmlAnimManager buttons after drag ends
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.RestoreButtonsAfterDrag();
+        }
+
         // ✅ החזר את הכפתור המקורי להיות אינטראקטיבי (למקרה שחוזרים)
         canvasGroup.interactable = true;
         canvasGroup.blocksRaycasts = true;
-        
+
         if (activeDragRT != null)
         {
             Debug.Log($"[DraggableButton] OnEndDrag - checking for drop...");

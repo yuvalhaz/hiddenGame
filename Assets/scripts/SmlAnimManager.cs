@@ -260,4 +260,44 @@ public class SmlAnimManager : MonoBehaviour
     {
         OnLevelComplete(0);
     }
+
+    // ✅ Called when drag starts - disable ALL buttons to prevent blocking
+    public void DisableAllButtonsForDrag()
+    {
+        for (int i = 0; i < links.Count; i++)
+        {
+            var link = links[i];
+            if (link == null || link.button == null) continue;
+
+            // Disable raycast on all graphics (button won't block drops)
+            var graphics = link.button.GetComponentsInChildren<Graphic>(true);
+            foreach (var graphic in graphics)
+            {
+                graphic.raycastTarget = false;
+            }
+        }
+
+        Debug.Log("[SmlAnimManager] Disabled all buttons for drag");
+    }
+
+    // ✅ Called when drag ends - restore buttons based on settled state
+    public void RestoreButtonsAfterDrag()
+    {
+        for (int i = 0; i < links.Count; i++)
+        {
+            var link = links[i];
+            if (link == null || link.spot == null || link.button == null) continue;
+
+            // Only enable raycast for settled spots
+            bool shouldEnable = link.spot.IsSettled;
+
+            var graphics = link.button.GetComponentsInChildren<Graphic>(true);
+            foreach (var graphic in graphics)
+            {
+                graphic.raycastTarget = shouldEnable;
+            }
+        }
+
+        Debug.Log("[SmlAnimManager] Restored buttons after drag");
+    }
 }
