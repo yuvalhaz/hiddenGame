@@ -22,7 +22,6 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private bool useAutoSpacing = false;
     [Tooltip("Automatically calculate spacing to fit exactly N buttons on screen")]
     [SerializeField] private int buttonsToFitOnScreen = 3;
-    [Tooltip("How many buttons should be visible on screen at once")]
 
     [Header("Drag Area Settings")]
     [SerializeField] private bool useCenterDragArea = true;
