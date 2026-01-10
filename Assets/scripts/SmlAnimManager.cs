@@ -125,12 +125,14 @@ public class SmlAnimManager : MonoBehaviour
         }
 
         // When enabled (spot is settled), ensure button is clickable
-        // Enable CanvasGroup blocksRaycasts
+        // Enable CanvasGroup blocksRaycasts - add CanvasGroup if it doesn't exist
         CanvasGroup cg = btn.GetComponent<CanvasGroup>();
-        if (cg != null)
+        if (cg == null)
         {
-            cg.blocksRaycasts = true;
+            cg = btn.gameObject.AddComponent<CanvasGroup>();
+            Debug.Log($"[SmlAnimManager] Added CanvasGroup to {btn.name}");
         }
+        cg.blocksRaycasts = true;
 
         // Enable raycastTarget on button image
         var img = btn.GetComponent<Image>();
