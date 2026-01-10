@@ -25,9 +25,8 @@ public class ScrollableButtonBar : MonoBehaviour
 
     [Header("Drag Area Settings")]
     [SerializeField] private bool useCenterDragArea = true;
-    [Tooltip("If true, only the center area of button can be dragged")]
-    [SerializeField] [Range(0.1f, 1f)] private float dragAreaScale = 0.7f;
     [Tooltip("Percentage of button size that can be dragged (0.7 = 70%)")]
+    [SerializeField] [Range(0.1f, 1f)] private float dragAreaScale = 0.7f;
 
     [Header("Button Data")]
     [SerializeField] private List<ButtonData> buttonDataList = new List<ButtonData>();
