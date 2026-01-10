@@ -115,6 +115,10 @@ public class SmlAnimManager : MonoBehaviour
         if (img != null)
         {
             img.raycastTarget = enabled;
+
+            // Only detect clicks on non-transparent pixels (reduces click area!)
+            // This helps prevent blocking drops in transparent areas
+            img.alphaHitTestMinimumThreshold = 0.5f;
         }
 
         Debug.Log($"[SmlAnimManager] {btn.name} -> btn.enabled={enabled}, raycastTarget={enabled}");
