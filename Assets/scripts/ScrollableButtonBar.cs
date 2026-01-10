@@ -103,6 +103,28 @@ public class ScrollableButtonBar : MonoBehaviour
         }
     }
 
+    private void OnValidate()
+    {
+        // Called when values change in Inspector (only in Editor)
+        if (Application.isPlaying && buttons != null && buttons.Count > 0)
+        {
+            RecalculateAllPositions();
+        }
+    }
+
+    /// <summary>
+    /// Manually refresh button positions (Right-click component -> Refresh Button Positions)
+    /// </summary>
+    [ContextMenu("Refresh Button Positions")]
+    public void RefreshButtonPositions()
+    {
+        if (buttons != null && buttons.Count > 0)
+        {
+            RecalculateAllPositions();
+            Debug.Log("[ScrollableButtonBar] Button positions refreshed manually");
+        }
+    }
+
     void Update()
     {
         // ✅ אנימציה חלקה ורציפה בלי קפיצות!
