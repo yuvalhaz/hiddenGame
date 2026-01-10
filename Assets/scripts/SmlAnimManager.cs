@@ -38,8 +38,13 @@ public class SmlAnimManager : MonoBehaviour
     [SerializeField] private int confettiCount = 100;
     [SerializeField] private float confettiDuration = 1.5f;
 
+    [Header("Cooldown")]
+    [SerializeField] private float clickCooldown = 10f;
+    [Tooltip("Seconds between clicks on the same button")]
+
     private readonly HashSet<Button> wired = new HashSet<Button>();
     private readonly Dictionary<Button, Coroutine> running = new Dictionary<Button, Coroutine>();
+    private readonly Dictionary<Button, float> lastClickTime = new Dictionary<Button, float>();
 
     private void Awake()
     {
@@ -169,6 +174,22 @@ public class SmlAnimManager : MonoBehaviour
     {
         if (btn == null) return;
 
+        // Check cooldown
+        float currentTime = Time.time;
+        if (lastClickTime.TryGetValue(btn, out float lastTime))
+        {
+            float timeSinceLastClick = currentTime - lastTime;
+            if (timeSinceLastClick < clickCooldown)
+            {
+                float remaining = clickCooldown - timeSinceLastClick;
+                Debug.Log($"[SmlAnimManager] {btn.name} on cooldown - {remaining:F1}s remaining");
+                return;
+            }
+        }
+
+        // Update last click time
+        lastClickTime[btn] = currentTime;
+
         PlayClick();
 
         RectTransform rt = btn.GetComponent<RectTransform>();
@@ -262,6 +283,8 @@ public class SmlAnimManager : MonoBehaviour
     }
 
     // ✅ Called when drag starts - disable ALL buttons to prevent blocking
+    // בזמן גרירה: לכבות Raycast + לכבות את קומפוננטת ה-Button
+    // רק לכפתורים שמופיעים ב-links (כלומר מנוהלים ע"י SmlAnimManager)
     public void DisableAllButtonsForDrag()
     {
         for (int i = 0; i < links.Count; i++)
@@ -269,25 +292,22 @@ public class SmlAnimManager : MonoBehaviour
             var link = links[i];
             if (link == null || link.button == null) continue;
 
-            // Disable CanvasGroup blocksRaycasts
-            CanvasGroup cg = link.button.GetComponent<CanvasGroup>();
-            if (cg != null)
-            {
-                cg.blocksRaycasts = false;
-            }
+            var btn = link.button;
 
-            // Disable raycast on all graphics (button won't block drops)
-            var graphics = link.button.GetComponentsInChildren<Graphic>(true);
-            foreach (var graphic in graphics)
-            {
-                graphic.raycastTarget = false;
-            }
+            // לכבות את הכפתור לגמרי (לא משנה alpha / צבע)
+            btn.enabled = false;
+
+            // לכבות חסימת Raycast
+            CanvasGroup cg = btn.GetComponent<CanvasGroup>();
+            if (cg != null) cg.blocksRaycasts = false;
+
+            var graphics = btn.GetComponentsInChildren<Graphic>(true);
+            foreach (var g in graphics)
+                g.raycastTarget = false;
         }
-
-        Debug.Log("[SmlAnimManager] Disabled all buttons for drag");
     }
 
-    // ✅ Called when drag ends - restore buttons based on settled state
+    // בסיום גרירה: להחזיר Button + Raycast רק אם הספוט שלו Settled
     public void RestoreButtonsAfterDrag()
     {
         for (int i = 0; i < links.Count; i++)
@@ -295,24 +315,19 @@ public class SmlAnimManager : MonoBehaviour
             var link = links[i];
             if (link == null || link.spot == null || link.button == null) continue;
 
-            // Only enable raycast for settled spots
-            bool shouldEnable = link.spot.IsSettled;
+            bool enable = link.spot.IsSettled;
+            var btn = link.button;
 
-            // Restore CanvasGroup blocksRaycasts
-            CanvasGroup cg = link.button.GetComponent<CanvasGroup>();
-            if (cg != null)
-            {
-                cg.blocksRaycasts = shouldEnable;
-            }
+            // הכפתור חוזר לעבוד (קומפוננטה ON)
+            btn.enabled = true;
 
-            // Restore raycast on graphics
-            var graphics = link.button.GetComponentsInChildren<Graphic>(true);
-            foreach (var graphic in graphics)
-            {
-                graphic.raycastTarget = shouldEnable;
-            }
+            // רייקאסט רק אם Settled
+            CanvasGroup cg = btn.GetComponent<CanvasGroup>();
+            if (cg != null) cg.blocksRaycasts = enable;
+
+            var graphics = btn.GetComponentsInChildren<Graphic>(true);
+            foreach (var g in graphics)
+                g.raycastTarget = enable;
         }
-
-        Debug.Log("[SmlAnimManager] Restored buttons after drag");
     }
 }
