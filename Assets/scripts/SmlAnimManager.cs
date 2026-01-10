@@ -25,7 +25,6 @@ public class SmlAnimManager : MonoBehaviour
     [SerializeField] private float duration = 0.3f;
     [SerializeField] private float pulseScale = 1.2f;
     [SerializeField] private float wiggleAngle = 10f;
-    [SerializeField] private float clickCooldown = 15f; // Cooldown in seconds between clicks
 
     [Header("Sound (optional)")]
     [SerializeField] private AudioSource audioSource;
@@ -41,7 +40,6 @@ public class SmlAnimManager : MonoBehaviour
 
     private readonly HashSet<Button> wired = new HashSet<Button>();
     private readonly Dictionary<Button, Coroutine> running = new Dictionary<Button, Coroutine>();
-    private readonly Dictionary<Button, float> lastClickTime = new Dictionary<Button, float>();
 
     private void Awake()
     {
@@ -168,21 +166,6 @@ public class SmlAnimManager : MonoBehaviour
     private void OnClicked(Button btn)
     {
         if (btn == null) return;
-
-        // Check cooldown
-        float currentTime = Time.time;
-        if (lastClickTime.TryGetValue(btn, out float lastTime))
-        {
-            float timeSinceLastClick = currentTime - lastTime;
-            if (timeSinceLastClick < clickCooldown)
-            {
-                Debug.Log($"[SmlAnimManager] {btn.name} on cooldown! {clickCooldown - timeSinceLastClick:F1}s remaining");
-                return; // Still on cooldown, ignore click
-            }
-        }
-
-        // Update last click time
-        lastClickTime[btn] = currentTime;
 
         PlayClick();
 
