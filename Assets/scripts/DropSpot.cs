@@ -36,6 +36,14 @@ public class DropSpot : MonoBehaviour
         if (revealController != null)
         {
             revealController.Reveal();
+
+            // ✅ כבה את ה-raycast של התמונה שנחשפה!
+            var backgroundImage = revealController.GetBackgroundImage();
+            if (backgroundImage != null)
+            {
+                backgroundImage.raycastTarget = false;
+                Debug.Log($"[DropSpot] Disabled raycast on {spotId}");
+            }
         }
         else
         {

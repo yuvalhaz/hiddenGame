@@ -149,6 +149,10 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.DisableAllButtonsForDrag();
+        }
         // Check with TutorialSlideManager if dragging is allowed
         if (TutorialSlideManager.Instance != null)
         {
@@ -192,12 +196,6 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         if (parentScrollRect != null)
         {
             parentScrollRect.enabled = false;
-        }
-
-        // ✅ Disable ALL SmlAnimManager buttons during drag to prevent blocking
-        if (SmlAnimManager.Instance != null)
-        {
-            SmlAnimManager.Instance.DisableAllButtonsForDrag();
         }
 
         buttonBar?.OnButtonDragStarted(this, originalIndex);
@@ -245,18 +243,13 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     public void OnEndDrag(PointerEventData eventData)
     {
+
         isDragging = false;
 
         // Re-enable ScrollRect
         if (parentScrollRect != null)
         {
             parentScrollRect.enabled = true;
-        }
-
-        // ✅ Restore SmlAnimManager buttons after drag ends
-        if (SmlAnimManager.Instance != null)
-        {
-            SmlAnimManager.Instance.RestoreButtonsAfterDrag();
         }
 
         canvasGroup.interactable = true;
@@ -310,6 +303,13 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         if (!wasSuccessfullyPlaced)
         {
             buttonBar?.OnButtonReturned(this, originalIndex);
+        }
+
+
+// ✅ Restore SmlAnimManager buttons after drag (only settled ones should raycast)
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.RestoreButtonsAfterDrag();
         }
 
         isDraggingOut = false;

@@ -1,349 +1,376 @@
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
+/// <summary>
+/// Manages level progression, completion, and scene loading
+/// ✅ Works with LevelSelectionUI and GameProgressManager
+/// </summary>
 public class LevelManager : MonoBehaviour
 {
-    [Header("Level Configuration")]
-    [Tooltip("Configure levels directly in code - each level should have exactly 7 items")]
-    [SerializeField] private bool showCurrentLevelInfo = true;
-    
-    [Header("References")]
-    [SerializeField] private GameProgressManager progressManager;
-    [SerializeField] private RewardedAdsManager adsManager;
+    [Header("Scene Names")]
+    [SerializeField] private string levelSelectionScene = "LevelSelection";
+    [SerializeField] private string levelScenePrefix = "Level";
+    [Tooltip("Level scenes should be named: Level1, Level2, Level3, etc.")]
+
+    [Header("Level Settings")]
+    [SerializeField] private int totalLevels = 10;
     
     [Header("Debug")]
     [SerializeField] private bool debugMode = false;
 
-    private int currentLevelIndex = 0;
-    
     public static LevelManager Instance { get; private set; }
 
-    // Events
-    public System.Action<int> OnLevelChanged;
-    public System.Action<int> OnLevelCompleted;
-
-    // ===== LEVEL CONFIGURATION IN CODE =====
-    // Define your levels here - each level should have exactly 7 itemIds
-    private Dictionary<int, List<string>> levelConfig = new Dictionary<int, List<string>>()
-    {
-        // Level 0 (first level)
-        { 0, new List<string> { "spot00", "spot01", "spot02", "spot03", "spot04", "spot05", "spot06" } },
-        
-        // Level 1
-        { 1, new List<string> { "item8", "item9", "item10", "item11", "item12", "item13", "item14" } },
-        
-        // Level 2  
-        { 2, new List<string> { "item15", "item16", "item17", "item18", "item19", "item20", "item21" } },
-        
-        // Level 3
-        { 3, new List<string> { "item22", "item23", "item24", "item25", "item26", "item27", "item28" } },
-        
-        // Add more levels as needed...
-        // { 4, new List<string> { "item29", "item30", "item31", "item32", "item33", "item34", "item35" } },
-    };
+    private int currentLevelNumber = 0; // 0-indexed internally
 
     private void Awake()
     {
+        Debug.Log("🔵🔵🔵 [LevelManager] Awake called! 🔵🔵🔵");
+        Debug.Log($"[LevelManager] GameObject name: {gameObject.name}");
+        Debug.Log($"[LevelManager] Current scene: {SceneManager.GetActiveScene().name}");
+        
         if (Instance == null)
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            Debug.Log("✅✅✅ [LevelManager] Instance created and set to DontDestroyOnLoad! ✅✅✅");
+            Debug.Log($"[LevelManager] Instance reference: {Instance}");
+            LoadCurrentLevelFromPrefs();
         }
         else
         {
+            Debug.LogWarning("❌❌❌ [LevelManager] Duplicate found! Destroying this instance! ❌❌❌");
+            Debug.LogWarning($"[LevelManager] Existing Instance: {Instance}");
+            Debug.LogWarning($"[LevelManager] This GameObject: {gameObject.name}");
             Destroy(gameObject);
-            return;
         }
-
-        // Find references if not assigned
-        if (!progressManager) progressManager = FindObjectOfType<GameProgressManager>();
-        if (!adsManager) adsManager = FindObjectOfType<RewardedAdsManager>();
-        
-        ValidateLevels();
     }
 
-    private void Start()
+    /// <summary>
+    /// Load which level we're currently on from PlayerPrefs
+    /// </summary>
+    private void LoadCurrentLevelFromPrefs()
     {
-        LoadCurrentLevel();
-        RefreshAvailableItems();
-    }
-
-    private void ValidateLevels()
-    {
-        foreach (var level in levelConfig)
+        currentLevelNumber = PlayerPrefs.GetInt("CurrentLevel", 0);
+        if (debugMode)
         {
-            if (level.Value.Count != 7)
-            {
-                Debug.LogWarning($"[LevelManager] Level {level.Key} doesn't have exactly 7 items! Has {level.Value.Count}");
-            }
+            Debug.Log($"[LevelManager] Current level loaded: {currentLevelNumber} (Level {currentLevelNumber + 1})");
+        }
+    }
+
+    /// <summary>
+    /// Get the current level number (1-indexed for display)
+    /// </summary>
+    public int GetCurrentLevelNumber()
+    {
+        return currentLevelNumber + 1; // Convert to 1-indexed
+    }
+
+    /// <summary>
+    /// ✅ Call this when a level is completed!
+    /// This marks the level as done and unlocks the next one
+    /// </summary>
+    public void MarkCurrentLevelComplete()
+    {
+        int levelNumber = currentLevelNumber + 1; // Convert to 1-indexed
+        
+        Debug.Log($"[LevelManager] ⭐ MarkCurrentLevelComplete called!");
+        Debug.Log($"[LevelManager] Current level index: {currentLevelNumber}");
+        Debug.Log($"[LevelManager] Marking Level {levelNumber} as complete");
+        
+        // Mark as complete using LevelSelectionUI's system
+        LevelSelectionUI.MarkLevelComplete(levelNumber);
+        
+        // Verify it was saved
+        string key = $"Level_{levelNumber}_Completed";
+        int savedValue = PlayerPrefs.GetInt(key, -1);
+        Debug.Log($"[LevelManager] Verification - {key} = {savedValue}");
+        
+        if (debugMode)
+        {
+            Debug.Log($"[LevelManager] ✅ Level {levelNumber} marked as complete!");
+        }
+    }
+
+    /// <summary>
+    /// ✅ Complete current level and prepare next (without loading scene)
+    /// Use this when you want to return to level selection instead of auto-loading next level
+    /// </summary>
+    public void CompleteCurrentLevelAndAdvancePointer()
+    {
+        Debug.Log($"[LevelManager] 🎯 CompleteCurrentLevelAndAdvancePointer called!");
+        Debug.Log($"[LevelManager] Current level BEFORE: {currentLevelNumber} (Level {currentLevelNumber + 1})");
+        
+        // Mark current level as complete first
+        MarkCurrentLevelComplete();
+
+        // Move to next level pointer
+        currentLevelNumber++;
+        Debug.Log($"[LevelManager] Current level AFTER increment: {currentLevelNumber} (Level {currentLevelNumber + 1})");
+
+        // Check if we've completed all levels
+        if (currentLevelNumber >= totalLevels)
+        {
+            Debug.Log($"[LevelManager] 🎉 All levels completed!");
+            currentLevelNumber = 0; // Reset to first level
         }
         
-        if (debugMode)
-            Debug.Log($"[LevelManager] Configured {levelConfig.Count} levels");
-    }
-
-    private void LoadCurrentLevel()
-    {
-        currentLevelIndex = PlayerPrefs.GetInt("CurrentLevel", 0);
-        
-        // Make sure we don't go beyond available levels
-        currentLevelIndex = Mathf.Clamp(currentLevelIndex, 0, levelConfig.Count - 1);
-        
-        if (debugMode)
-            Debug.Log($"[LevelManager] Loaded level: {currentLevelIndex}");
-    }
-
-    private void SaveCurrentLevel()
-    {
-        PlayerPrefs.SetInt("CurrentLevel", currentLevelIndex);
+        // Save new level pointer
+        PlayerPrefs.SetInt("CurrentLevel", currentLevelNumber);
         PlayerPrefs.Save();
-    }
-
-    public int GetCurrentLevelIndex()
-    {
-        return currentLevelIndex;
-    }
-
-    public int GetTotalLevels()
-    {
-        return levelConfig.Count;
-    }
-
-    public bool IsItemAllowedInCurrentLevel(string itemId)
-    {
-        if (!levelConfig.ContainsKey(currentLevelIndex))
-            return true; // Fallback: allow all items
-        
-        return levelConfig[currentLevelIndex].Contains(itemId);
-    }
-
-    public List<string> GetCurrentLevelItemIds()
-    {
-        if (levelConfig.ContainsKey(currentLevelIndex))
-            return new List<string>(levelConfig[currentLevelIndex]);
-        
-        return new List<string>();
+        Debug.Log($"[LevelManager] ✅ Saved CurrentLevel = {currentLevelNumber} (ready for Level {currentLevelNumber + 1})");
     }
 
     /// <summary>
-    /// Called when an item is successfully placed. Checks if level is complete.
+    /// ✅ Advance to the next level (called by EndingDialogSystem)
     /// </summary>
-    public void OnItemPlaced(string itemId)
+    public void AdvanceToNextLevel()
     {
-        if (!IsItemAllowedInCurrentLevel(itemId))
-        {
-            Debug.LogWarning($"[LevelManager] Item {itemId} was placed but doesn't belong to current level!");
-            return;
-        }
-
-        // Check if current level is complete
-        if (IsCurrentLevelComplete())
-        {
-            CompleteCurrentLevel();
-        }
-    }
-
-    private bool IsCurrentLevelComplete()
-    {
-        if (!levelConfig.ContainsKey(currentLevelIndex) || progressManager == null)
-            return false;
-
-        var currentLevelItems = levelConfig[currentLevelIndex];
-        foreach (string itemId in currentLevelItems)
-        {
-            if (!progressManager.IsItemPlaced(itemId))
-                return false;
-        }
+        Debug.Log($"[LevelManager] 🚀 AdvanceToNextLevel called!");
+        Debug.Log($"[LevelManager] Current level BEFORE: {currentLevelNumber} (Level {currentLevelNumber + 1})");
         
-        return true;
+        // Mark current level as complete first
+        MarkCurrentLevelComplete();
+
+        // Move to next level
+        currentLevelNumber++;
+        Debug.Log($"[LevelManager] Current level AFTER increment: {currentLevelNumber} (Level {currentLevelNumber + 1})");
+
+        // Check if we've completed all levels
+        if (currentLevelNumber >= totalLevels)
+        {
+            Debug.Log($"[LevelManager] 🎉 All levels completed! Returning to level selection.");
+            
+            // Reset to first level and return to selection
+            currentLevelNumber = 0;
+            PlayerPrefs.SetInt("CurrentLevel", currentLevelNumber);
+            PlayerPrefs.Save();
+            
+            LoadLevelSelection();
+        }
+        else
+        {
+            // Save new level and load it
+            PlayerPrefs.SetInt("CurrentLevel", currentLevelNumber);
+            PlayerPrefs.Save();
+
+            Debug.Log($"[LevelManager] Saved CurrentLevel = {currentLevelNumber}");
+            Debug.Log($"[LevelManager] Advancing to Level {currentLevelNumber + 1}");
+
+            LoadCurrentLevel();
+        }
     }
 
-    private void CompleteCurrentLevel()
+    /// <summary>
+    /// Load the current level scene
+    /// </summary>
+    public void LoadCurrentLevel()
+    {
+        string sceneName = $"{levelScenePrefix}{currentLevelNumber + 1}";
+        
+        if (debugMode)
+        {
+            Debug.Log($"[LevelManager] Loading scene: {sceneName}");
+        }
+
+        SceneManager.LoadScene(sceneName);
+    }
+
+    /// <summary>
+    /// Load a specific level by number (1-indexed)
+    /// </summary>
+    public void LoadLevel(int levelNumber)
+    {
+        currentLevelNumber = levelNumber - 1; // Convert to 0-indexed
+        PlayerPrefs.SetInt("CurrentLevel", currentLevelNumber);
+        PlayerPrefs.Save();
+
+        LoadCurrentLevel();
+    }
+
+    /// <summary>
+    /// Return to level selection screen
+    /// </summary>
+    public void LoadLevelSelection()
     {
         if (debugMode)
-            Debug.Log($"[LevelManager] Level {currentLevelIndex} completed!");
-
-        // Fire event
-        OnLevelCompleted?.Invoke(currentLevelIndex);
-
-        // Trigger SmlAnimManager confetti + sound
-        if (SmlAnimManager.Instance != null)
         {
-            SmlAnimManager.Instance.OnLevelComplete(currentLevelIndex);
+            Debug.Log($"[LevelManager] Loading level selection: {levelSelectionScene}");
         }
 
-        // Show ad if ads manager is available
-        if (adsManager != null && adsManager.IsReady())
-        {
-            adsManager.ShowRewarded(
-                onReward: () =>
-                {
-                    if (debugMode) Debug.Log("[LevelManager] Ad reward received");
-                },
-                onClosed: (completed) =>
-                {  // FIX: Accept the bool parameter
-                    AdvanceToNextLevel();
-                },
-                onFailed: (error) =>
-                {
-                    Debug.LogWarning($"[LevelManager] Ad failed: {error}");
-                    AdvanceToNextLevel(); // Continue anyway
-                }
-            );
-        }
-        else
-        {
-            // No ads or ads not ready - advance immediately
-            AdvanceToNextLevel();
-        }
-    }
-
-
-    private void AdvanceToNextLevel()
-    {
-        if (currentLevelIndex < levelConfig.Count - 1)
-        {
-            currentLevelIndex++;
-            SaveCurrentLevel();
-            
-            if (debugMode)
-                Debug.Log($"[LevelManager] Advanced to level {currentLevelIndex}");
-            
-            OnLevelChanged?.Invoke(currentLevelIndex);
-            RefreshAvailableItems();
-        }
-        else
-        {
-            if (debugMode)
-                Debug.Log("[LevelManager] All levels completed!");
-            
-            // Could show "game complete" screen here
-        }
+        SceneManager.LoadScene(levelSelectionScene);
     }
 
     /// <summary>
-    /// Refreshes which items are visible/interactable based on current level
+    /// Restart the current level
     /// </summary>
-    /// <summary>
-    /// Refreshes which items are visible/interactable based on current level
-    /// </summary>
-    private void RefreshAvailableItems()
+    public void RestartCurrentLevel()
     {
-        var currentLevelItems = GetCurrentLevelItemIds();
-
-        // ✅ CHANGED: Find DraggableButton instead of SimpleDragFromBar
-        var allDragButtons = FindObjectsOfType<DraggableButton>();
-
-        foreach (var dragButton in allDragButtons)
+        if (debugMode)
         {
-            string buttonID = dragButton.GetButtonID();
-            bool shouldBeVisible = currentLevelItems.Contains(buttonID);
+            Debug.Log($"[LevelManager] Restarting Level {currentLevelNumber + 1}");
+        }
 
-            // Only show items that belong to current level AND haven't been placed yet
-            if (progressManager != null && progressManager.IsItemPlaced(buttonID))
+        // Clear the current level's progress
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.ResetCurrentLevelOnly();
+        }
+
+        LoadCurrentLevel();
+    }
+
+    /// <summary>
+    /// Check if a level is completed
+    /// </summary>
+    public bool IsLevelCompleted(int levelNumber)
+    {
+        string key = $"Level_{levelNumber}_Completed";
+        return PlayerPrefs.GetInt(key, 0) == 1;
+    }
+
+    /// <summary>
+    /// Get total number of completed levels
+    /// </summary>
+    public int GetCompletedLevelsCount()
+    {
+        int count = 0;
+        for (int i = 1; i <= totalLevels; i++)
+        {
+            if (IsLevelCompleted(i))
             {
-                shouldBeVisible = false; // Item already placed, don't show in bottom bar
-            }
-
-            // Hide/show the button
-            dragButton.gameObject.SetActive(shouldBeVisible);
-
-            if (debugMode && shouldBeVisible)
-                Debug.Log($"[LevelManager] Made item {buttonID} available for level {currentLevelIndex}");
-        }
-    }
-
-
-    /// <summary>
-    /// Reset current level progress (for testing)
-    /// </summary>
-    [ContextMenu("Reset Current Level")]
-    public void ResetCurrentLevel()
-    {
-        if (progressManager != null && levelConfig.ContainsKey(currentLevelIndex))
-        {
-            var currentLevelItems = levelConfig[currentLevelIndex];
-            foreach (string itemId in currentLevelItems)
-            {
-                progressManager.RemoveItemPlacement(itemId);
+                count++;
             }
         }
-        
-        RefreshAvailableItems();
+        return count;
     }
 
-    /// <summary>
-    /// Reset all progress and go back to level 0 (for testing)
-    /// </summary>
-    [ContextMenu("Reset All Progress")]
-    public void ResetAllProgress()
+    #region Debug Methods
+
+    [ContextMenu("🎮 Complete Current Level")]
+    public void DebugCompleteCurrentLevel()
     {
-        currentLevelIndex = 0;
-        SaveCurrentLevel();
-        
-        if (progressManager != null)
-            progressManager.ResetAllProgress();
-            
-        RefreshAvailableItems();
-        OnLevelChanged?.Invoke(currentLevelIndex);
+        MarkCurrentLevelComplete();
+        Debug.Log($"[LevelManager] DEBUG: Completed Level {currentLevelNumber + 1}");
     }
 
-    /// <summary>
-    /// Skip to next level (for testing)
-    /// </summary>
-    [ContextMenu("Skip Level")]
-    public void SkipLevel()
+    [ContextMenu("➡️ Advance to Next Level")]
+    public void DebugAdvanceToNext()
     {
-        if (currentLevelIndex < levelConfig.Count - 1)
+        AdvanceToNextLevel();
+    }
+
+    [ContextMenu("🔄 Restart Current Level")]
+    public void DebugRestartLevel()
+    {
+        RestartCurrentLevel();
+    }
+
+    [ContextMenu("🏠 Go to Level Selection")]
+    public void DebugGoToLevelSelection()
+    {
+        LoadLevelSelection();
+    }
+
+    [ContextMenu("📊 Show Progress")]
+    public void DebugShowProgress()
+    {
+        Debug.Log("=== LEVEL PROGRESS ===");
+        Debug.Log($"Current Level: {currentLevelNumber + 1}");
+        Debug.Log($"Completed Levels: {GetCompletedLevelsCount()}/{totalLevels}");
+        
+        for (int i = 1; i <= totalLevels; i++)
         {
-            AdvanceToNextLevel();
+            bool completed = IsLevelCompleted(i);
+            Debug.Log($"  Level {i}: {(completed ? "✓ Complete" : "○ Not Complete")}");
         }
     }
 
-    // Public getters for UI
+    #endregion
+
+    #region GameDebugTools Compatibility
+
+    /// <summary>
+    /// Get current level name (for GameDebugTools)
+    /// </summary>
     public string GetCurrentLevelName()
     {
-        return $"Level {currentLevelIndex + 1}";
+        return $"{levelScenePrefix}{currentLevelNumber + 1}";
     }
 
-    public string GetLevelProgress()
+    /// <summary>
+    /// Get level progress percentage (for GameDebugTools)
+    /// </summary>
+    public float GetLevelProgress()
     {
-        if (progressManager == null || !levelConfig.ContainsKey(currentLevelIndex))
-            return "0/7";
-            
-        var currentLevelItems = levelConfig[currentLevelIndex];
-        int placedCount = 0;
-        
-        foreach (string itemId in currentLevelItems)
+        if (GameProgressManager.Instance != null)
         {
-            if (progressManager.IsItemPlaced(itemId))
-                placedCount++;
+            var progressData = GameProgressManager.Instance.GetProgressData();
+            if (progressData != null)
+            {
+                // This would need to know total items in level
+                // For now return simple completed count
+                return progressData.placedItems.Count;
+            }
         }
-        
-        return $"{placedCount}/7";
+        return 0f;
     }
 
-    // Method to add new levels in code easily
-    public void AddLevel(int levelIndex, List<string> itemIds)
+    /// <summary>
+    /// Reset current level (for GameDebugTools)
+    /// </summary>
+    public void ResetCurrentLevel()
     {
-        if (itemIds.Count != 7)
+        RestartCurrentLevel();
+    }
+
+    /// <summary>
+    /// Reset all progress (for GameDebugTools)
+    /// </summary>
+    public void ResetAllProgress()
+    {
+        // Reset level completion
+        for (int i = 1; i <= totalLevels; i++)
         {
-            Debug.LogWarning($"[LevelManager] Cannot add level {levelIndex} - must have exactly 7 items!");
-            return;
+            PlayerPrefs.DeleteKey($"Level_{i}_Completed");
         }
         
-        levelConfig[levelIndex] = new List<string>(itemIds);
-        
+        // Reset current level to 0
+        currentLevelNumber = 0;
+        PlayerPrefs.SetInt("CurrentLevel", 0);
+        PlayerPrefs.Save();
+
+        // Reset GameProgressManager if available
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.ResetAllProgress();
+        }
+
         if (debugMode)
-            Debug.Log($"[LevelManager] Added level {levelIndex} with items: {string.Join(", ", itemIds)}");
-    }
-
-    private void OnValidate()
-    {
-        if (showCurrentLevelInfo && Application.isPlaying)
         {
-            // Show current level info in inspector during play
-            name = $"LevelManager - Level {currentLevelIndex + 1} ({GetLevelProgress()})";
+            Debug.Log("[LevelManager] All progress reset!");
         }
     }
+
+    /// <summary>
+    /// Skip to next level (for GameDebugTools)
+    /// </summary>
+    public void SkipLevel()
+    {
+        if (debugMode)
+        {
+            Debug.Log($"[LevelManager] Skipping Level {currentLevelNumber + 1}");
+        }
+        
+        AdvanceToNextLevel();
+    }
+
+    /// <summary>
+    /// Get total number of levels (for GameDebugTools)
+    /// </summary>
+    public int GetTotalLevels()
+    {
+        return totalLevels;
+    }
+
+    #endregion
 }
