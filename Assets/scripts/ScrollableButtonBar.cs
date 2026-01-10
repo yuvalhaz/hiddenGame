@@ -43,10 +43,12 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<Vector2> targetPositions = new List<Vector2>();
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
-    private bool isFirstRecalculation = true; // Skip animation on very first recalculation
+    private int startFrame = -1; // Frame when Start() was called
 
     void Start()
     {
+        startFrame = Time.frameCount;
+
         if (buttonDataList.Count == 0)
         {
             for (int i = 0; i < numberOfButtons; i++)
@@ -58,7 +60,7 @@ public class ScrollableButtonBar : MonoBehaviour
                 });
             }
         }
-        
+
         CreateButtons();
     }
 
@@ -348,21 +350,24 @@ public class ScrollableButtonBar : MonoBehaviour
 
                 Debug.Log($"כפתור {i}: מיקום יעד חדש = {xPos}");
 
-                // ✅ On first recalculation, place immediately. Otherwise animate.
+                // ✅ During initial frames, place immediately. Otherwise animate.
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
                     RectTransform rect = buttons[i].GetComponent<RectTransform>();
                     if (rect != null)
                     {
-                        if (isFirstRecalculation)
+                        // Check if we're within first 3 frames after Start
+                        bool isInitialSetup = (Time.frameCount - startFrame) <= 3;
+
+                        if (isInitialSetup)
                         {
-                            // First time - place immediately without animation
+                            // Initial setup - place immediately without animation
                             rect.anchoredPosition = newTarget;
-                            Debug.Log($"[ScrollableButtonBar] Button {i} placed immediately at {newTarget}");
+                            Debug.Log($"[ScrollableButtonBar] Button {i} placed immediately (frame {Time.frameCount - startFrame})");
                         }
                         else
                         {
-                            // Subsequent times - animate smoothly
+                            // Normal operation - animate smoothly
                             buttonsAnimating[rect] = true;
                         }
                     }
@@ -370,13 +375,6 @@ public class ScrollableButtonBar : MonoBehaviour
 
                 positionIndex++;
             }
-        }
-
-        // After first recalculation, enable animations for future recalculations
-        if (isFirstRecalculation)
-        {
-            isFirstRecalculation = false;
-            Debug.Log("[ScrollableButtonBar] Initial setup complete - animations now enabled");
         }
 
         UpdateContentSize();
