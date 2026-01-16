@@ -42,6 +42,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private RectTransform barRectTransform;
     private Vector2 dragStartPosition;
     private bool hasCrossedBarBoundary = false;
+    private bool hasLeftBarArea = false;
 
     void Awake()
     {
@@ -102,6 +103,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         isDragging = true;
         dragStartPosition = eventData.position;
         hasCrossedBarBoundary = false;
+        hasLeftBarArea = false;
 
         // ✅ העבר את האירוע ל-ScrollRect - תן לו לעבוד
         if (parentScrollRect != null)
@@ -125,9 +127,20 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
             if (!isInsideBar)
             {
-                // ✅ יצאנו מהבר - הפסק להעביר אירועים ל-ScrollRect
-                if (debugMode)
-                    Debug.Log($"[DraggableButton] Pointer left bar area - stopping ScrollRect");
+                // ✅ יצאנו מהבר - סיים את הגרירה של ScrollRect
+                if (!hasLeftBarArea)
+                {
+                    hasLeftBarArea = true;
+
+                    // שלח endDrag ל-ScrollRect כדי לסיים את הגרירה שלו
+                    if (parentScrollRect != null)
+                    {
+                        ((IEndDragHandler)parentScrollRect).OnEndDrag(eventData);
+                    }
+
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Pointer left bar area - ended ScrollRect drag");
+                }
                 return;
             }
 
@@ -240,8 +253,8 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             if (debugMode)
                 Debug.Log($"[DraggableButton] OnEndDrag - never crossed boundary, forwarding to ScrollRect");
 
-            // העבר את endDrag ל-ScrollRect
-            if (parentScrollRect != null)
+            // העבר את endDrag ל-ScrollRect רק אם לא יצאנו מהבר (אחרת כבר שלחנו endDrag)
+            if (parentScrollRect != null && !hasLeftBarArea)
             {
                 ((IEndDragHandler)parentScrollRect).OnEndDrag(eventData);
             }
@@ -250,6 +263,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
             hasCrossedBarBoundary = false;
+            hasLeftBarArea = false;
             return;
         }
 
@@ -328,6 +342,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
         isDraggingOut = false;
         hasCrossedBarBoundary = false;
+        hasLeftBarArea = false;
     }
 
     public void ReturnToPosition(Vector2 position)
