@@ -101,7 +101,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
     public void OnInitializePotentialDrag(PointerEventData eventData)
     {
-        // ✅ העבר גם ל-ScrollRect כדי שיהיה מוכן
+        // ✅ תמיד נתן ל-ScrollRect להתחיל
         if (parentScrollRect != null)
         {
             ExecuteEvents.ExecuteHierarchy(parentScrollRect.gameObject, eventData, ExecuteEvents.initializePotentialDrag);
@@ -114,100 +114,70 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         isDragging = true;
         dragStartPosition = eventData.position;
         hasCrossedBarBoundary = false;
-        isDraggingScrollRect = false; // ✅ נאפס את הדגל
+        isDraggingScrollRect = true; // ✅ נתחיל תמיד עם ScrollRect
 
         canvasGroup.blocksRaycasts = false;
 
         buttonBar.OnButtonDragStarted(this, originalIndex);
 
+        // ✅ תמיד נתחיל את ScrollRect
+        if (parentScrollRect != null)
+        {
+            ExecuteEvents.ExecuteHierarchy(parentScrollRect.gameObject, eventData, ExecuteEvents.beginDragHandler);
+        }
+
         if (debugMode)
-            Debug.Log($"[DraggableButton] OnBeginDrag - waiting for direction determination");
+            Debug.Log($"[DraggableButton] OnBeginDrag - ScrollRect started, monitoring for boundary crossing");
     }
 
     public void OnDrag(PointerEventData eventData)
     {
         if (!isDragging) return;
 
-        // ✅ בדוק אם עדיין לא החלטנו על כיוון הגרירה
-        if (!hasCrossedBarBoundary && !isDraggingScrollRect && barRectTransform != null)
+        // ✅ בדוק אם עדיין לא חצינו את הגבול
+        if (!hasCrossedBarBoundary && barRectTransform != null)
         {
-            // חשב את כיוון הגרירה
-            Vector2 dragDelta = eventData.position - dragStartPosition;
-            float dragDistance = dragDelta.magnitude;
+            // בדוק אם האצבע חצתה 20% מעל הבר
+            Vector2 localPointInBar;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                barRectTransform,
+                eventData.position,
+                eventData.pressEventCamera,
+                out localPointInBar
+            );
 
-            // רק אם יש מספיק תזוזה כדי לקבוע כיוון (threshold קטן)
-            if (dragDistance > 5f)
+            float barTopEdge = barRectTransform.rect.yMax;
+            float barHeight = barRectTransform.rect.height;
+            float threshold = barTopEdge + (barHeight * 0.2f); // 20% מעל הבר
+
+            if (localPointInBar.y > threshold)
             {
-                // האם זו גרירה אנכית או אופקית?
-                bool isVerticalDrag = Mathf.Abs(dragDelta.y) > Mathf.Abs(dragDelta.x);
-                bool isDraggingUp = dragDelta.y > 0;
+                // ✅ חצינו את הגבול! נעצור את ScrollRect ונתחיל גרירת כפתור
+                hasCrossedBarBoundary = true;
+                isDraggingScrollRect = false;
+                isDraggingOut = true;
 
-                if (!isVerticalDrag)
+                // עצור את ScrollRect
+                if (parentScrollRect != null)
                 {
-                    // ✅ גרירה אופקית - העבר ל-ScrollRect!
-                    isDraggingScrollRect = true;
-
-                    if (debugMode)
-                        Debug.Log($"[DraggableButton] Horizontal drag detected - forwarding to ScrollRect");
-
-                    // החזר את הכפתור למצב נורמלי
-                    canvasGroup.alpha = 1f;
-                    canvasGroup.blocksRaycasts = true;
-
-                    // העבר את אירוע ההתחלה ל-ScrollRect
-                    if (parentScrollRect != null)
-                    {
-                        ExecuteEvents.ExecuteHierarchy(parentScrollRect.gameObject, eventData, ExecuteEvents.beginDragHandler);
-                    }
+                    ExecuteEvents.ExecuteHierarchy(parentScrollRect.gameObject, eventData, ExecuteEvents.endDragHandler);
+                    parentScrollRect.StopMovement();
                 }
-                else if (isVerticalDrag && isDraggingUp)
-                {
-                    // גרירה אנכית למעלה - בדוק אם חצינו את הגבול
-                    Vector2 localPointInBar;
-                    RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                        barRectTransform,
-                        eventData.position,
-                        eventData.pressEventCamera,
-                        out localPointInBar
-                    );
 
-                    float barTopEdge = barRectTransform.rect.yMax;
+                if (debugMode)
+                    Debug.Log($"[DraggableButton] ✅ Crossed 20% boundary! Starting button drag for {buttonID}");
 
-                    if (localPointInBar.y > barTopEdge)
-                    {
-                        // ✅ חצינו את הגבול!
-                        hasCrossedBarBoundary = true;
-                        isDraggingOut = true;
+                buttonBar.OnButtonDraggedOut(this, originalIndex);
 
-                        if (debugMode)
-                            Debug.Log($"[DraggableButton] ✅ Crossed bar boundary! Starting drag for {buttonID}");
+                EnableMatchingDropSpot(true);
 
-                        buttonBar.OnButtonDraggedOut(this, originalIndex);
-
-                        EnableMatchingDropSpot(true);
-
-                        CreateDragVisual();
-                        canvasGroup.alpha = 0f;
-                        rectTransform.anchoredPosition = originalPosition;
-                    }
-                    else
-                    {
-                        if (debugMode)
-                            Debug.Log($"[DraggableButton] Dragging up but not crossed yet: localY={localPointInBar.y}, barTop={barTopEdge}");
-
-                        // עדיין לא חצינו - לא עושים כלום
-                        return;
-                    }
-                }
-                else
-                {
-                    // גרירה למטה - לא עושים כלום
-                    return;
-                }
+                CreateDragVisual();
+                canvasGroup.alpha = 0f;
+                rectTransform.anchoredPosition = originalPosition;
             }
         }
 
-        // ✅ אם החלטנו שזה ScrollRect - העבר את האירועים
+        // ✅ אם אנחנו במצב ScrollRect - העבר את האירועים
         if (isDraggingScrollRect && parentScrollRect != null)
         {
             ExecuteEvents.ExecuteHierarchy(parentScrollRect.gameObject, eventData, ExecuteEvents.dragHandler);
