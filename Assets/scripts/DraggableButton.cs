@@ -103,12 +103,11 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         dragStartPosition = eventData.position;
         hasCrossedBarBoundary = false;
 
-        // ✅ כרגע עדיין מאפשרים אינטראקציה
-        canvasGroup.interactable = true;
-        canvasGroup.blocksRaycasts = false;  // לא חוסמים raycasts כדי לאפשר גרירה
-
-        // ✅ לא משביתים את ScrollRect כאן - רק אחרי שנחצה את הגבול!
-        // ScrollRect ימשיך לעבוד עד שנזהה גרירה למעלה שחוצה את הבר
+        // ✅ העבר את האירוע ל-ScrollRect - תן לו לעבוד
+        if (parentScrollRect != null)
+        {
+            ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.beginDragHandler);
+        }
 
         if (debugMode)
             Debug.Log($"[DraggableButton] OnBeginDrag - waiting for vertical drag beyond bar");
@@ -151,9 +150,10 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                     if (debugMode)
                         Debug.Log($"[DraggableButton] ✅ Crossed bar boundary! Starting drag for {buttonID}");
 
-                    // עכשיו השבת את ScrollRect
+                    // עכשיו השבת את ScrollRect - שלח לו endDrag כדי לסיים את הגרירה שלו
                     if (parentScrollRect != null)
                     {
+                        ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.endDragHandler);
                         parentScrollRect.enabled = false;
                         if (debugMode)
                             Debug.Log($"[DraggableButton] ScrollRect disabled");
@@ -169,10 +169,24 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
                     buttonBar.OnButtonDraggedOut(this, originalIndex);
                 }
-                else if (debugMode)
+                else
                 {
-                    // עדיין לא חצינו - ScrollRect עובד
-                    Debug.Log($"[DraggableButton] Dragging but not crossed yet: localY={localPointInBar.y}, barTop={barTopEdge}");
+                    // עדיין לא חצינו - העבר את האירוע ל-ScrollRect
+                    if (parentScrollRect != null)
+                    {
+                        ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.dragHandler);
+                    }
+
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Dragging but not crossed yet: localY={localPointInBar.y}, barTop={barTopEdge}");
+                }
+            }
+            else
+            {
+                // גרירה אופקית או למטה - העבר ל-ScrollRect
+                if (parentScrollRect != null)
+                {
+                    ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.dragHandler);
                 }
             }
         }
@@ -190,25 +204,31 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     {
         isDragging = false;
 
-        // ✅ הפעל מחדש את ה-ScrollRect (רק אם השבתנו אותו)
-        if (parentScrollRect != null && hasCrossedBarBoundary)
-        {
-            parentScrollRect.enabled = true;
-            if (debugMode)
-                Debug.Log($"[DraggableButton] ScrollRect re-enabled");
-        }
-
-        // ✅ אם לא חצינו את הגבול - פשוט בטל הכל
+        // ✅ אם לא חצינו את הגבול - העבר את האירוע ל-ScrollRect ובטל הכל
         if (!hasCrossedBarBoundary)
         {
             if (debugMode)
-                Debug.Log($"[DraggableButton] OnEndDrag - never crossed boundary, just reset");
+                Debug.Log($"[DraggableButton] OnEndDrag - never crossed boundary, forwarding to ScrollRect");
+
+            // העבר את endDrag ל-ScrollRect
+            if (parentScrollRect != null)
+            {
+                ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.endDragHandler);
+            }
 
             canvasGroup.alpha = 1f;
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
             hasCrossedBarBoundary = false;
             return;
+        }
+
+        // ✅ הפעל מחדש את ה-ScrollRect (רק אם השבתנו אותו)
+        if (parentScrollRect != null && hasCrossedBarBoundary)
+        {
+            parentScrollRect.enabled = true;
+            if (debugMode)
+                Debug.Log($"[DraggableButton] ScrollRect re-enabled");
         }
 
         // ✅ חצינו את הגבול - טפל בגרירה
