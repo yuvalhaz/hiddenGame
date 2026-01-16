@@ -17,6 +17,11 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     [Header("Success Effects")]
     [SerializeField] private bool showConfettiOnSuccess = true;
     [SerializeField] private int confettiCount = 50;
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip dragStartSound;
+    [SerializeField] private AudioClip dropSuccessSound;
+    [SerializeField] private AudioClip dropFailSound;
     
     private ScrollableButtonBar buttonBar;
     private RectTransform rectTransform;
@@ -46,19 +51,29 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     // ✅ משתנה לזיהוי אם אנחנו בגרירת ScrollRect
     private bool isDraggingScrollRect = false;
 
+    private AudioSource audioSource;
+
     void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
         canvas = GetComponentInParent<Canvas>();
         canvasGroup = GetComponent<CanvasGroup>();
-        
+
         if (canvasGroup == null)
         {
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
-        
+
         // ✅ מצא את ה-ScrollRect ההורה
         parentScrollRect = GetComponentInParent<ScrollRect>();
+
+        // ✅ הוסף AudioSource אם אין
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+        }
     }
 
     void OnDestroy()
@@ -164,6 +179,9 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     parentScrollRect.StopMovement();
                 }
 
+                // ✅ השמע את אפקט הסאונד של התחלת גרירה
+                PlaySound(dragStartSound);
+
                 if (debugMode)
                     Debug.Log($"[DraggableButton] ✅ Crossed 20% boundary! Starting button drag for {buttonID}");
 
@@ -243,17 +261,20 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                         Debug.Log($"[DraggableButton] ✅ SUCCESS! Dropped on correct spot and close enough: {hitSpot.spotId}");
                         wasSuccessfullyPlaced = true;
                         canvasGroup.alpha = 1f;
+                        PlaySound(dropSuccessSound);
                         HandleSuccessfulPlacement(hitSpot);
                     }
                     else
                     {
                         Debug.Log($"[DraggableButton] ❌ Too far! Distance: {distance} > {dropDistanceThreshold}");
+                        PlaySound(dropFailSound);
                         StartCoroutine(AnimateReturnToBar());
                     }
                 }
                 else
                 {
                     Debug.LogError($"[DraggableButton] ❌ DropSpot has no RectTransform!");
+                    PlaySound(dropFailSound);
                     StartCoroutine(AnimateReturnToBar());
                 }
             }
@@ -264,6 +285,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 else
                     Debug.Log($"[DraggableButton] ❌ No spot found");
 
+                PlaySound(dropFailSound);
                 StartCoroutine(AnimateReturnToBar());
             }
         }
@@ -892,6 +914,16 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         else
         {
             Debug.LogWarning($"[EnableMatchingDropSpot] No DropSpot found with buttonID: {buttonID}");
+        }
+    }
+
+    // ===== Audio =====
+
+    private void PlaySound(AudioClip clip)
+    {
+        if (clip != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(clip);
         }
     }
 }
