@@ -116,7 +116,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         hasCrossedBarBoundary = false;
         isDraggingScrollRect = true; // ✅ נתחיל תמיד עם ScrollRect
 
-        canvasGroup.blocksRaycasts = false;
+        // ✅ לא נכבה את blocksRaycasts עד שנתחיל באמת לגרור כפתור!
 
         buttonBar.OnButtonDragStarted(this, originalIndex);
 
@@ -170,6 +170,9 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 buttonBar.OnButtonDraggedOut(this, originalIndex);
 
                 EnableMatchingDropSpot(true);
+
+                // ✅ רק עכשיו נכבה את blocksRaycasts כשאנחנו באמת גוררים כפתור
+                canvasGroup.blocksRaycasts = false;
 
                 CreateDragVisual();
                 canvasGroup.alpha = 0f;
