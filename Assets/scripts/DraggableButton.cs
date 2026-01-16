@@ -27,16 +27,21 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private CanvasGroup canvasGroup;
     private string buttonID;
     private bool isDragging = false;
-    
+
     private RectTransform activeDragRT;
     private Image activeDragImage;
-    
+
     private static Dictionary<string, DropSpot> dropSpotCache;
-    
+
     private bool wasSuccessfullyPlaced = false;
-    
+
     // ✅ הוספה: שמירת ההפניה ל-ScrollRect כדי להשבית אותו
     private ScrollRect parentScrollRect;
+
+    // ✅ משתנים חדשים לזיהוי חציית גבול הבר
+    private RectTransform barRectTransform;
+    private Vector2 dragStartPosition;
+    private bool hasCrossedBarBoundary = false;
 
     void Awake()
     {
@@ -68,6 +73,12 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     {
         buttonBar = bar;
         originalIndex = index;
+
+        // ✅ שמור את ה-RectTransform של הבר לבדיקת גבולות
+        if (bar != null)
+        {
+            barRectTransform = bar.GetComponent<RectTransform>();
+        }
     }
 
     public void SetButtonID(string id)
@@ -89,95 +100,137 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     {
         originalPosition = rectTransform.anchoredPosition;
         isDragging = true;
-        
-        // ✅ כרגע עדיין מאפשרים אינטראקציה (עד שעוברים threshold)
+        dragStartPosition = eventData.position;
+        hasCrossedBarBoundary = false;
+
+        // ✅ כרגע עדיין מאפשרים אינטראקציה
         canvasGroup.interactable = true;
         canvasGroup.blocksRaycasts = false;  // לא חוסמים raycasts כדי לאפשר גרירה
-        
-        // ✅ השבת את ה-ScrollRect כדי שלא יפריע לגרירה
-        if (parentScrollRect != null)
-        {
-            parentScrollRect.enabled = false;
-            if (debugMode)
-                Debug.Log($"[DraggableButton] ScrollRect disabled");
-        }
-        
-        buttonBar.OnButtonDragStarted(this, originalIndex);
-        
-        EnableMatchingDropSpot(true);
+
+        // ✅ לא משביתים את ScrollRect כאן - רק אחרי שנחצה את הגבול!
+        // ScrollRect ימשיך לעבוד עד שנזהה גרירה למעלה שחוצה את הבר
+
+        if (debugMode)
+            Debug.Log($"[DraggableButton] OnBeginDrag - waiting for vertical drag beyond bar");
     }
 
     public void OnDrag(PointerEventData eventData)
     {
         if (!isDragging) return;
-        
-        Vector2 localPoint;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            rectTransform.parent as RectTransform,
-            eventData.position,
-            eventData.pressEventCamera,
-            out localPoint
-        );
 
-        float distanceFromOriginal = Vector2.Distance(localPoint, originalPosition);
-        bool wasOut = isDraggingOut;
-        isDraggingOut = distanceFromOriginal > dragThreshold;
-        
-        // ✅ רק לפני שיוצרים drag visual - תזיז את הכפתור
-        // אחרי שיצרנו drag visual - אל תזיז את הכפתור המקורי!
-        if (!wasOut && isDraggingOut)
+        // ✅ בדוק אם עדיין לא חצינו את הגבול
+        if (!hasCrossedBarBoundary)
         {
-            // כאן אנחנו עוברים את ה-threshold בפעם הראשונה
-            if (debugMode)
-                Debug.Log($"[DraggableButton] Button crossed threshold! Creating drag visual for {buttonID}");
-            
-            buttonBar.OnButtonDraggedOut(this, originalIndex);
-            
-            CreateDragVisual();
-            canvasGroup.alpha = 0f;
-            
-            // ✅ החזר את הכפתור המקורי למיקום המקורי שלו!
-            rectTransform.anchoredPosition = originalPosition;
+            // חשב את כיוון הגרירה
+            Vector2 dragDelta = eventData.position - dragStartPosition;
+
+            // האם זו גרירה אנכית למעלה?
+            bool isVerticalDrag = Mathf.Abs(dragDelta.y) > Mathf.Abs(dragDelta.x);
+            bool isDraggingUp = dragDelta.y > 0;
+
+            if (isVerticalDrag && isDraggingUp && barRectTransform != null)
+            {
+                // המר את מיקום האצבע לקואורדינטות מקומיות של הבר
+                Vector2 localPointInBar;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    barRectTransform,
+                    eventData.position,
+                    eventData.pressEventCamera,
+                    out localPointInBar
+                );
+
+                // הגבול העליון של הבר
+                float barTopEdge = barRectTransform.rect.yMax;
+
+                if (localPointInBar.y > barTopEdge)
+                {
+                    // ✅ חצינו את הגבול!
+                    hasCrossedBarBoundary = true;
+                    isDraggingOut = true;
+
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] ✅ Crossed bar boundary! Starting drag for {buttonID}");
+
+                    // עכשיו השבת את ScrollRect
+                    if (parentScrollRect != null)
+                    {
+                        parentScrollRect.enabled = false;
+                        if (debugMode)
+                            Debug.Log($"[DraggableButton] ScrollRect disabled");
+                    }
+
+                    // התחל את הגרירה האמיתית
+                    buttonBar.OnButtonDragStarted(this, originalIndex);
+                    EnableMatchingDropSpot(true);
+
+                    CreateDragVisual();
+                    canvasGroup.alpha = 0f;
+                    rectTransform.anchoredPosition = originalPosition;
+
+                    buttonBar.OnButtonDraggedOut(this, originalIndex);
+                }
+                else if (debugMode)
+                {
+                    // עדיין לא חצינו - ScrollRect עובד
+                    Debug.Log($"[DraggableButton] Dragging but not crossed yet: localY={localPointInBar.y}, barTop={barTopEdge}");
+                }
+            }
         }
-        
-        // ✅ רק עדכן את מיקום ה-drag visual, אל תזיז את הכפתור המקורי
-        if (isDraggingOut && activeDragRT != null)
+        else
         {
-            UpdateDragPosition(eventData);
+            // ✅ כבר חצינו את הגבול - המשך גרירה רגילה
+            if (activeDragRT != null)
+            {
+                UpdateDragPosition(eventData);
+            }
         }
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
         isDragging = false;
-        
-        // ✅ הפעל מחדש את ה-ScrollRect
-        if (parentScrollRect != null)
+
+        // ✅ הפעל מחדש את ה-ScrollRect (רק אם השבתנו אותו)
+        if (parentScrollRect != null && hasCrossedBarBoundary)
         {
             parentScrollRect.enabled = true;
             if (debugMode)
                 Debug.Log($"[DraggableButton] ScrollRect re-enabled");
         }
-        
-        // ✅ החזר את הכפתור המקורי להיות אינטראקטיבי (למקרה שחוזרים)
+
+        // ✅ אם לא חצינו את הגבול - פשוט בטל הכל
+        if (!hasCrossedBarBoundary)
+        {
+            if (debugMode)
+                Debug.Log($"[DraggableButton] OnEndDrag - never crossed boundary, just reset");
+
+            canvasGroup.alpha = 1f;
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+            hasCrossedBarBoundary = false;
+            return;
+        }
+
+        // ✅ חצינו את הגבול - טפל בגרירה
+        // החזר את הכפתור המקורי להיות אינטראקטיבי (למקרה שחוזרים)
         canvasGroup.interactable = true;
         canvasGroup.blocksRaycasts = true;
-        
+
         if (activeDragRT != null)
         {
             Debug.Log($"[DraggableButton] OnEndDrag - checking for drop...");
-            
+
             DropSpot hitSpot = RaycastForDropSpot(eventData);
-            
+
             if (hitSpot != null && hitSpot.Accepts(buttonID))
             {
                 RectTransform spotRT = hitSpot.GetComponent<RectTransform>();
                 if (spotRT != null)
                 {
                     float distance = Vector3.Distance(activeDragRT.position, spotRT.position);
-                    
+
                     Debug.Log($"[DraggableButton] Distance to spot: {distance}, Max allowed: {dropDistanceThreshold}");
-                    
+
                     if (distance <= dropDistanceThreshold)
                     {
                         Debug.Log($"[DraggableButton] ✅ SUCCESS! Dropped on correct spot and close enough: {hitSpot.spotId}");
@@ -203,7 +256,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                     Debug.Log($"[DraggableButton] ❌ Wrong spot! Expected: {buttonID}, Got: {hitSpot.spotId}");
                 else
                     Debug.Log($"[DraggableButton] ❌ No spot found");
-                
+
                 StartCoroutine(AnimateReturnToBar());
             }
         }
@@ -213,7 +266,8 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             canvasGroup.alpha = 1f;
             canvasGroup.interactable = true;
         }
-        
+
+        // ✅ כבה את DropSpot רק אם הפעלנו אותו
         EnableMatchingDropSpot(false);
 
         // רק אם לא הושם בהצלחה - תחזיר אותו לבר
@@ -221,8 +275,9 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         {
             buttonBar.OnButtonReturned(this, originalIndex);
         }
-        
+
         isDraggingOut = false;
+        hasCrossedBarBoundary = false;
     }
 
     public void ReturnToPosition(Vector2 position)
