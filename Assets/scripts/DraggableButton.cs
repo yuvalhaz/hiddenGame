@@ -120,6 +120,17 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         // ✅ בדוק אם עדיין לא חצינו את הגבול
         if (!hasCrossedBarBoundary)
         {
+            // בדוק אם האצבע עדיין בתוך גבולות הבר
+            bool isInsideBar = IsPointerInsideBar(eventData);
+
+            if (!isInsideBar)
+            {
+                // ✅ יצאנו מהבר - הפסק להעביר אירועים ל-ScrollRect
+                if (debugMode)
+                    Debug.Log($"[DraggableButton] Pointer left bar area - stopping ScrollRect");
+                return;
+            }
+
             // חשב את כיוון הגרירה
             Vector2 dragDelta = eventData.position - dragStartPosition;
 
@@ -198,6 +209,25 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                 UpdateDragPosition(eventData);
             }
         }
+    }
+
+    /// <summary>
+    /// בדוק אם מיקום האצבע נמצא בתוך גבולות הבר התחתון
+    /// </summary>
+    private bool IsPointerInsideBar(PointerEventData eventData)
+    {
+        if (barRectTransform == null) return true;
+
+        Vector2 localPoint;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            barRectTransform,
+            eventData.position,
+            eventData.pressEventCamera,
+            out localPoint
+        );
+
+        Rect barRect = barRectTransform.rect;
+        return barRect.Contains(localPoint);
     }
 
     public void OnEndDrag(PointerEventData eventData)
