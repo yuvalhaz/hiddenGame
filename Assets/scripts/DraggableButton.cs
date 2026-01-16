@@ -105,10 +105,10 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         hasCrossedBarBoundary = false;
         hasLeftBarArea = false;
 
-        // ✅ העבר את האירוע ל-ScrollRect - תן לו לעבוד
-        if (parentScrollRect != null)
+        // ✅ העבר את האירוע להיררכיה (ScrollRect נמצא ב-parent)
+        if (transform.parent != null)
         {
-            ((IBeginDragHandler)parentScrollRect).OnBeginDrag(eventData);
+            ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.beginDragHandler);
         }
 
         if (debugMode)
@@ -132,10 +132,10 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                 {
                     hasLeftBarArea = true;
 
-                    // שלח endDrag ל-ScrollRect כדי לסיים את הגרירה שלו
-                    if (parentScrollRect != null)
+                    // שלח endDrag להיררכיה
+                    if (transform.parent != null)
                     {
-                        ((IEndDragHandler)parentScrollRect).OnEndDrag(eventData);
+                        ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.endDragHandler);
                     }
 
                     if (debugMode)
@@ -174,10 +174,14 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                     if (debugMode)
                         Debug.Log($"[DraggableButton] ✅ Crossed bar boundary! Starting drag for {buttonID}");
 
-                    // עכשיו השבת את ScrollRect - שלח לו endDrag כדי לסיים את הגרירה שלו
+                    // עכשיו השבת את ScrollRect - שלח endDrag להיררכיה
+                    if (transform.parent != null)
+                    {
+                        ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.endDragHandler);
+                    }
+
                     if (parentScrollRect != null)
                     {
-                        ((IEndDragHandler)parentScrollRect).OnEndDrag(eventData);
                         parentScrollRect.enabled = false;
                         if (debugMode)
                             Debug.Log($"[DraggableButton] ScrollRect disabled");
@@ -195,10 +199,10 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                 }
                 else
                 {
-                    // עדיין לא חצינו - העבר את האירוע ל-ScrollRect
-                    if (parentScrollRect != null)
+                    // עדיין לא חצינו - העבר את האירוע להיררכיה
+                    if (transform.parent != null)
                     {
-                        ((IDragHandler)parentScrollRect).OnDrag(eventData);
+                        ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.dragHandler);
                     }
 
                     if (debugMode)
@@ -207,10 +211,10 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             }
             else
             {
-                // גרירה אופקית או למטה - העבר ל-ScrollRect
-                if (parentScrollRect != null)
+                // גרירה אופקית או למטה - העבר להיררכיה
+                if (transform.parent != null)
                 {
-                    ((IDragHandler)parentScrollRect).OnDrag(eventData);
+                    ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.dragHandler);
                 }
             }
         }
@@ -253,10 +257,10 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             if (debugMode)
                 Debug.Log($"[DraggableButton] OnEndDrag - never crossed boundary, forwarding to ScrollRect");
 
-            // העבר את endDrag ל-ScrollRect רק אם לא יצאנו מהבר (אחרת כבר שלחנו endDrag)
-            if (parentScrollRect != null && !hasLeftBarArea)
+            // העבר את endDrag להיררכיה רק אם לא יצאנו מהבר (אחרת כבר שלחנו endDrag)
+            if (transform.parent != null && !hasLeftBarArea)
             {
-                ((IEndDragHandler)parentScrollRect).OnEndDrag(eventData);
+                ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.endDragHandler);
             }
 
             canvasGroup.alpha = 1f;
