@@ -106,7 +106,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         // ✅ העבר את האירוע ל-ScrollRect - תן לו לעבוד
         if (parentScrollRect != null)
         {
-            ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.beginDragHandler);
+            ((IBeginDragHandler)parentScrollRect).OnBeginDrag(eventData);
         }
 
         if (debugMode)
@@ -153,7 +153,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                     // עכשיו השבת את ScrollRect - שלח לו endDrag כדי לסיים את הגרירה שלו
                     if (parentScrollRect != null)
                     {
-                        ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.endDragHandler);
+                        ((IEndDragHandler)parentScrollRect).OnEndDrag(eventData);
                         parentScrollRect.enabled = false;
                         if (debugMode)
                             Debug.Log($"[DraggableButton] ScrollRect disabled");
@@ -174,7 +174,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                     // עדיין לא חצינו - העבר את האירוע ל-ScrollRect
                     if (parentScrollRect != null)
                     {
-                        ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.dragHandler);
+                        ((IDragHandler)parentScrollRect).OnDrag(eventData);
                     }
 
                     if (debugMode)
@@ -186,7 +186,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
                 // גרירה אופקית או למטה - העבר ל-ScrollRect
                 if (parentScrollRect != null)
                 {
-                    ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.dragHandler);
+                    ((IDragHandler)parentScrollRect).OnDrag(eventData);
                 }
             }
         }
@@ -213,7 +213,7 @@ public class DraggableButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             // העבר את endDrag ל-ScrollRect
             if (parentScrollRect != null)
             {
-                ExecuteEvents.Execute(parentScrollRect.gameObject, eventData, ExecuteEvents.endDragHandler);
+                ((IEndDragHandler)parentScrollRect).OnEndDrag(eventData);
             }
 
             canvasGroup.alpha = 1f;
