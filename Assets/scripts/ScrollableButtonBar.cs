@@ -339,7 +339,7 @@ public class ScrollableButtonBar : MonoBehaviour
             
             buttons.Add(draggable);
             buttonStates.Add(true);
-            targetPositions.Add(Vector2.zero); // Will be set by RecalculateAllPositions
+            targetPositions.Add(buttonRect.anchoredPosition); // Start at same position, will be updated by RecalculateAllPositions
 
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
             if (buttonText != null)
