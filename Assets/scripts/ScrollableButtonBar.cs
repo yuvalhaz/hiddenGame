@@ -106,6 +106,11 @@ public class ScrollableButtonBar : MonoBehaviour
             // Recalculate positions with new spacing
             RecalculateAllPositions();
         }
+        else
+        {
+            // Even without auto spacing, recalculate to set correct positions
+            RecalculateAllPositions();
+        }
 
         // Determine initial animation speed based on number of active buttons
         int activeButtonCount = 0;
@@ -289,10 +294,8 @@ public class ScrollableButtonBar : MonoBehaviour
                 buttonRect.sizeDelta = new Vector2(buttonWidth, buttonWidth);
             }
 
-            // Calculate position based on actual button width
-            float actualWidth = buttonRect.sizeDelta.x;
-            float xPos = buttonSpacing + (i * (actualWidth + buttonSpacing));
-            buttonRect.anchoredPosition = new Vector2(xPos, 0);
+            // Start position far right (will be animated to correct position)
+            buttonRect.anchoredPosition = new Vector2(10000f, 0);
 
             // ✅ Create center drag area if enabled
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
