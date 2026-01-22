@@ -36,12 +36,14 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private bool shuffleButtons = false;
 
     [Header("Animation Settings")]
-    [Tooltip("מהירות אנימציה רגילה במהלך המשחק (ברירת מחדל: 10)")]
-    [SerializeField] private float normalAnimationSpeed = 10f;
-    [Tooltip("מהירות איטית למיקום ההתחלתי בלבד (ברירת מחדל: 7)")]
-    [SerializeField] private float startupAnimationSpeed = 7f;
+    [Tooltip("מהירות רגילה למשחק (ברירת מחדל: 7)")]
+    [SerializeField] private float normalAnimationSpeed = 7f;
+    [Tooltip("מהירות מהירה למיקום ראשוני של כפתורים בודדים (ברירת מחדל: 50)")]
+    [SerializeField] private float fastStartupSpeed = 50f;
     [Tooltip("כמה שניות להמתין לפני מעבר למהירות רגילה (ברירת מחדל: 2)")]
     [SerializeField] private float initialAnimationDuration = 2f;
+    [Tooltip("מספר כפתורים שמעליו משתמשים במהירות רגילה (ברירת מחדל: 10)")]
+    [SerializeField] private int manyButtonsThreshold = 10;
 
     [Header("References")]
     [SerializeField] private RectTransform contentPanel;
@@ -112,19 +114,21 @@ public class ScrollableButtonBar : MonoBehaviour
             if (state) activeButtonCount++;
         }
 
-        // If there are many buttons (more than 10), use slow startup speed
-        // If there are few buttons (10 or less), start with normal speed
-        if (activeButtonCount > 10)
+        // If there are many buttons, use normal speed and stay there
+        // If there are few buttons, start fast then slow down to normal
+        if (activeButtonCount > manyButtonsThreshold)
         {
-            currentAnimationSpeed = startupAnimationSpeed;
-            startTime = Time.time;
-            Debug.Log($"[ScrollableButtonBar] Many buttons ({activeButtonCount}) - starting with slow speed ({startupAnimationSpeed})");
+            // Many buttons: use normal speed (7) and don't change
+            currentAnimationSpeed = normalAnimationSpeed;
+            startTime = -999f; // Old time so speed won't change
+            Debug.Log($"[ScrollableButtonBar] Many buttons ({activeButtonCount}) - using normal speed ({normalAnimationSpeed})");
         }
         else
         {
-            currentAnimationSpeed = normalAnimationSpeed;
-            startTime = -999f; // Set old time so speed won't change
-            Debug.Log($"[ScrollableButtonBar] Few buttons ({activeButtonCount}) - starting with normal speed ({normalAnimationSpeed})");
+            // Few buttons: start fast, then slow down to normal
+            currentAnimationSpeed = fastStartupSpeed;
+            startTime = Time.time;
+            Debug.Log($"[ScrollableButtonBar] Few buttons ({activeButtonCount}) - starting fast ({fastStartupSpeed}), will slow to {normalAnimationSpeed}");
         }
     }
 
@@ -152,11 +156,11 @@ public class ScrollableButtonBar : MonoBehaviour
 
     void Update()
     {
-        // After initial duration, switch to normal speed
-        if (currentAnimationSpeed == startupAnimationSpeed && Time.time - startTime >= initialAnimationDuration)
+        // After initial duration, switch from fast to normal speed
+        if (currentAnimationSpeed == fastStartupSpeed && Time.time - startTime >= initialAnimationDuration)
         {
             currentAnimationSpeed = normalAnimationSpeed;
-            Debug.Log($"[ScrollableButtonBar] Initial animation complete - speed increased from {startupAnimationSpeed} to {normalAnimationSpeed}");
+            Debug.Log($"[ScrollableButtonBar] Initial animation complete - speed reduced from {fastStartupSpeed} to {normalAnimationSpeed}");
         }
 
         // ✅ אנימציה חלקה ורציפה בלי קפיצות!
