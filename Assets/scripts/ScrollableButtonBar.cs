@@ -40,8 +40,8 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private float initialAnimationSpeed = 50f;
     [Tooltip("מהירות אנימציה רגילה אחרי השינוי (ברירת מחדל: 10)")]
     [SerializeField] private float normalAnimationSpeed = 10f;
-    [Tooltip("כמה זמן בשניות עד שהמהירות משתנה (ברירת מחדל: 30 = חצי דקה)")]
-    [SerializeField] private float speedChangeDelay = 30f;
+    [Tooltip("מספר כפתורים שנשארים שבו המהירות משתנה (ברירת מחדל: 10)")]
+    [SerializeField] private int buttonsRemainingThreshold = 10;
 
     [Header("References")]
     [SerializeField] private RectTransform contentPanel;
@@ -54,13 +54,11 @@ public class ScrollableButtonBar : MonoBehaviour
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
 
     private float currentAnimationSpeed;
-    private float startTime;
 
     void Start()
     {
-        // Initialize animation speed and start time
+        // Initialize animation speed
         currentAnimationSpeed = initialAnimationSpeed;
-        startTime = Time.time;
 
         if (buttonDataList.Count == 0)
         {
@@ -134,11 +132,20 @@ public class ScrollableButtonBar : MonoBehaviour
 
     void Update()
     {
-        // Check if it's time to reduce animation speed
-        if (currentAnimationSpeed == initialAnimationSpeed && Time.time - startTime >= speedChangeDelay)
+        // Check if we should reduce animation speed based on remaining buttons
+        if (currentAnimationSpeed == initialAnimationSpeed)
         {
-            currentAnimationSpeed = normalAnimationSpeed;
-            Debug.Log($"[ScrollableButtonBar] Animation speed reduced from {initialAnimationSpeed} to {normalAnimationSpeed}");
+            int activeButtonCount = 0;
+            foreach (bool state in buttonStates)
+            {
+                if (state) activeButtonCount++;
+            }
+
+            if (activeButtonCount <= buttonsRemainingThreshold)
+            {
+                currentAnimationSpeed = normalAnimationSpeed;
+                Debug.Log($"[ScrollableButtonBar] Animation speed reduced from {initialAnimationSpeed} to {normalAnimationSpeed} (remaining buttons: {activeButtonCount})");
+            }
         }
 
         // ✅ אנימציה חלקה ורציפה בלי קפיצות!
