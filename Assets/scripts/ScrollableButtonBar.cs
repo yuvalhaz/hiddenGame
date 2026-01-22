@@ -58,10 +58,6 @@ public class ScrollableButtonBar : MonoBehaviour
 
     void Start()
     {
-        // Initialize with very slow speed for initial positioning
-        currentAnimationSpeed = startupAnimationSpeed;
-        startTime = Time.time;
-
         if (buttonDataList.Count == 0)
         {
             for (int i = 0; i < numberOfButtons; i++)
@@ -107,6 +103,28 @@ public class ScrollableButtonBar : MonoBehaviour
 
             // Recalculate positions with new spacing
             RecalculateAllPositions();
+        }
+
+        // Determine initial animation speed based on number of active buttons
+        int activeButtonCount = 0;
+        foreach (bool state in buttonStates)
+        {
+            if (state) activeButtonCount++;
+        }
+
+        // If there are many buttons (more than 10), use slow startup speed
+        // If there are few buttons (10 or less), start with normal speed
+        if (activeButtonCount > 10)
+        {
+            currentAnimationSpeed = startupAnimationSpeed;
+            startTime = Time.time;
+            Debug.Log($"[ScrollableButtonBar] Many buttons ({activeButtonCount}) - starting with slow speed ({startupAnimationSpeed})");
+        }
+        else
+        {
+            currentAnimationSpeed = normalAnimationSpeed;
+            startTime = -999f; // Set old time so speed won't change
+            Debug.Log($"[ScrollableButtonBar] Few buttons ({activeButtonCount}) - starting with normal speed ({normalAnimationSpeed})");
         }
     }
 
