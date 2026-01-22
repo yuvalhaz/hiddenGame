@@ -38,8 +38,8 @@ public class ScrollableButtonBar : MonoBehaviour
     [Header("Animation Settings")]
     [Tooltip("מהירות אנימציה רגילה במהלך המשחק (ברירת מחדל: 10)")]
     [SerializeField] private float normalAnimationSpeed = 10f;
-    [Tooltip("מהירות איטית למיקום ההתחלתי בלבד (ברירת מחדל: 3)")]
-    [SerializeField] private float startupAnimationSpeed = 3f;
+    [Tooltip("מהירות איטית למיקום ההתחלתי בלבד (ברירת מחדל: 7)")]
+    [SerializeField] private float startupAnimationSpeed = 7f;
     [Tooltip("כמה שניות להמתין לפני מעבר למהירות רגילה (ברירת מחדל: 2)")]
     [SerializeField] private float initialAnimationDuration = 2f;
 
