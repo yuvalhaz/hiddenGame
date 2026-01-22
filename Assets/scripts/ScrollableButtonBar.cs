@@ -74,30 +74,6 @@ public class ScrollableButtonBar : MonoBehaviour
 
         CreateButtons();
 
-        // Get screen width for initial button positioning
-        float screenWidth = 0f;
-        if (scrollRect != null && scrollRect.viewport != null)
-        {
-            screenWidth = scrollRect.viewport.rect.width;
-        }
-        else
-        {
-            screenWidth = Screen.width;
-        }
-
-        // Set all buttons to start from right edge of screen
-        for (int i = 0; i < buttons.Count; i++)
-        {
-            if (buttons[i] != null)
-            {
-                RectTransform rect = buttons[i].GetComponent<RectTransform>();
-                if (rect != null)
-                {
-                    rect.anchoredPosition = new Vector2(screenWidth + 100f, 0);
-                }
-            }
-        }
-
         // Calculate auto spacing AFTER creating buttons (so we know actual button sizes)
         if (useAutoSpacing && scrollRect != null && scrollRect.viewport != null && buttons.Count > 0)
         {
@@ -318,8 +294,8 @@ public class ScrollableButtonBar : MonoBehaviour
                 buttonRect.sizeDelta = new Vector2(buttonWidth, buttonWidth);
             }
 
-            // Position will be set after CreateButtons
-            buttonRect.anchoredPosition = Vector2.zero;
+            // Start from right side (off-screen), will be animated to correct position
+            buttonRect.anchoredPosition = new Vector2(2000f, 0);
 
             // ✅ Create center drag area if enabled
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
