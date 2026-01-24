@@ -78,7 +78,15 @@ public class SettingsUI : MonoBehaviour
         }
         else
         {
-            OpenSettings();
+            // Check with UIManager if we can open
+            if (UIManager.Instance.RequestOpenSettings())
+            {
+                OpenSettings();
+            }
+            else
+            {
+                Debug.Log("[SettingsUI] Cannot open - another panel is active");
+            }
         }
     }
 
@@ -115,12 +123,16 @@ public class SettingsUI : MonoBehaviour
             StartCoroutine(FadePanel(1f, 0f, () => {
                 settingsPanel.SetActive(false);
                 isPanelOpen = false;
+                // Notify UIManager that settings closed
+                UIManager.Instance.NotifySettingsClosed();
             }));
         }
         else
         {
             settingsPanel.SetActive(false);
             isPanelOpen = false;
+            // Notify UIManager that settings closed
+            UIManager.Instance.NotifySettingsClosed();
         }
 
         Debug.Log("[SettingsUI] Settings closed");

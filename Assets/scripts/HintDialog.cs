@@ -57,8 +57,16 @@ public class HintDialog : MonoBehaviour
     /// </summary>
     public void Open()
     {
-        ShowImmediate();
-        transform.SetAsLastSibling();
+        // Check with UIManager if we can open
+        if (UIManager.Instance.RequestOpenHintDialog())
+        {
+            ShowImmediate();
+            transform.SetAsLastSibling();
+        }
+        else
+        {
+            Debug.Log("[HintDialog] Cannot open - another panel is active");
+        }
     }
 
     /// <summary>
@@ -71,6 +79,8 @@ public class HintDialog : MonoBehaviour
 
         isClosing = true;
         HideImmediate();
+        // Notify UIManager that hint dialog closed
+        UIManager.Instance.NotifyHintDialogClosed();
         onClosed?.Invoke();
         isClosing = false;
     }
