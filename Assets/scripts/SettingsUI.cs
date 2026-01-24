@@ -175,14 +175,13 @@ public class SettingsUI : MonoBehaviour
         if (colorChangingImage1 != null)
         {
             int randomIndex1 = Random.Range(0, availableColors.Length);
-            Color selectedColor1 = availableColors[randomIndex1];
+            Color newColor1 = availableColors[randomIndex1];
 
-            // Preserve alpha
-            float currentAlpha1 = colorChangingImage1.color.a;
-            selectedColor1.a = currentAlpha1;
+            // Create new color with current alpha (don't modify the object's color directly)
+            Color finalColor1 = new Color(newColor1.r, newColor1.g, newColor1.b, colorChangingImage1.color.a);
+            colorChangingImage1.color = finalColor1;
 
-            colorChangingImage1.color = selectedColor1;
-            Debug.Log($"[SettingsUI] Object 1 color: {selectedColor1} (alpha preserved: {currentAlpha1})");
+            Debug.Log($"[SettingsUI] Object 1 color: RGB({finalColor1.r}, {finalColor1.g}, {finalColor1.b}) Alpha: {finalColor1.a}");
 
             // Handle second object - must be different from first
             if (colorChangingImage2 != null)
@@ -194,28 +193,26 @@ public class SettingsUI : MonoBehaviour
                 }
                 while (randomIndex2 == randomIndex1); // Keep trying until we get a different color
 
-                Color selectedColor2 = availableColors[randomIndex2];
+                Color newColor2 = availableColors[randomIndex2];
 
-                // Preserve alpha
-                float currentAlpha2 = colorChangingImage2.color.a;
-                selectedColor2.a = currentAlpha2;
+                // Create new color with current alpha
+                Color finalColor2 = new Color(newColor2.r, newColor2.g, newColor2.b, colorChangingImage2.color.a);
+                colorChangingImage2.color = finalColor2;
 
-                colorChangingImage2.color = selectedColor2;
-                Debug.Log($"[SettingsUI] Object 2 color: {selectedColor2} (alpha preserved: {currentAlpha2})");
+                Debug.Log($"[SettingsUI] Object 2 color: RGB({finalColor2.r}, {finalColor2.g}, {finalColor2.b}) Alpha: {finalColor2.a}");
             }
         }
         else if (colorChangingImage2 != null)
         {
             // If only second object exists
             int randomIndex = Random.Range(0, availableColors.Length);
-            Color selectedColor = availableColors[randomIndex];
+            Color newColor = availableColors[randomIndex];
 
-            // Preserve alpha
-            float currentAlpha = colorChangingImage2.color.a;
-            selectedColor.a = currentAlpha;
+            // Create new color with current alpha
+            Color finalColor = new Color(newColor.r, newColor.g, newColor.b, colorChangingImage2.color.a);
+            colorChangingImage2.color = finalColor;
 
-            colorChangingImage2.color = selectedColor;
-            Debug.Log($"[SettingsUI] Object 2 color: {selectedColor} (alpha preserved: {currentAlpha})");
+            Debug.Log($"[SettingsUI] Object 2 color: RGB({finalColor.r}, {finalColor.g}, {finalColor.b}) Alpha: {finalColor.a}");
         }
     }
 
