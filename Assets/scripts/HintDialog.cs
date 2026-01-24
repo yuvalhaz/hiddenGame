@@ -20,6 +20,10 @@ public class HintDialog : MonoBehaviour
     [Tooltip("Invoked when dialog is closed")]
     public UnityEvent onClosed;
 
+    [Header("UI Blocking")]
+    [SerializeField] private SettingsUI settingsUI;
+    [Tooltip("Optional: SettingsUI reference to prevent opening both panels together")]
+
     // Prevent infinite recursion if onClosed event is misconfigured
     private bool isClosing = false;
 
@@ -53,12 +57,34 @@ public class HintDialog : MonoBehaviour
     }
 
     /// <summary>
+    /// Check if hint dialog is currently visible
+    /// </summary>
+    public bool IsOpen()
+    {
+        return dialogGroup != null && dialogGroup.alpha > 0.5f;
+    }
+
+    /// <summary>
     /// Opens the hint dialog and brings it to front.
     /// </summary>
     public void Open()
     {
+        // Auto-find SettingsUI if not assigned
+        if (settingsUI == null)
+        {
+            settingsUI = FindObjectOfType<SettingsUI>();
+        }
+
+        // Check if Settings is open
+        if (settingsUI != null && settingsUI.IsPanelOpen())
+        {
+            Debug.LogWarning("[HintDialog] ❌ Cannot open - Settings is open!");
+            return;
+        }
+
         ShowImmediate();
         transform.SetAsLastSibling();
+        Debug.Log("[HintDialog] ✅ Opened");
     }
 
     /// <summary>
@@ -71,6 +97,8 @@ public class HintDialog : MonoBehaviour
 
         isClosing = true;
         HideImmediate();
+        // Notify UIManager that hint dialog closed
+        UIManager.Instance.NotifyHintDialogClosed();
         onClosed?.Invoke();
         isClosing = false;
     }

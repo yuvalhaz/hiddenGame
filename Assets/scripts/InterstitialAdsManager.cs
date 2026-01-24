@@ -130,12 +130,23 @@ public class InterstitialAdsManager : MonoBehaviour
 
     /// <summary>
     /// Show interstitial ad with optional callbacks
+    /// ✅ NOW CHECKS: If user bought "Remove Ads" - skip showing the ad!
     /// </summary>
     public void ShowInterstitial(
         Action<bool> onClosed = null,
         Action<string> onFailed = null,
         Action onOpened = null)
     {
+        // ✅ IAP CHECK: If user bought "Remove Ads", don't show ad!
+        if (IAPManager.Instance != null && IAPManager.Instance.AreAdsRemoved())
+        {
+            Debug.Log("[InterstitialAdsManager] ✅ Ads removed by IAP - skipping interstitial ad");
+            SafeInvoke(onOpened);
+            SafeInvoke(OnAdClosed, true);
+            SafeInvoke(onClosed, true);
+            return;
+        }
+
 #if UNITY_EDITOR
         Debug.Log("[InterstitialAdsManager] Editor simulate: opened -> closed(true).");
         SafeInvoke(onOpened);

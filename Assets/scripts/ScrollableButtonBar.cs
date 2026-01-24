@@ -36,12 +36,14 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private bool shuffleButtons = false;
 
     [Header("Animation Settings")]
-    [Tooltip("מהירות אנימציה בהתחלה (ברירת מחדל: 50)")]
-    [SerializeField] private float initialAnimationSpeed = 50f;
-    [Tooltip("מהירות אנימציה רגילה אחרי השינוי (ברירת מחדל: 10)")]
-    [SerializeField] private float normalAnimationSpeed = 10f;
-    [Tooltip("כמה זמן בשניות עד שהמהירות משתנה (ברירת מחדל: 30 = חצי דקה)")]
-    [SerializeField] private float speedChangeDelay = 30f;
+    [Tooltip("מהירות רגילה למשחק (ברירת מחדל: 7)")]
+    [SerializeField] private float normalAnimationSpeed = 7f;
+    [Tooltip("מהירות מהירה למיקום ראשוני של כפתורים בודדים (ברירת מחדל: 50)")]
+    [SerializeField] private float fastStartupSpeed = 50f;
+    [Tooltip("כמה שניות להמתין לפני מעבר למהירות רגילה (ברירת מחדל: 2)")]
+    [SerializeField] private float initialAnimationDuration = 2f;
+    [Tooltip("מספר כפתורים שמעליו משתמשים במהירות רגילה (ברירת מחדל: 10)")]
+    [SerializeField] private int manyButtonsThreshold = 10;
 
     [Header("References")]
     [SerializeField] private RectTransform contentPanel;
@@ -58,10 +60,6 @@ public class ScrollableButtonBar : MonoBehaviour
 
     void Start()
     {
-        // Initialize animation speed and start time
-        currentAnimationSpeed = initialAnimationSpeed;
-        startTime = Time.time;
-
         if (buttonDataList.Count == 0)
         {
             for (int i = 0; i < numberOfButtons; i++)
@@ -108,6 +106,35 @@ public class ScrollableButtonBar : MonoBehaviour
             // Recalculate positions with new spacing
             RecalculateAllPositions();
         }
+        else
+        {
+            // Even without auto spacing, recalculate to set correct positions
+            RecalculateAllPositions();
+        }
+
+        // Determine initial animation speed based on number of active buttons
+        int activeButtonCount = 0;
+        foreach (bool state in buttonStates)
+        {
+            if (state) activeButtonCount++;
+        }
+
+        // If there are many buttons, use normal speed and stay there
+        // If there are few buttons, start fast then slow down to normal
+        if (activeButtonCount > manyButtonsThreshold)
+        {
+            // Many buttons: use normal speed (7) and don't change
+            currentAnimationSpeed = normalAnimationSpeed;
+            startTime = -999f; // Old time so speed won't change
+            Debug.Log($"[ScrollableButtonBar] Many buttons ({activeButtonCount}) - using normal speed ({normalAnimationSpeed})");
+        }
+        else
+        {
+            // Few buttons: start fast, then slow down to normal
+            currentAnimationSpeed = fastStartupSpeed;
+            startTime = Time.time;
+            Debug.Log($"[ScrollableButtonBar] Few buttons ({activeButtonCount}) - starting fast ({fastStartupSpeed}), will slow to {normalAnimationSpeed}");
+        }
     }
 
     private void OnValidate()
@@ -134,11 +161,11 @@ public class ScrollableButtonBar : MonoBehaviour
 
     void Update()
     {
-        // Check if it's time to reduce animation speed
-        if (currentAnimationSpeed == initialAnimationSpeed && Time.time - startTime >= speedChangeDelay)
+        // After initial duration, switch from fast to normal speed
+        if (currentAnimationSpeed == fastStartupSpeed && Time.time - startTime >= initialAnimationDuration)
         {
             currentAnimationSpeed = normalAnimationSpeed;
-            Debug.Log($"[ScrollableButtonBar] Animation speed reduced from {initialAnimationSpeed} to {normalAnimationSpeed}");
+            Debug.Log($"[ScrollableButtonBar] Initial animation complete - speed reduced from {fastStartupSpeed} to {normalAnimationSpeed}");
         }
 
         // ✅ אנימציה חלקה ורציפה בלי קפיצות!
@@ -267,10 +294,8 @@ public class ScrollableButtonBar : MonoBehaviour
                 buttonRect.sizeDelta = new Vector2(buttonWidth, buttonWidth);
             }
 
-            // Calculate position based on actual button width
-            float actualWidth = buttonRect.sizeDelta.x;
-            float xPos = buttonSpacing + (i * (actualWidth + buttonSpacing));
-            buttonRect.anchoredPosition = new Vector2(xPos, 0);
+            // Start from right side (off-screen), will be animated to correct position
+            buttonRect.anchoredPosition = new Vector2(2000f, 0);
 
             // ✅ Create center drag area if enabled
             DraggableButton draggable = buttonObj.GetComponent<DraggableButton>();
@@ -314,7 +339,7 @@ public class ScrollableButtonBar : MonoBehaviour
             
             buttons.Add(draggable);
             buttonStates.Add(true);
-            targetPositions.Add(buttonRect.anchoredPosition);
+            targetPositions.Add(buttonRect.anchoredPosition); // Start at same position, will be updated by RecalculateAllPositions
 
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
             if (buttonText != null)
