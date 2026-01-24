@@ -36,8 +36,6 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     private RectTransform activeDragRT;
     private Image activeDragImage;
 
-    private static Dictionary<string, DropSpot> dropSpotCache;
-
     private bool wasSuccessfullyPlaced = false;
 
     // ✅ הוספה: שמירת ההפניה ל-ScrollRect כדי להשבית אותו
@@ -186,6 +184,15 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     Debug.Log($"[DraggableButton] ✅ Crossed 20% boundary! Starting button drag for {buttonID}");
 
                 buttonBar.OnButtonDraggedOut(this, originalIndex);
+
+                // ✅ Force refresh DropSpotCache to ensure all DropSpots are loaded
+                // This is especially important on mobile where loading might be slower
+                if (DropSpotCache.Count == 0)
+                {
+                    Debug.LogWarning($"[DraggableButton] DropSpotCache is empty! Forcing refresh...");
+                    DropSpotCache.Refresh();
+                    Debug.Log($"[DraggableButton] DropSpotCache refreshed. Count: {DropSpotCache.Count}");
+                }
 
                 EnableMatchingDropSpot(true);
 
@@ -372,7 +379,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         Sprite realPhoto = GetRealPhotoFromDropSpot();
         
         Debug.Log($"[DraggableButton] GetRealPhotoFromDropSpot returned: {(realPhoto != null ? realPhoto.name : "NULL")}");
-        
+
         if (realPhoto != null)
         {
             activeDragImage.sprite = realPhoto;
@@ -380,14 +387,33 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         }
         else
         {
+            // ⚠️ WARNING: Real photo not found! This should not happen in normal gameplay.
+            // This means either:
+            // 1. DropSpot with matching buttonID doesn't exist
+            // 2. DropSpot's ImageRevealController is missing or misconfigured
+            // 3. Background sprite is not assigned in the Inspector
+            Debug.LogError($"[DraggableButton] ❌ CRITICAL: Could not find real photo for buttonID '{buttonID}'!");
+            Debug.LogError($"[DraggableButton] This will cause white cube or button icon to appear during drag!");
+            Debug.LogError($"[DraggableButton] Please check: 1) DropSpot exists with spotId='{buttonID}' 2) ImageRevealController is attached 3) Background sprite is assigned");
+
+            // Try to use button's sprite as last resort fallback
             Image myImage = GetComponent<Image>();
-            if (myImage != null)
+            if (myImage != null && myImage.sprite != null)
             {
                 activeDragImage.sprite = myImage.sprite;
-                Debug.Log($"[DraggableButton] ⚠️ Using button sprite: {(myImage.sprite != null ? myImage.sprite.name : "NULL")}");
+                Debug.LogWarning($"[DraggableButton] ⚠️ Using button sprite as fallback: {myImage.sprite.name}");
+            }
+            else
+            {
+                // Even fallback failed - destroy the drag visual and abort
+                Debug.LogError($"[DraggableButton] ❌ ABORT: No sprite available at all! Destroying drag visual.");
+                Destroy(activeDragRT.gameObject);
+                activeDragRT = null;
+                activeDragImage = null;
+                return;
             }
         }
-        
+
         activeDragImage.color = Color.white;
         activeDragImage.raycastTarget = false;
         activeDragImage.preserveAspect = true;
@@ -460,121 +486,58 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
     // ===== DropSpot Cache =====
 
-    private static void RefreshDropSpotCache()
-    {
-        Debug.Log($"[DraggableButton] === REFRESH CACHE START ===");
-
-        if (dropSpotCache == null)
-        {
-            dropSpotCache = new Dictionary<string, DropSpot>();
-            Debug.Log($"[DraggableButton] Created new cache dictionary");
-        }
-
-        dropSpotCache.Clear();
-
-        // ✅ תיקון: מצא גם objects לא פעילים!
-        var allDropSpots = FindObjectsOfType<DropSpot>(true); // ← הוסף true!
-
-        Debug.Log($"[DraggableButton] Found {allDropSpots.Length} DropSpots in scene");
-
-        foreach (var spot in allDropSpots)
-        {
-            Debug.Log($"[DraggableButton] Checking spot: spotId='{spot.spotId}', isEmpty={string.IsNullOrEmpty(spot.spotId)}");
-
-            if (!string.IsNullOrEmpty(spot.spotId))
-            {
-                if (!dropSpotCache.ContainsKey(spot.spotId))
-                {
-                    dropSpotCache[spot.spotId] = spot;
-                    Debug.Log($"[DraggableButton] ✅ Cached: '{spot.spotId}'");
-                }
-                else
-                {
-                    Debug.LogWarning($"[DraggableButton] ⚠️ Duplicate spotId: '{spot.spotId}'");
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"[DraggableButton] ⚠️ Spot has empty spotId!");
-            }
-        }
-
-        Debug.Log($"[DraggableButton] === REFRESH CACHE END === Total cached: {dropSpotCache.Count}");
-    }
-    
     private Sprite GetRealPhotoFromDropSpot()
     {
         Debug.Log($"[DraggableButton] === GET REAL PHOTO START === buttonID: '{buttonID}'");
-        
-        if (dropSpotCache == null || dropSpotCache.Count == 0)
+
+        DropSpot spot = DropSpotCache.Get(buttonID);
+
+        if (spot == null)
         {
-            Debug.Log($"[DraggableButton] Cache is empty, refreshing...");
-            RefreshDropSpotCache();
-        }
-        else
-        {
-            Debug.Log($"[DraggableButton] Cache already has {dropSpotCache.Count} items");
+            Debug.LogError($"[DraggableButton] ❌ buttonID '{buttonID}' NOT FOUND in DropSpotCache!");
+            Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
+            return null;
         }
 
-        Debug.Log($"[DraggableButton] Searching for buttonID: '{buttonID}' in cache...");
+        Debug.Log($"[DraggableButton] ✅ FOUND DropSpot in cache: '{spot.spotId}'");
 
-        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
+        var revealController = spot.GetComponent<ImageRevealController>();
+        if (revealController == null)
         {
-            Debug.Log($"[DraggableButton] ✅ FOUND DropSpot in cache: '{spot.spotId}'");
-            
-            var revealController = spot.GetComponent<ImageRevealController>();
-            if (revealController != null)
-            {
-                Debug.Log($"[DraggableButton] ✅ Found ImageRevealController");
-                
-                var backgroundImage = revealController.GetBackgroundImage();
-                
-                if (backgroundImage != null)
-                {
-                    Debug.Log($"[DraggableButton] ✅ backgroundImage component exists");
-                    
-                    if (backgroundImage.sprite != null)
-                    {
-                        Debug.Log($"[DraggableButton] 🎉 SUCCESS! sprite name: '{backgroundImage.sprite.name}'");
-                        return backgroundImage.sprite;
-                    }
-                    else
-                    {
-                        Debug.LogError($"[DraggableButton] ❌ backgroundImage.sprite is NULL!");
-                    }
-                }
-                else
-                {
-                    Debug.LogError($"[DraggableButton] ❌ GetBackgroundImage() returned NULL!");
-                }
-            }
-            else
-            {
-                Debug.LogError($"[DraggableButton] ❌ No ImageRevealController component found!");
-            }
-        }
-        else
-        {
-            Debug.LogError($"[DraggableButton] ❌ buttonID '{buttonID}' NOT FOUND in cache!");
-            Debug.Log($"[DraggableButton] Available keys in cache:");
-            foreach (var key in dropSpotCache.Keys)
-            {
-                Debug.Log($"  - '{key}'");
-            }
+            Debug.LogError($"[DraggableButton] ❌ No ImageRevealController component found!");
+            Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
+            return null;
         }
 
-        Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
-        return null;
+        Debug.Log($"[DraggableButton] ✅ Found ImageRevealController");
+
+        var backgroundImage = revealController.GetBackgroundImage();
+
+        if (backgroundImage == null)
+        {
+            Debug.LogError($"[DraggableButton] ❌ GetBackgroundImage() returned NULL!");
+            Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
+            return null;
+        }
+
+        Debug.Log($"[DraggableButton] ✅ backgroundImage component exists");
+
+        if (backgroundImage.sprite == null)
+        {
+            Debug.LogError($"[DraggableButton] ❌ backgroundImage.sprite is NULL!");
+            Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
+            return null;
+        }
+
+        Debug.Log($"[DraggableButton] 🎉 SUCCESS! sprite name: '{backgroundImage.sprite.name}'");
+        return backgroundImage.sprite;
     }
-    
+
     private Vector2 GetRealPhotoSizeFromDropSpot()
     {
-        if (dropSpotCache == null || dropSpotCache.Count == 0)
-        {
-            RefreshDropSpotCache();
-        }
+        DropSpot spot = DropSpotCache.Get(buttonID);
 
-        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
+        if (spot != null)
         {
             var revealController = spot.GetComponent<ImageRevealController>();
             if (revealController != null)
@@ -586,19 +549,17 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     if (bgRT != null)
                     {
                         Vector2 size = bgRT.rect.size;
-                        
+
                         if (debugMode)
                             Debug.Log($"[DraggableButton] ✅ Real photo size: {size}");
-                        
+
                         return size;
                     }
                 }
             }
-        }
 
-        if (dropSpotCache.TryGetValue(buttonID, out DropSpot fallbackSpot))
-        {
-            var spotRT = fallbackSpot.GetComponent<RectTransform>();
+            // Fallback to DropSpot size
+            var spotRT = spot.GetComponent<RectTransform>();
             if (spotRT != null)
             {
                 if (debugMode)
@@ -609,7 +570,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
         if (debugMode)
             Debug.LogWarning($"[DraggableButton] ⚠️ Could not find size, using default 350x350");
-        
+
         return new Vector2(350f, 350f);
     }
     
@@ -871,50 +832,44 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     }
     
     // ===== אפשור/כיבוי Raycast על DropSpot =====
-    
+
     private void EnableMatchingDropSpot(bool enable)
     {
-        if (dropSpotCache == null || dropSpotCache.Count == 0)
-        {
-            RefreshDropSpotCache();
-        }
+        DropSpot spot = DropSpotCache.Get(buttonID);
 
-        if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
-        {
-            if (spot.IsSettled)
-            {
-                if (debugMode)
-                    Debug.Log($"[EnableMatchingDropSpot] DropSpot {spot.spotId} is already settled - skipping");
-                return;
-            }
-
-            var revealController = spot.GetComponent<ImageRevealController>();
-
-            if (revealController != null)
-            {
-                var backgroundImage = revealController.GetBackgroundImage();
-
-                if (backgroundImage != null)
-                {
-                    backgroundImage.raycastTarget = enable;
-
-                    if (debugMode)
-                        Debug.Log($"[EnableMatchingDropSpot] DropSpot {spot.spotId} - raycastTarget set to: {enable}");
-                }
-                else
-                {
-                    Debug.LogWarning($"[EnableMatchingDropSpot] Background image is NULL for {spot.spotId}");
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"[EnableMatchingDropSpot] No ImageRevealController for {spot.spotId}");
-            }
-        }
-        else
+        if (spot == null)
         {
             Debug.LogWarning($"[EnableMatchingDropSpot] No DropSpot found with buttonID: {buttonID}");
+            return;
         }
+
+        if (spot.IsSettled)
+        {
+            if (debugMode)
+                Debug.Log($"[EnableMatchingDropSpot] DropSpot {spot.spotId} is already settled - skipping");
+            return;
+        }
+
+        var revealController = spot.GetComponent<ImageRevealController>();
+
+        if (revealController == null)
+        {
+            Debug.LogWarning($"[EnableMatchingDropSpot] No ImageRevealController for {spot.spotId}");
+            return;
+        }
+
+        var backgroundImage = revealController.GetBackgroundImage();
+
+        if (backgroundImage == null)
+        {
+            Debug.LogWarning($"[EnableMatchingDropSpot] Background image is NULL for {spot.spotId}");
+            return;
+        }
+
+        backgroundImage.raycastTarget = enable;
+
+        if (debugMode)
+            Debug.Log($"[EnableMatchingDropSpot] DropSpot {spot.spotId} - raycastTarget set to: {enable}");
     }
 
     // ===== Audio =====
