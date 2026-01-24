@@ -82,10 +82,17 @@ public class HintButton : MonoBehaviour
             Debug.Log("🎓 [HintButton] Tutorial mode - triggering hint directly!");
             TriggerHintAnimation();
         }
+        // Check if player has purchased hints or unlimited hints
+        else if (IAPManager.Instance != null && IAPManager.Instance.CanUseHint())
+        {
+            Debug.Log("💎 [HintButton] Player has hints - using purchased hint!");
+            IAPManager.Instance.UseHint();
+            TriggerHintAnimation();
+        }
         // Normal level - open dialog for rewarded ad
         else if (hintDialog != null)
         {
-            Debug.Log("💬 [HintButton] Normal mode - opening hint dialog");
+            Debug.Log("💬 [HintButton] No hints available - opening dialog for rewarded ad");
             hintDialog.Open();
         }
         // Fallback - no dialog available, trigger directly
