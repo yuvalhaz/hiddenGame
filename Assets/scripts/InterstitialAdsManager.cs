@@ -22,8 +22,8 @@ public class InterstitialAdsManager : MonoBehaviour
     private bool isAdLoading = false;
 #endif
 
-    // ✅ FIXED: Main thread dispatcher to prevent crashes
-    private Action mainThreadAction;
+    // ✅ FIXED: Main thread dispatcher queue to prevent race conditions
+    private System.Collections.Generic.Queue<Action> mainThreadActions = new System.Collections.Generic.Queue<Action>();
 
     void Awake()
     {
@@ -42,13 +42,20 @@ public class InterstitialAdsManager : MonoBehaviour
         }
     }
 
-    // ✅ FIXED: Update loop to execute main thread actions safely
+    // ✅ FIXED: Update loop to execute ALL queued main thread actions safely
     void Update()
     {
-        if (mainThreadAction != null)
+        while (mainThreadActions.Count > 0)
         {
-            mainThreadAction.Invoke();
-            mainThreadAction = null;
+            var action = mainThreadActions.Dequeue();
+            try
+            {
+                action?.Invoke();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
     }
 
@@ -113,7 +120,7 @@ public class InterstitialAdsManager : MonoBehaviour
             {
                 Debug.LogError($"[InterstitialAdsManager] Failed to load ad: {error}");
                 // ✅ Use main thread dispatcher for callback
-                mainThreadAction = () => SafeInvoke(onLoaded, false);
+                mainThreadActions.Enqueue(() => SafeInvoke(onLoaded, false));
                 return;
             }
 
@@ -121,7 +128,7 @@ public class InterstitialAdsManager : MonoBehaviour
             Debug.Log("[InterstitialAdsManager] Ad loaded successfully!");
 
             // ✅ Use main thread dispatcher for callback
-            mainThreadAction = () => SafeInvoke(onLoaded, true);
+            mainThreadActions.Enqueue(() => SafeInvoke(onLoaded, true));
         });
     }
 #endif
@@ -181,17 +188,17 @@ public class InterstitialAdsManager : MonoBehaviour
         {
             Debug.Log("[InterstitialAdsManager] Ad opened");
             adWasShown = true;
-            mainThreadAction = () => SafeInvoke(onOpened);
+            mainThreadActions.Enqueue(() => SafeInvoke(onOpened));
         };
 
         interstitialAd.OnAdFullScreenContentClosed += () =>
         {
             Debug.Log($"[InterstitialAdsManager] Ad closed. Was shown: {adWasShown}");
-            mainThreadAction = () =>
+            mainThreadActions.Enqueue(() =>
             {
                 SafeInvoke(OnAdClosed, adWasShown);
                 SafeInvoke(onClosed, adWasShown);
-            };
+            });
 
             // טען פרסומת חדשה אוטומטית
             Preload();
@@ -201,7 +208,7 @@ public class InterstitialAdsManager : MonoBehaviour
         {
             string errorMsg = $"Failed to show ad: {error}";
             Debug.LogError($"[InterstitialAdsManager] {errorMsg}");
-            mainThreadAction = () => SafeInvoke(onFailed, errorMsg);
+            mainThreadActions.Enqueue(() => SafeInvoke(onFailed, errorMsg));
 
             // טען פרסומת חדשה אוטומטית
             Preload();

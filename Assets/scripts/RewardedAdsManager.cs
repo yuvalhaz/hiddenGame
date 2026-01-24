@@ -22,8 +22,8 @@ public class RewardedAdsManager : MonoBehaviour
     private bool isAdLoading = false;
 #endif
 
-    // ✅ FIXED: Main thread dispatcher to prevent crashes
-    private Action mainThreadAction;
+    // ✅ FIXED: Main thread dispatcher queue to prevent race conditions
+    private System.Collections.Generic.Queue<Action> mainThreadActions = new System.Collections.Generic.Queue<Action>();
 
     void Awake()
     {
@@ -42,13 +42,20 @@ public class RewardedAdsManager : MonoBehaviour
         }
     }
 
-    // ✅ FIXED: Update loop to execute main thread actions safely
+    // ✅ FIXED: Update loop to execute ALL queued main thread actions safely
     void Update()
     {
-        if (mainThreadAction != null)
+        while (mainThreadActions.Count > 0)
         {
-            mainThreadAction.Invoke();
-            mainThreadAction = null;
+            var action = mainThreadActions.Dequeue();
+            try
+            {
+                action?.Invoke();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
     }
 
@@ -113,7 +120,7 @@ public class RewardedAdsManager : MonoBehaviour
             {
                 Debug.LogError($"[RewardedAdsManager] Failed to load ad: {error}");
                 // ✅ Use main thread dispatcher for callback
-                mainThreadAction = () => SafeInvoke(onLoaded, false);
+                mainThreadActions.Enqueue(() => SafeInvoke(onLoaded, false));
                 return;
             }
 
@@ -121,7 +128,7 @@ public class RewardedAdsManager : MonoBehaviour
             Debug.Log("[RewardedAdsManager] Ad loaded successfully!");
 
             // ✅ Use main thread dispatcher for callback
-            mainThreadAction = () => SafeInvoke(onLoaded, true);
+            mainThreadActions.Enqueue(() => SafeInvoke(onLoaded, true));
         });
     }
 #endif
@@ -172,13 +179,13 @@ public class RewardedAdsManager : MonoBehaviour
         rewardedAd.OnAdFullScreenContentOpened += () =>
         {
             Debug.Log("[RewardedAdsManager] Ad opened");
-            mainThreadAction = () => SafeInvoke(onOpened);
+            mainThreadActions.Enqueue(() => SafeInvoke(onOpened));
         };
 
         rewardedAd.OnAdFullScreenContentClosed += () =>
         {
             Debug.Log($"[RewardedAdsManager] Ad closed. Reward granted: {rewardGranted}");
-            mainThreadAction = () => SafeInvoke(onClosed, rewardGranted);
+            mainThreadActions.Enqueue(() => SafeInvoke(onClosed, rewardGranted));
 
             // טען פרסומת חדשה אוטומטית
             Preload();
@@ -188,7 +195,7 @@ public class RewardedAdsManager : MonoBehaviour
         {
             string errorMsg = $"Failed to show ad: {error}";
             Debug.LogError($"[RewardedAdsManager] {errorMsg}");
-            mainThreadAction = () => SafeInvoke(onFailed, errorMsg);
+            mainThreadActions.Enqueue(() => SafeInvoke(onFailed, errorMsg));
 
             // טען פרסומת חדשה אוטומטית
             Preload();
@@ -200,12 +207,12 @@ public class RewardedAdsManager : MonoBehaviour
             rewardGranted = true;
             Debug.Log($"[RewardedAdsManager] Reward earned: {reward.Type}, {reward.Amount}");
 
-            // ✅ FIXED: Execute reward logic on main thread to prevent crashes
-            mainThreadAction = () =>
+            // ✅ FIXED: Execute reward logic on main thread using queue to prevent race conditions
+            mainThreadActions.Enqueue(() =>
             {
                 SafeInvoke(OnRewardGranted);
                 SafeInvoke(onReward);
-            };
+            });
         });
     }
 #endif

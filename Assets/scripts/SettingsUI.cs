@@ -134,21 +134,46 @@ public class SettingsUI : MonoBehaviour
         }
     }
 
+    private bool isSubscribedToIAP = false;
+
     private void SubscribeToIAPEvents()
     {
+        if (isSubscribedToIAP) return;
+
         if (IAPManager.Instance != null)
         {
             IAPManager.Instance.OnPurchaseSuccess += OnPurchaseSuccess;
             IAPManager.Instance.OnPurchaseFailedEvent += OnPurchaseFailed;
+            isSubscribedToIAP = true;
+            Debug.Log("[SettingsUI] Subscribed to IAP events");
+        }
+        else
+        {
+            // Retry subscription after delay
+            StartCoroutine(RetrySubscription());
+        }
+    }
+
+    private System.Collections.IEnumerator RetrySubscription()
+    {
+        yield return new WaitForSeconds(0.5f);
+
+        if (!isSubscribedToIAP && IAPManager.Instance != null)
+        {
+            IAPManager.Instance.OnPurchaseSuccess += OnPurchaseSuccess;
+            IAPManager.Instance.OnPurchaseFailedEvent += OnPurchaseFailed;
+            isSubscribedToIAP = true;
+            Debug.Log("[SettingsUI] Subscribed to IAP events (delayed)");
         }
     }
 
     private void UnsubscribeFromIAPEvents()
     {
-        if (IAPManager.Instance != null)
+        if (isSubscribedToIAP && IAPManager.Instance != null)
         {
             IAPManager.Instance.OnPurchaseSuccess -= OnPurchaseSuccess;
             IAPManager.Instance.OnPurchaseFailedEvent -= OnPurchaseFailed;
+            isSubscribedToIAP = false;
         }
     }
 
