@@ -22,7 +22,13 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     [SerializeField] private AudioClip dragStartSound;
     [SerializeField] private AudioClip dropSuccessSound;
     [SerializeField] private AudioClip dropFailSound;
-    
+
+    [Header("Raycast Blocking During Drag")]
+    [Tooltip("Images to disable raycast on while dragging (e.g. clickable overlays)")]
+    [SerializeField] private Image[] disableRaycastOnDrag;
+    [Tooltip("CanvasGroups to disable during drag")]
+    [SerializeField] private CanvasGroup[] disableCanvasGroupsOnDrag;
+
     private ScrollableButtonBar buttonBar;
     private RectTransform rectTransform;
     private Canvas canvas;
@@ -210,6 +216,9 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 // ✅ רק עכשיו נכבה את blocksRaycasts כשאנחנו באמת גוררים כפתור
                 canvasGroup.blocksRaycasts = false;
 
+                // ✅ השבת raycasts על אלמנטים חיצוניים
+                DisableExternalRaycasts();
+
                 CreateDragVisual();
                 canvasGroup.alpha = 0f;
                 rectTransform.anchoredPosition = originalPosition;
@@ -316,6 +325,9 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
         // ✅ כבה את DropSpot רק אם הפעלנו אותו
         EnableMatchingDropSpot(false);
+
+        // ✅ הפעל מחדש raycasts על אלמנטים חיצוניים
+        EnableExternalRaycasts();
 
         // רק אם לא הושם בהצלחה - תחזיר אותו לבר
         if (!wasSuccessfullyPlaced)
@@ -932,6 +944,70 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         if (clip != null && audioSource != null)
         {
             audioSource.PlayOneShot(clip);
+        }
+    }
+
+    // ===== Raycast Control During Drag =====
+
+    private void DisableExternalRaycasts()
+    {
+        // Disable specific images
+        if (disableRaycastOnDrag != null)
+        {
+            foreach (var img in disableRaycastOnDrag)
+            {
+                if (img != null)
+                {
+                    img.raycastTarget = false;
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Disabled raycast on: {img.name}");
+                }
+            }
+        }
+
+        // Disable canvas groups
+        if (disableCanvasGroupsOnDrag != null)
+        {
+            foreach (var cg in disableCanvasGroupsOnDrag)
+            {
+                if (cg != null)
+                {
+                    cg.blocksRaycasts = false;
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Disabled CanvasGroup raycasts on: {cg.name}");
+                }
+            }
+        }
+    }
+
+    private void EnableExternalRaycasts()
+    {
+        // Re-enable specific images
+        if (disableRaycastOnDrag != null)
+        {
+            foreach (var img in disableRaycastOnDrag)
+            {
+                if (img != null)
+                {
+                    img.raycastTarget = true;
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Re-enabled raycast on: {img.name}");
+                }
+            }
+        }
+
+        // Re-enable canvas groups
+        if (disableCanvasGroupsOnDrag != null)
+        {
+            foreach (var cg in disableCanvasGroupsOnDrag)
+            {
+                if (cg != null)
+                {
+                    cg.blocksRaycasts = true;
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Re-enabled CanvasGroup raycasts on: {cg.name}");
+                }
+            }
         }
     }
 }
