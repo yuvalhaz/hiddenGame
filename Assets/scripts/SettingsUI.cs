@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 /// <summary>
 /// Manages the settings menu UI including shop/IAP
@@ -19,23 +18,23 @@ public class SettingsUI : MonoBehaviour
 
     [Header("=== SHOP / IAP ===")]
     [SerializeField] private Button removeAdsButton;
-    [SerializeField] private TextMeshProUGUI removeAdsPrice;
+    [SerializeField] private Text removeAdsPrice;
     [SerializeField] private GameObject removeAdsContainer; // Hide after purchase
 
     [SerializeField] private Button hints10Button;
-    [SerializeField] private TextMeshProUGUI hints10Price;
+    [SerializeField] private Text hints10Price;
 
     [SerializeField] private Button hints50Button;
-    [SerializeField] private TextMeshProUGUI hints50Price;
+    [SerializeField] private Text hints50Price;
 
     [SerializeField] private Button unlimitedHintsButton;
-    [SerializeField] private TextMeshProUGUI unlimitedHintsPrice;
+    [SerializeField] private Text unlimitedHintsPrice;
     [SerializeField] private GameObject unlimitedHintsContainer; // Hide after purchase
 
     [SerializeField] private Button restorePurchasesButton; // iOS only
 
     [Header("Hints Display (Optional)")]
-    [SerializeField] private TextMeshProUGUI hintsCountText;
+    [SerializeField] private Text hintsCountText;
 
     [Header("Color Changing Objects (Optional)")]
     [SerializeField] private Image colorChangingImage1; // First object that changes color
