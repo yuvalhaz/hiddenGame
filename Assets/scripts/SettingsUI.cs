@@ -16,8 +16,9 @@ public class SettingsUI : MonoBehaviour
     [SerializeField] private Sprite musicOnIcon;
     [SerializeField] private Sprite musicOffIcon;
 
-    [Header("Color Changing Object (Optional)")]
-    [SerializeField] private Image colorChangingImage; // The object that changes color
+    [Header("Color Changing Objects (Optional)")]
+    [SerializeField] private Image colorChangingImage1; // First object that changes color
+    [SerializeField] private Image colorChangingImage2; // Second object that changes color (always different from first)
     [SerializeField] private Color[] availableColors = new Color[]
     {
         Color.red,
@@ -158,22 +159,48 @@ public class SettingsUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Change the color of the color-changing object to a random color from the list
+    /// Change the color of the color-changing objects to random colors from the list
+    /// Makes sure both objects have different colors
     /// </summary>
     private void ChangeRandomColor()
     {
-        if (colorChangingImage == null || availableColors == null || availableColors.Length == 0)
+        if (availableColors == null || availableColors.Length < 2)
         {
+            Debug.LogWarning("[SettingsUI] Need at least 2 colors for color changing!");
             return;
         }
 
-        // Pick a random color from the available colors
-        int randomIndex = Random.Range(0, availableColors.Length);
-        Color selectedColor = availableColors[randomIndex];
+        // Handle first object
+        if (colorChangingImage1 != null)
+        {
+            int randomIndex1 = Random.Range(0, availableColors.Length);
+            Color selectedColor1 = availableColors[randomIndex1];
+            colorChangingImage1.color = selectedColor1;
+            Debug.Log($"[SettingsUI] Object 1 color: {selectedColor1}");
 
-        colorChangingImage.color = selectedColor;
+            // Handle second object - must be different from first
+            if (colorChangingImage2 != null)
+            {
+                int randomIndex2;
+                do
+                {
+                    randomIndex2 = Random.Range(0, availableColors.Length);
+                }
+                while (randomIndex2 == randomIndex1); // Keep trying until we get a different color
 
-        Debug.Log($"[SettingsUI] Changed color to: {selectedColor}");
+                Color selectedColor2 = availableColors[randomIndex2];
+                colorChangingImage2.color = selectedColor2;
+                Debug.Log($"[SettingsUI] Object 2 color: {selectedColor2}");
+            }
+        }
+        else if (colorChangingImage2 != null)
+        {
+            // If only second object exists
+            int randomIndex = Random.Range(0, availableColors.Length);
+            Color selectedColor = availableColors[randomIndex];
+            colorChangingImage2.color = selectedColor;
+            Debug.Log($"[SettingsUI] Object 2 color: {selectedColor}");
+        }
     }
 
     /// <summary>
