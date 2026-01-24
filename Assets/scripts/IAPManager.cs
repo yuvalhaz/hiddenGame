@@ -1,12 +1,19 @@
 using UnityEngine;
-using UnityEngine.Purchasing;
 using System;
+
+#if UNITY_PURCHASING
+using UnityEngine.Purchasing;
+#endif
 
 /// <summary>
 /// Manages In-App Purchases
 /// Handles: Remove Ads, Hint Packages, Unlimited Hints
+/// Works with or without Unity IAP package installed
 /// </summary>
-public class IAPManager : MonoBehaviour, IStoreListener
+public class IAPManager : MonoBehaviour
+#if UNITY_PURCHASING
+    , IStoreListener
+#endif
 {
     private static IAPManager instance;
     public static IAPManager Instance
@@ -33,8 +40,10 @@ public class IAPManager : MonoBehaviour, IStoreListener
     private const string HINTS_COUNT_KEY = "HintsCount";
     private const string UNLIMITED_HINTS_KEY = "UnlimitedHints";
 
+#if UNITY_PURCHASING
     private IStoreController storeController;
     private IExtensionProvider storeExtensionProvider;
+#endif
 
     // Events
     public event Action OnPurchaseSuccess;
@@ -52,9 +61,14 @@ public class IAPManager : MonoBehaviour, IStoreListener
         instance = this;
         DontDestroyOnLoad(gameObject);
 
+#if UNITY_PURCHASING
         InitializePurchasing();
+#else
+        Debug.LogWarning("[IAPManager] Unity IAP not installed - IAP features disabled");
+#endif
     }
 
+#if UNITY_PURCHASING
     /// <summary>
     /// Initialize Unity IAP
     /// </summary>
@@ -137,28 +151,50 @@ public class IAPManager : MonoBehaviour, IStoreListener
         Debug.LogWarning($"[IAPManager] Purchase failed: {product.definition.id} - {failureReason}");
         OnPurchaseFailed?.Invoke($"Purchase failed: {failureReason}");
     }
+#endif
 
     // Purchase Methods
     public void BuyRemoveAds()
     {
+#if UNITY_PURCHASING
         BuyProductID(REMOVE_ADS);
+#else
+        Debug.LogWarning("[IAPManager] Unity IAP not installed");
+        OnPurchaseFailed?.Invoke("IAP not available");
+#endif
     }
 
     public void BuyHints10()
     {
+#if UNITY_PURCHASING
         BuyProductID(HINTS_10);
+#else
+        Debug.LogWarning("[IAPManager] Unity IAP not installed");
+        OnPurchaseFailed?.Invoke("IAP not available");
+#endif
     }
 
     public void BuyHints50()
     {
+#if UNITY_PURCHASING
         BuyProductID(HINTS_50);
+#else
+        Debug.LogWarning("[IAPManager] Unity IAP not installed");
+        OnPurchaseFailed?.Invoke("IAP not available");
+#endif
     }
 
     public void BuyUnlimitedHints()
     {
+#if UNITY_PURCHASING
         BuyProductID(HINTS_UNLIMITED);
+#else
+        Debug.LogWarning("[IAPManager] Unity IAP not installed");
+        OnPurchaseFailed?.Invoke("IAP not available");
+#endif
     }
 
+#if UNITY_PURCHASING
     private void BuyProductID(string productId)
     {
         if (!IsInitialized())
@@ -181,8 +217,9 @@ public class IAPManager : MonoBehaviour, IStoreListener
             OnPurchaseFailed?.Invoke("Product not available");
         }
     }
+#endif
 
-    // Grant Methods
+    // Grant Methods (work without IAP - can be called for testing)
     private void GrantRemoveAds()
     {
         PlayerPrefs.SetInt(ADS_REMOVED_KEY, 1);
@@ -206,7 +243,7 @@ public class IAPManager : MonoBehaviour, IStoreListener
         Debug.Log("[IAPManager] ✅ Unlimited hints granted!");
     }
 
-    // Query Methods
+    // Query Methods (work without IAP)
     public bool AreAdsRemoved()
     {
         return PlayerPrefs.GetInt(ADS_REMOVED_KEY, 0) == 1;
@@ -252,6 +289,7 @@ public class IAPManager : MonoBehaviour, IStoreListener
         }
     }
 
+#if UNITY_PURCHASING
     // Restore Purchases (for iOS mainly)
     public void RestorePurchases()
     {
@@ -293,4 +331,46 @@ public class IAPManager : MonoBehaviour, IStoreListener
 
         return "$?.??";
     }
+#else
+    public void RestorePurchases()
+    {
+        Debug.LogWarning("[IAPManager] Unity IAP not installed");
+    }
+
+    public string GetProductPrice(string productId)
+    {
+        return "$?.??";
+    }
+#endif
+
+    // ===== TESTING METHODS (Editor only) =====
+#if UNITY_EDITOR
+    [ContextMenu("Test: Grant Remove Ads")]
+    public void TestGrantRemoveAds()
+    {
+        GrantRemoveAds();
+    }
+
+    [ContextMenu("Test: Add 10 Hints")]
+    public void TestAdd10Hints()
+    {
+        AddHints(10);
+    }
+
+    [ContextMenu("Test: Grant Unlimited Hints")]
+    public void TestGrantUnlimitedHints()
+    {
+        GrantUnlimitedHints();
+    }
+
+    [ContextMenu("Test: Clear All Purchases")]
+    public void TestClearAllPurchases()
+    {
+        PlayerPrefs.DeleteKey(ADS_REMOVED_KEY);
+        PlayerPrefs.DeleteKey(HINTS_COUNT_KEY);
+        PlayerPrefs.DeleteKey(UNLIMITED_HINTS_KEY);
+        PlayerPrefs.Save();
+        Debug.Log("[IAPManager] All purchases cleared");
+    }
+#endif
 }
