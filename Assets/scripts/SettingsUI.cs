@@ -9,6 +9,7 @@ public class SettingsUI : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private GameObject settingsPanel;
     [SerializeField] private Button settingsButton; // The gear icon button
+    [SerializeField] private Button closeButton; // Close settings button
     [SerializeField] private Button musicToggleButton;
     [SerializeField] private Image musicButtonIcon; // Optional - icon that shows music state
 
@@ -80,6 +81,11 @@ public class SettingsUI : MonoBehaviour
         if (settingsButton != null)
         {
             settingsButton.onClick.AddListener(ToggleSettingsPanel);
+        }
+
+        if (closeButton != null)
+        {
+            closeButton.onClick.AddListener(CloseSettings);
         }
 
         if (musicToggleButton != null)
