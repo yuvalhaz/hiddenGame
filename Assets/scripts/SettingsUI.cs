@@ -1,8 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
-/// Manages the settings menu UI
+/// Manages the settings menu UI including shop/IAP
 /// </summary>
 public class SettingsUI : MonoBehaviour
 {
@@ -15,6 +16,26 @@ public class SettingsUI : MonoBehaviour
     [Header("Music Icons (Optional)")]
     [SerializeField] private Sprite musicOnIcon;
     [SerializeField] private Sprite musicOffIcon;
+
+    [Header("=== SHOP / IAP ===")]
+    [SerializeField] private Button removeAdsButton;
+    [SerializeField] private TextMeshProUGUI removeAdsPrice;
+    [SerializeField] private GameObject removeAdsContainer; // Hide after purchase
+
+    [SerializeField] private Button hints10Button;
+    [SerializeField] private TextMeshProUGUI hints10Price;
+
+    [SerializeField] private Button hints50Button;
+    [SerializeField] private TextMeshProUGUI hints50Price;
+
+    [SerializeField] private Button unlimitedHintsButton;
+    [SerializeField] private TextMeshProUGUI unlimitedHintsPrice;
+    [SerializeField] private GameObject unlimitedHintsContainer; // Hide after purchase
+
+    [SerializeField] private Button restorePurchasesButton; // iOS only
+
+    [Header("Hints Display (Optional)")]
+    [SerializeField] private TextMeshProUGUI hintsCountText;
 
     [Header("Color Changing Objects (Optional)")]
     [SerializeField] private Image colorChangingImage1; // First object that changes color
@@ -67,8 +88,165 @@ public class SettingsUI : MonoBehaviour
             musicToggleButton.onClick.AddListener(ToggleMusicSetting);
         }
 
+        // Setup IAP buttons
+        SetupIAPButtons();
+
         // Update music button state
         UpdateMusicButtonUI();
+
+        // Subscribe to IAP events
+        SubscribeToIAPEvents();
+    }
+
+    void OnDestroy()
+    {
+        UnsubscribeFromIAPEvents();
+    }
+
+    // ===== IAP SETUP =====
+
+    private void SetupIAPButtons()
+    {
+        if (removeAdsButton != null)
+            removeAdsButton.onClick.AddListener(OnRemoveAdsClicked);
+
+        if (hints10Button != null)
+            hints10Button.onClick.AddListener(OnHints10Clicked);
+
+        if (hints50Button != null)
+            hints50Button.onClick.AddListener(OnHints50Clicked);
+
+        if (unlimitedHintsButton != null)
+            unlimitedHintsButton.onClick.AddListener(OnUnlimitedHintsClicked);
+
+        if (restorePurchasesButton != null)
+        {
+            restorePurchasesButton.onClick.AddListener(OnRestorePurchasesClicked);
+            // Show only on iOS
+            bool isApple = Application.platform == RuntimePlatform.IPhonePlayer ||
+                           Application.platform == RuntimePlatform.OSXPlayer;
+            restorePurchasesButton.gameObject.SetActive(isApple);
+        }
+    }
+
+    private void SubscribeToIAPEvents()
+    {
+        if (IAPManager.Instance != null)
+        {
+            IAPManager.Instance.OnPurchaseSuccess += OnPurchaseSuccess;
+            IAPManager.Instance.OnPurchaseFailedEvent += OnPurchaseFailed;
+        }
+    }
+
+    private void UnsubscribeFromIAPEvents()
+    {
+        if (IAPManager.Instance != null)
+        {
+            IAPManager.Instance.OnPurchaseSuccess -= OnPurchaseSuccess;
+            IAPManager.Instance.OnPurchaseFailedEvent -= OnPurchaseFailed;
+        }
+    }
+
+    // ===== IAP BUTTON HANDLERS =====
+
+    private void OnRemoveAdsClicked()
+    {
+        Debug.Log("[SettingsUI] Remove Ads clicked");
+        if (IAPManager.Instance != null)
+            IAPManager.Instance.BuyRemoveAds();
+    }
+
+    private void OnHints10Clicked()
+    {
+        Debug.Log("[SettingsUI] Hints 10 clicked");
+        if (IAPManager.Instance != null)
+            IAPManager.Instance.BuyHints10();
+    }
+
+    private void OnHints50Clicked()
+    {
+        Debug.Log("[SettingsUI] Hints 50 clicked");
+        if (IAPManager.Instance != null)
+            IAPManager.Instance.BuyHints50();
+    }
+
+    private void OnUnlimitedHintsClicked()
+    {
+        Debug.Log("[SettingsUI] Unlimited Hints clicked");
+        if (IAPManager.Instance != null)
+            IAPManager.Instance.BuyUnlimitedHints();
+    }
+
+    private void OnRestorePurchasesClicked()
+    {
+        Debug.Log("[SettingsUI] Restore Purchases clicked");
+        if (IAPManager.Instance != null)
+            IAPManager.Instance.RestorePurchases();
+    }
+
+    // ===== IAP EVENT HANDLERS =====
+
+    private void OnPurchaseSuccess()
+    {
+        Debug.Log("[SettingsUI] Purchase successful!");
+        UpdateShopUI();
+    }
+
+    private void OnPurchaseFailed(string error)
+    {
+        Debug.LogWarning($"[SettingsUI] Purchase failed: {error}");
+    }
+
+    // ===== SHOP UI UPDATES =====
+
+    private void UpdateShopUI()
+    {
+        if (IAPManager.Instance == null) return;
+
+        // Hide Remove Ads if already purchased
+        if (removeAdsContainer != null)
+            removeAdsContainer.SetActive(!IAPManager.Instance.AreAdsRemoved());
+        if (removeAdsButton != null)
+            removeAdsButton.interactable = !IAPManager.Instance.AreAdsRemoved();
+
+        // Hide Unlimited Hints if already purchased
+        if (unlimitedHintsContainer != null)
+            unlimitedHintsContainer.SetActive(!IAPManager.Instance.HasUnlimitedHints());
+        if (unlimitedHintsButton != null)
+            unlimitedHintsButton.interactable = !IAPManager.Instance.HasUnlimitedHints();
+
+        // Update hints count
+        UpdateHintsCount();
+
+        // Update prices
+        UpdatePrices();
+    }
+
+    private void UpdatePrices()
+    {
+        if (IAPManager.Instance == null) return;
+
+        if (removeAdsPrice != null)
+            removeAdsPrice.text = IAPManager.Instance.GetProductPrice(IAPManager.REMOVE_ADS);
+
+        if (hints10Price != null)
+            hints10Price.text = IAPManager.Instance.GetProductPrice(IAPManager.HINTS_10);
+
+        if (hints50Price != null)
+            hints50Price.text = IAPManager.Instance.GetProductPrice(IAPManager.HINTS_50);
+
+        if (unlimitedHintsPrice != null)
+            unlimitedHintsPrice.text = IAPManager.Instance.GetProductPrice(IAPManager.HINTS_UNLIMITED);
+    }
+
+    private void UpdateHintsCount()
+    {
+        if (hintsCountText == null || IAPManager.Instance == null) return;
+
+        if (IAPManager.Instance.HasUnlimitedHints())
+            hintsCountText.text = "Unlimited";
+        else
+            hintsCountText.text = IAPManager.Instance.GetHintsCount().ToString();
     }
 
     /// <summary>
@@ -119,6 +297,9 @@ public class SettingsUI : MonoBehaviour
 
         // Change color of the color-changing object
         ChangeRandomColor();
+
+        // Update shop UI when opening
+        UpdateShopUI();
 
         if (animatePanel && panelCanvasGroup != null)
         {
