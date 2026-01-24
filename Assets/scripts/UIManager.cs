@@ -56,20 +56,23 @@ public class UIManager : MonoBehaviour
     /// </summary>
     public bool RequestOpenSettings()
     {
+        Debug.Log($"[UIManager] RequestOpenSettings - Current panel: {currentOpenPanel}");
+
         if (currentOpenPanel == OpenPanel.HintDialog)
         {
-            Debug.Log("[UIManager] Cannot open Settings - Hint Dialog is open");
+            Debug.LogWarning("[UIManager] ❌ Cannot open Settings - Hint Dialog is open");
             return false;
         }
 
         if (currentOpenPanel == OpenPanel.Settings)
         {
             // Already open, allow (for toggle behavior)
+            Debug.Log("[UIManager] Settings already open - allowing");
             return true;
         }
 
         currentOpenPanel = OpenPanel.Settings;
-        Debug.Log("[UIManager] Settings panel opened");
+        Debug.Log("[UIManager] ✅ Settings panel opened - State updated");
         return true;
     }
 
@@ -79,20 +82,23 @@ public class UIManager : MonoBehaviour
     /// </summary>
     public bool RequestOpenHintDialog()
     {
+        Debug.Log($"[UIManager] RequestOpenHintDialog - Current panel: {currentOpenPanel}");
+
         if (currentOpenPanel == OpenPanel.Settings)
         {
-            Debug.Log("[UIManager] Cannot open Hint Dialog - Settings is open");
+            Debug.LogWarning("[UIManager] ❌ Cannot open Hint Dialog - Settings is open");
             return false;
         }
 
         if (currentOpenPanel == OpenPanel.HintDialog)
         {
             // Already open, allow (for toggle behavior)
+            Debug.Log("[UIManager] Hint Dialog already open - allowing");
             return true;
         }
 
         currentOpenPanel = OpenPanel.HintDialog;
-        Debug.Log("[UIManager] Hint Dialog opened");
+        Debug.Log("[UIManager] ✅ Hint Dialog opened - State updated");
         return true;
     }
 
@@ -101,10 +107,16 @@ public class UIManager : MonoBehaviour
     /// </summary>
     public void NotifySettingsClosed()
     {
+        Debug.Log($"[UIManager] NotifySettingsClosed called - Current panel: {currentOpenPanel}");
+
         if (currentOpenPanel == OpenPanel.Settings)
         {
             currentOpenPanel = OpenPanel.None;
-            Debug.Log("[UIManager] Settings panel closed");
+            Debug.Log("[UIManager] ✅ Settings panel closed - State reset to None");
+        }
+        else
+        {
+            Debug.LogWarning($"[UIManager] ⚠️ NotifySettingsClosed called but current panel is: {currentOpenPanel}");
         }
     }
 
@@ -113,10 +125,16 @@ public class UIManager : MonoBehaviour
     /// </summary>
     public void NotifyHintDialogClosed()
     {
+        Debug.Log($"[UIManager] NotifyHintDialogClosed called - Current panel: {currentOpenPanel}");
+
         if (currentOpenPanel == OpenPanel.HintDialog)
         {
             currentOpenPanel = OpenPanel.None;
-            Debug.Log("[UIManager] Hint Dialog closed");
+            Debug.Log("[UIManager] ✅ Hint Dialog closed - State reset to None");
+        }
+        else
+        {
+            Debug.LogWarning($"[UIManager] ⚠️ NotifyHintDialogClosed called but current panel is: {currentOpenPanel}");
         }
     }
 
