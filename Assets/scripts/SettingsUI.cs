@@ -78,15 +78,7 @@ public class SettingsUI : MonoBehaviour
         }
         else
         {
-            // Check with UIManager if we can open
-            if (UIManager.Instance.RequestOpenSettings())
-            {
-                OpenSettings();
-            }
-            else
-            {
-                Debug.Log("[SettingsUI] Cannot open - another panel is active");
-            }
+            OpenSettings(); // OpenSettings now handles UIManager check internally
         }
     }
 
@@ -96,6 +88,13 @@ public class SettingsUI : MonoBehaviour
     public void OpenSettings()
     {
         if (settingsPanel == null) return;
+
+        // Check with UIManager if we can open
+        if (!UIManager.Instance.RequestOpenSettings())
+        {
+            Debug.Log("[SettingsUI] Cannot open - another panel is active");
+            return;
+        }
 
         settingsPanel.SetActive(true);
         isPanelOpen = true;
