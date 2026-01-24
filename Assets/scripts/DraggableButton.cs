@@ -187,11 +187,22 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
                 // ✅ Force refresh DropSpotCache to ensure all DropSpots are loaded
                 // This is especially important on mobile where loading might be slower
+                Debug.Log($"[DraggableButton] Checking DropSpotCache. Current count: {DropSpotCache.Count}");
                 if (DropSpotCache.Count == 0)
                 {
-                    Debug.LogWarning($"[DraggableButton] DropSpotCache is empty! Forcing refresh...");
+                    Debug.LogWarning($"[DraggableButton] ⚠️ DropSpotCache is EMPTY! Forcing refresh...");
                     DropSpotCache.Refresh();
-                    Debug.Log($"[DraggableButton] DropSpotCache refreshed. Count: {DropSpotCache.Count}");
+                    Debug.Log($"[DraggableButton] DropSpotCache refreshed. New count: {DropSpotCache.Count}");
+
+                    if (DropSpotCache.Count == 0)
+                    {
+                        Debug.LogError($"[DraggableButton] ❌ CRITICAL: DropSpotCache is STILL empty after refresh!");
+                        Debug.LogError($"[DraggableButton] This means no DropSpots exist in the scene!");
+                    }
+                }
+                else
+                {
+                    Debug.Log($"[DraggableButton] ✅ DropSpotCache has {DropSpotCache.Count} spots");
                 }
 
                 EnableMatchingDropSpot(true);
@@ -373,17 +384,48 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         activeDragRT.SetParent(host.transform, false);
         
         activeDragImage = go.GetComponent<Image>();
-        
+
+        // ✅ MOBILE FIX: Set material to default UI material explicitly
+        activeDragImage.material = null; // Forces default UI material
+
         Debug.Log($"[DraggableButton] Created GameObject, now getting photo...");
-        
+
         Sprite realPhoto = GetRealPhotoFromDropSpot();
         
         Debug.Log($"[DraggableButton] GetRealPhotoFromDropSpot returned: {(realPhoto != null ? realPhoto.name : "NULL")}");
 
         if (realPhoto != null)
         {
+            // ✅ MOBILE FIX: Verify texture is loaded before assigning
+            if (realPhoto.texture == null)
+            {
+                Debug.LogError($"[DraggableButton] ❌ CRITICAL: Sprite '{realPhoto.name}' has NULL texture!");
+                Debug.LogError($"[DraggableButton] This usually means texture compression issues on mobile");
+            }
+            else
+            {
+                Debug.Log($"[DraggableButton] ✅ Sprite texture verified: {realPhoto.texture.name} ({realPhoto.texture.width}x{realPhoto.texture.height})");
+            }
+
             activeDragImage.sprite = realPhoto;
+            activeDragImage.enabled = false; // Disable temporarily
+            activeDragImage.enabled = true;  // Re-enable to force refresh
+
             Debug.Log($"[DraggableButton] ✅ SET SPRITE TO: {realPhoto.name}");
+
+            // Verify sprite was actually set
+            if (activeDragImage.sprite == null)
+            {
+                Debug.LogError($"[DraggableButton] ❌ CRITICAL: Sprite was NULL after assignment!");
+            }
+            else if (activeDragImage.sprite != realPhoto)
+            {
+                Debug.LogError($"[DraggableButton] ❌ CRITICAL: Sprite assignment failed - sprite doesn't match!");
+            }
+            else
+            {
+                Debug.Log($"[DraggableButton] ✅ Sprite verified: {activeDragImage.sprite.name}");
+            }
         }
         else
         {
@@ -417,6 +459,8 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         activeDragImage.color = Color.white;
         activeDragImage.raycastTarget = false;
         activeDragImage.preserveAspect = true;
+        activeDragImage.type = Image.Type.Simple; // ✅ MOBILE FIX: Explicitly set to Simple
+        activeDragImage.useSpriteMesh = false;     // ✅ MOBILE FIX: Disable sprite mesh
         
         CanvasGroup cg = activeDragRT.GetComponent<CanvasGroup>();
         cg.interactable = false;
@@ -489,22 +533,29 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     private Sprite GetRealPhotoFromDropSpot()
     {
         Debug.Log($"[DraggableButton] === GET REAL PHOTO START === buttonID: '{buttonID}'");
+        Debug.Log($"[DraggableButton] DropSpotCache.Count: {DropSpotCache.Count}");
 
         DropSpot spot = DropSpotCache.Get(buttonID);
 
         if (spot == null)
         {
             Debug.LogError($"[DraggableButton] ❌ buttonID '{buttonID}' NOT FOUND in DropSpotCache!");
+            Debug.LogError($"[DraggableButton] Available spots in cache:");
+            var allSpots = DropSpotCache.GetAll();
+            foreach (var s in allSpots)
+            {
+                Debug.LogError($"   - '{s.spotId}'");
+            }
             Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
             return null;
         }
 
-        Debug.Log($"[DraggableButton] ✅ FOUND DropSpot in cache: '{spot.spotId}'");
+        Debug.Log($"[DraggableButton] ✅ FOUND DropSpot in cache: '{spot.spotId}' on GameObject: {spot.gameObject.name}");
 
         var revealController = spot.GetComponent<ImageRevealController>();
         if (revealController == null)
         {
-            Debug.LogError($"[DraggableButton] ❌ No ImageRevealController component found!");
+            Debug.LogError($"[DraggableButton] ❌ No ImageRevealController component found on {spot.gameObject.name}!");
             Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
             return null;
         }
@@ -516,6 +567,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         if (backgroundImage == null)
         {
             Debug.LogError($"[DraggableButton] ❌ GetBackgroundImage() returned NULL!");
+            Debug.LogError($"[DraggableButton] This means backgroundImage is not assigned in Inspector!");
             Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
             return null;
         }
@@ -525,11 +577,12 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         if (backgroundImage.sprite == null)
         {
             Debug.LogError($"[DraggableButton] ❌ backgroundImage.sprite is NULL!");
+            Debug.LogError($"[DraggableButton] backgroundImage exists but has no sprite assigned!");
             Debug.Log($"[DraggableButton] === GET REAL PHOTO END === returning NULL");
             return null;
         }
 
-        Debug.Log($"[DraggableButton] 🎉 SUCCESS! sprite name: '{backgroundImage.sprite.name}'");
+        Debug.Log($"[DraggableButton] 🎉 SUCCESS! sprite name: '{backgroundImage.sprite.name}', texture: {backgroundImage.sprite.texture != null}");
         return backgroundImage.sprite;
     }
 
