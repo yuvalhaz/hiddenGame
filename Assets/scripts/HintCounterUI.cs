@@ -23,7 +23,11 @@ public class HintCounterUI : MonoBehaviour
     [SerializeField] private float updateInterval = 0.5f;
     [Tooltip("How often to check for hint count updates (in seconds)")]
 
+    [Header("Debug")]
+    [SerializeField] private bool debugMode = false;
+
     private float updateTimer = 0f;
+    private string lastSetText = "";
 
     void Start()
     {
@@ -41,6 +45,19 @@ public class HintCounterUI : MonoBehaviour
                 UpdateDisplay();
             }
         }
+
+        // Debug: Check if text was changed externally
+        if (debugMode)
+        {
+            string currentText = "";
+            if (hintsText != null) currentText = hintsText.text;
+            else if (hintsTMPText != null) currentText = hintsTMPText.text;
+
+            if (currentText != lastSetText && !string.IsNullOrEmpty(lastSetText))
+            {
+                Debug.LogWarning($"[HintCounterUI] Text changed externally! Was: '{lastSetText}', Now: '{currentText}'");
+            }
+        }
     }
 
     /// <summary>
@@ -50,6 +67,7 @@ public class HintCounterUI : MonoBehaviour
     {
         if (IAPManager.Instance == null)
         {
+            if (debugMode) Debug.Log("[HintCounterUI] IAPManager.Instance is NULL");
             SetText("רמזים: 0");
             return;
         }
@@ -57,6 +75,7 @@ public class HintCounterUI : MonoBehaviour
         // Check if player has unlimited hints
         if (IAPManager.Instance.HasUnlimitedHints())
         {
+            if (debugMode) Debug.Log("[HintCounterUI] Has unlimited hints");
             SetText(unlimitedText);
         }
         else
@@ -64,6 +83,7 @@ public class HintCounterUI : MonoBehaviour
             // Display current hint count
             int hintCount = IAPManager.Instance.GetHintsCount();
             string displayText = string.Format(normalFormat, hintCount);
+            if (debugMode) Debug.Log($"[HintCounterUI] Hint count: {hintCount}, Display: '{displayText}'");
             SetText(displayText);
         }
     }
@@ -73,14 +93,23 @@ public class HintCounterUI : MonoBehaviour
     /// </summary>
     private void SetText(string text)
     {
+        lastSetText = text;
+
         if (hintsText != null)
         {
             hintsText.text = text;
+            if (debugMode) Debug.Log($"[HintCounterUI] Set hintsText to: '{text}'");
         }
 
         if (hintsTMPText != null)
         {
             hintsTMPText.text = text;
+            if (debugMode) Debug.Log($"[HintCounterUI] Set hintsTMPText to: '{text}'");
+        }
+
+        if (hintsText == null && hintsTMPText == null)
+        {
+            Debug.LogError("[HintCounterUI] No text component assigned!");
         }
     }
 }
