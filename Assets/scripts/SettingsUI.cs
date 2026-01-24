@@ -161,6 +161,7 @@ public class SettingsUI : MonoBehaviour
     /// <summary>
     /// Change the color of the color-changing objects to random colors from the list
     /// Makes sure both objects have different colors
+    /// Preserves the alpha (transparency) of each object
     /// </summary>
     private void ChangeRandomColor()
     {
@@ -175,8 +176,13 @@ public class SettingsUI : MonoBehaviour
         {
             int randomIndex1 = Random.Range(0, availableColors.Length);
             Color selectedColor1 = availableColors[randomIndex1];
+
+            // Preserve alpha
+            float currentAlpha1 = colorChangingImage1.color.a;
+            selectedColor1.a = currentAlpha1;
+
             colorChangingImage1.color = selectedColor1;
-            Debug.Log($"[SettingsUI] Object 1 color: {selectedColor1}");
+            Debug.Log($"[SettingsUI] Object 1 color: {selectedColor1} (alpha preserved: {currentAlpha1})");
 
             // Handle second object - must be different from first
             if (colorChangingImage2 != null)
@@ -189,8 +195,13 @@ public class SettingsUI : MonoBehaviour
                 while (randomIndex2 == randomIndex1); // Keep trying until we get a different color
 
                 Color selectedColor2 = availableColors[randomIndex2];
+
+                // Preserve alpha
+                float currentAlpha2 = colorChangingImage2.color.a;
+                selectedColor2.a = currentAlpha2;
+
                 colorChangingImage2.color = selectedColor2;
-                Debug.Log($"[SettingsUI] Object 2 color: {selectedColor2}");
+                Debug.Log($"[SettingsUI] Object 2 color: {selectedColor2} (alpha preserved: {currentAlpha2})");
             }
         }
         else if (colorChangingImage2 != null)
@@ -198,8 +209,13 @@ public class SettingsUI : MonoBehaviour
             // If only second object exists
             int randomIndex = Random.Range(0, availableColors.Length);
             Color selectedColor = availableColors[randomIndex];
+
+            // Preserve alpha
+            float currentAlpha = colorChangingImage2.color.a;
+            selectedColor.a = currentAlpha;
+
             colorChangingImage2.color = selectedColor;
-            Debug.Log($"[SettingsUI] Object 2 color: {selectedColor}");
+            Debug.Log($"[SettingsUI] Object 2 color: {selectedColor} (alpha preserved: {currentAlpha})");
         }
     }
 
