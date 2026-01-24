@@ -16,6 +16,17 @@ public class SettingsUI : MonoBehaviour
     [SerializeField] private Sprite musicOnIcon;
     [SerializeField] private Sprite musicOffIcon;
 
+    [Header("Color Changing Object (Optional)")]
+    [SerializeField] private Image colorChangingImage; // The object that changes color
+    [SerializeField] private Color[] availableColors = new Color[]
+    {
+        Color.red,
+        Color.blue,
+        Color.green,
+        Color.yellow,
+        new Color(1f, 0.5f, 0f) // Orange
+    };
+
     [Header("Animation (Optional)")]
     [SerializeField] private bool animatePanel = true;
     [SerializeField] private float animationDuration = 0.3f;
@@ -80,6 +91,9 @@ public class SettingsUI : MonoBehaviour
         settingsPanel.SetActive(true);
         isPanelOpen = true;
 
+        // Change color of the color-changing object
+        ChangeRandomColor();
+
         if (animatePanel && panelCanvasGroup != null)
         {
             StartCoroutine(FadePanel(0f, 1f));
@@ -141,6 +155,25 @@ public class SettingsUI : MonoBehaviour
         {
             musicButtonIcon.sprite = musicOffIcon;
         }
+    }
+
+    /// <summary>
+    /// Change the color of the color-changing object to a random color from the list
+    /// </summary>
+    private void ChangeRandomColor()
+    {
+        if (colorChangingImage == null || availableColors == null || availableColors.Length == 0)
+        {
+            return;
+        }
+
+        // Pick a random color from the available colors
+        int randomIndex = Random.Range(0, availableColors.Length);
+        Color selectedColor = availableColors[randomIndex];
+
+        colorChangingImage.color = selectedColor;
+
+        Debug.Log($"[SettingsUI] Changed color to: {selectedColor}");
     }
 
     /// <summary>
