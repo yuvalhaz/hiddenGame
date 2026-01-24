@@ -32,6 +32,10 @@ public class SettingsUI : MonoBehaviour
     [SerializeField] private bool animatePanel = true;
     [SerializeField] private float animationDuration = 0.3f;
 
+    [Header("UI Blocking")]
+    [SerializeField] private HintDialog hintDialog;
+    [Tooltip("Optional: HintDialog reference to prevent opening both panels together")]
+
     private bool isPanelOpen = false;
     private CanvasGroup panelCanvasGroup;
 
@@ -68,6 +72,14 @@ public class SettingsUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Check if settings panel is currently open
+    /// </summary>
+    public bool IsPanelOpen()
+    {
+        return isPanelOpen;
+    }
+
+    /// <summary>
     /// Toggle settings panel open/close
     /// </summary>
     public void ToggleSettingsPanel()
@@ -89,10 +101,16 @@ public class SettingsUI : MonoBehaviour
     {
         if (settingsPanel == null) return;
 
-        // Check with UIManager if we can open
-        if (!UIManager.Instance.RequestOpenSettings())
+        // Auto-find HintDialog if not assigned
+        if (hintDialog == null)
         {
-            Debug.Log("[SettingsUI] Cannot open - another panel is active");
+            hintDialog = FindObjectOfType<HintDialog>();
+        }
+
+        // Check if Hint Dialog is open
+        if (hintDialog != null && hintDialog.IsOpen())
+        {
+            Debug.LogWarning("[SettingsUI] ❌ Cannot open - Hint Dialog is open!");
             return;
         }
 
@@ -107,7 +125,7 @@ public class SettingsUI : MonoBehaviour
             StartCoroutine(FadePanel(0f, 1f));
         }
 
-        Debug.Log("[SettingsUI] Settings opened");
+        Debug.Log("[SettingsUI] ✅ Settings opened");
     }
 
     /// <summary>
