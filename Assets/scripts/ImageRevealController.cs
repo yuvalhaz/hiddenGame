@@ -42,6 +42,9 @@ public class ImageRevealController : MonoBehaviour
 
             isRevealed = true;
 
+            // ✅ כבה raycasts על פריטים שכבר הונחו
+            DisableAllRaycasts();
+
             // ✅ Notify SmlAnimManager to enable button clicks
             if (SmlAnimManager.Instance != null)
             {
@@ -199,5 +202,23 @@ public class ImageRevealController : MonoBehaviour
     public Image GetBackgroundImage()
     {
         return backgroundImage;
+    }
+
+    /// <summary>
+    /// כבה raycast על כל התמונות - למניעת הפרעה לגרירה
+    /// </summary>
+    public void DisableAllRaycasts()
+    {
+        if (backgroundImage != null)
+        {
+            backgroundImage.raycastTarget = false;
+        }
+
+        if (placeholderImage != null)
+        {
+            placeholderImage.raycastTarget = false;
+        }
+
+        Debug.Log($"[ImageRevealController] Disabled all raycasts on {gameObject.name}");
     }
 }
