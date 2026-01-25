@@ -51,6 +51,10 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<bool> buttonStates = new List<bool>();
     private List<Vector2> targetPositions = new List<Vector2>();
 
+    // ✅ Cache לביצועים טובים יותר
+    private List<CanvasGroup> buttonCanvasGroups = new List<CanvasGroup>();
+    private List<Image> buttonImages = new List<Image>();
+
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
 
     private float currentAnimationSpeed;
@@ -316,6 +320,10 @@ public class ScrollableButtonBar : MonoBehaviour
             buttonStates.Add(true);
             targetPositions.Add(buttonRect.anchoredPosition);
 
+            // ✅ Cache components לביצועים
+            buttonCanvasGroups.Add(draggable.GetComponent<CanvasGroup>());
+            buttonImages.Add(draggable.GetComponent<Image>());
+
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
             if (buttonText != null)
             {
@@ -572,47 +580,43 @@ public class ScrollableButtonBar : MonoBehaviour
     }
 
     /// <summary>
-    /// כיבוי raycast על כל הכפתורים בזמן גרירה
+    /// כיבוי raycast על כל הכפתורים בזמן גרירה (משתמש ב-cache לביצועים)
     /// </summary>
     public void DisableAllButtonRaycasts(DraggableButton except = null)
     {
-        foreach (var btn in buttons)
+        for (int i = 0; i < buttons.Count; i++)
         {
-            if (btn == null || btn == except) continue;
+            if (buttons[i] == null || buttons[i] == except) continue;
 
-            CanvasGroup cg = btn.GetComponent<CanvasGroup>();
-            if (cg != null)
+            if (i < buttonCanvasGroups.Count && buttonCanvasGroups[i] != null)
             {
-                cg.blocksRaycasts = false;
+                buttonCanvasGroups[i].blocksRaycasts = false;
             }
 
-            Image img = btn.GetComponent<Image>();
-            if (img != null)
+            if (i < buttonImages.Count && buttonImages[i] != null)
             {
-                img.raycastTarget = false;
+                buttonImages[i].raycastTarget = false;
             }
         }
     }
 
     /// <summary>
-    /// החזרת raycast לכל הכפתורים אחרי גרירה
+    /// החזרת raycast לכל הכפתורים אחרי גרירה (משתמש ב-cache לביצועים)
     /// </summary>
     public void EnableAllButtonRaycasts()
     {
-        foreach (var btn in buttons)
+        for (int i = 0; i < buttons.Count; i++)
         {
-            if (btn == null) continue;
+            if (buttons[i] == null) continue;
 
-            CanvasGroup cg = btn.GetComponent<CanvasGroup>();
-            if (cg != null)
+            if (i < buttonCanvasGroups.Count && buttonCanvasGroups[i] != null)
             {
-                cg.blocksRaycasts = true;
+                buttonCanvasGroups[i].blocksRaycasts = true;
             }
 
-            Image img = btn.GetComponent<Image>();
-            if (img != null)
+            if (i < buttonImages.Count && buttonImages[i] != null)
             {
-                img.raycastTarget = true;
+                buttonImages[i].raycastTarget = true;
             }
         }
     }
