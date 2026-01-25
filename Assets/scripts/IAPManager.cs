@@ -10,10 +10,18 @@ using System;
 public class IAPManager : MonoBehaviour, IStoreListener
 {
     private static IAPManager instance;
+    private static bool isQuitting = false;
+
     public static IAPManager Instance
     {
         get
         {
+            // Don't create new instance if quitting
+            if (isQuitting)
+            {
+                return null;
+            }
+
             if (instance == null)
             {
                 GameObject go = new GameObject("IAPManager");
@@ -45,6 +53,9 @@ public class IAPManager : MonoBehaviour, IStoreListener
 
     void Awake()
     {
+        // Reset quitting flag when starting (for Editor play mode)
+        isQuitting = false;
+
         // Singleton pattern
         if (instance != null && instance != this)
         {
@@ -56,6 +67,19 @@ public class IAPManager : MonoBehaviour, IStoreListener
         DontDestroyOnLoad(gameObject);
 
         InitializePurchasing();
+    }
+
+    void OnApplicationQuit()
+    {
+        isQuitting = true;
+    }
+
+    void OnDestroy()
+    {
+        if (instance == this)
+        {
+            instance = null;
+        }
     }
 
     /// <summary>
