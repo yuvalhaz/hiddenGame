@@ -324,4 +324,38 @@ public class IAPManager : MonoBehaviour, IStoreListener
 
         return "$?.??";
     }
+
+    // Get product title for display
+    public string GetProductTitle(string productId)
+    {
+        if (!IsInitialized())
+        {
+            return "";
+        }
+
+        Product product = storeController.products.WithID(productId);
+        if (product != null)
+        {
+            return product.metadata.localizedTitle;
+        }
+
+        return "";
+    }
+
+    // Get product description for display
+    public string GetProductDescription(string productId)
+    {
+        if (!IsInitialized())
+        {
+            return "";
+        }
+
+        Product product = storeController.products.WithID(productId);
+        if (product != null)
+        {
+            return product.metadata.localizedDescription;
+        }
+
+        return "";
+    }
 }
