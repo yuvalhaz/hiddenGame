@@ -570,4 +570,50 @@ public class ScrollableButtonBar : MonoBehaviour
             RecalculateAllPositions();
         }
     }
+
+    /// <summary>
+    /// כיבוי raycast על כל הכפתורים בזמן גרירה
+    /// </summary>
+    public void DisableAllButtonRaycasts(DraggableButton except = null)
+    {
+        foreach (var btn in buttons)
+        {
+            if (btn == null || btn == except) continue;
+
+            CanvasGroup cg = btn.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.blocksRaycasts = false;
+            }
+
+            Image img = btn.GetComponent<Image>();
+            if (img != null)
+            {
+                img.raycastTarget = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// החזרת raycast לכל הכפתורים אחרי גרירה
+    /// </summary>
+    public void EnableAllButtonRaycasts()
+    {
+        foreach (var btn in buttons)
+        {
+            if (btn == null) continue;
+
+            CanvasGroup cg = btn.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.blocksRaycasts = true;
+            }
+
+            Image img = btn.GetComponent<Image>();
+            if (img != null)
+            {
+                img.raycastTarget = true;
+            }
+        }
+    }
 }
