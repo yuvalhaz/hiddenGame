@@ -257,16 +257,28 @@ public class SettingsUI : MonoBehaviour
         if (IAPManager.Instance == null) return;
 
         if (removeAdsPrice != null)
-            removeAdsPrice.text = IAPManager.Instance.GetProductPrice(IAPManager.REMOVE_ADS);
+            removeAdsPrice.text = FormatProductText(IAPManager.REMOVE_ADS);
 
         if (hints10Price != null)
-            hints10Price.text = IAPManager.Instance.GetProductPrice(IAPManager.HINTS_10);
+            hints10Price.text = FormatProductText(IAPManager.HINTS_10);
 
         if (hints50Price != null)
-            hints50Price.text = IAPManager.Instance.GetProductPrice(IAPManager.HINTS_50);
+            hints50Price.text = FormatProductText(IAPManager.HINTS_50);
 
         if (unlimitedHintsPrice != null)
-            unlimitedHintsPrice.text = IAPManager.Instance.GetProductPrice(IAPManager.HINTS_UNLIMITED);
+            unlimitedHintsPrice.text = FormatProductText(IAPManager.HINTS_UNLIMITED);
+    }
+
+    private string FormatProductText(string productId)
+    {
+        string title = IAPManager.Instance.GetProductTitle(productId);
+        string price = IAPManager.Instance.GetProductPrice(productId);
+
+        // If title is available, show "Title - Price", otherwise just price
+        if (!string.IsNullOrEmpty(title))
+            return $"{title} - {price}";
+        else
+            return price;
     }
 
     private void UpdateHintsCount()
