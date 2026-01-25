@@ -27,6 +27,21 @@ public class HintCounterUI : MonoBehaviour
 
     private void Start()
     {
+        // Auto-find text components if not assigned
+        if (countText == null)
+        {
+            countText = GetComponent<Text>();
+            if (countText == null)
+                countText = GetComponentInChildren<Text>();
+        }
+
+        if (countTextTMP == null)
+        {
+            countTextTMP = GetComponent<TextMeshProUGUI>();
+            if (countTextTMP == null)
+                countTextTMP = GetComponentInChildren<TextMeshProUGUI>();
+        }
+
         // Debug: הוספת רמזים לבדיקה
         if (debugApplyOnStart && debugAddHints > 0)
         {
@@ -54,25 +69,28 @@ public class HintCounterUI : MonoBehaviour
         // עדכון הטקסט
         string displayText = hasHints ? hintCount.ToString() : "";
 
+        Debug.Log($"[HintCounterUI] UpdateDisplay: count={hintCount}, hasHints={hasHints}, text='{displayText}'");
+        Debug.Log($"[HintCounterUI] countText={countText}, countTextTMP={countTextTMP}");
+
         if (countText != null)
         {
             countText.text = displayText;
-            countText.gameObject.SetActive(hasHints);
+            countText.enabled = hasHints; // רק מכבה את הטקסט, לא את ה-GameObject
+            Debug.Log($"[HintCounterUI] Set Text to '{displayText}', enabled={hasHints}");
         }
 
         if (countTextTMP != null)
         {
             countTextTMP.text = displayText;
-            countTextTMP.gameObject.SetActive(hasHints);
+            countTextTMP.enabled = hasHints; // רק מכבה את הטקסט, לא את ה-GameObject
+            Debug.Log($"[HintCounterUI] Set TMP to '{displayText}', enabled={hasHints}");
         }
 
         // אם צריך להסתיר את כל ה-GameObject
-        if (hideGameObjectWhenZero)
+        if (hideGameObjectWhenZero && !hasHints)
         {
-            gameObject.SetActive(hasHints);
+            gameObject.SetActive(false);
         }
-
-        Debug.Log($"[HintCounterUI] Updated: count={hintCount}, visible={hasHints}");
     }
 
     /// <summary>
