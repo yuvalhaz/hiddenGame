@@ -20,6 +20,7 @@ public class HintCounterUI : MonoBehaviour
     [Tooltip("לבדיקה בלבד - מספר רמזים להוספה")]
     [SerializeField] private int debugAddHints = 0;
     [SerializeField] private bool debugApplyOnStart = false;
+    [SerializeField] private bool debugClearHints = false;
 
     // PlayerPrefs key (same as IAPManager)
     private const string HINTS_COUNT_KEY = "HintsCount";
@@ -42,8 +43,15 @@ public class HintCounterUI : MonoBehaviour
                 countTextTMP = GetComponentInChildren<TextMeshProUGUI>();
         }
 
+        // Debug: איפוס רמזים
+        if (debugClearHints)
+        {
+            PlayerPrefs.SetInt(HINTS_COUNT_KEY, 0);
+            PlayerPrefs.Save();
+            Debug.Log($"[HintCounterUI] DEBUG: Cleared hints to 0");
+        }
         // Debug: הוספת רמזים לבדיקה
-        if (debugApplyOnStart && debugAddHints > 0)
+        else if (debugApplyOnStart && debugAddHints > 0)
         {
             PlayerPrefs.SetInt(HINTS_COUNT_KEY, debugAddHints);
             PlayerPrefs.Save();
