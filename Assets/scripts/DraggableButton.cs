@@ -29,6 +29,10 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     [Tooltip("CanvasGroups to disable during drag")]
     [SerializeField] private CanvasGroup[] disableCanvasGroupsOnDrag;
 
+    // Runtime references (set programmatically for dynamically created buttons)
+    private Image[] runtimeDisableRaycastImages;
+    private CanvasGroup[] runtimeDisableCanvasGroups;
+
     private ScrollableButtonBar buttonBar;
     private RectTransform rectTransform;
     private Canvas canvas;
@@ -111,6 +115,18 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     public string GetButtonID()
     {
         return buttonID;
+    }
+
+    /// <summary>
+    /// Set UI elements to disable raycasts on during drag (for dynamically created buttons)
+    /// </summary>
+    public void SetRaycastTargets(Image[] images, CanvasGroup[] canvasGroups)
+    {
+        runtimeDisableRaycastImages = images;
+        runtimeDisableCanvasGroups = canvasGroups;
+
+        if (debugMode)
+            Debug.Log($"[DraggableButton] SetRaycastTargets: {images?.Length ?? 0} images, {canvasGroups?.Length ?? 0} canvas groups");
     }
 
     public bool IsDragging()
@@ -951,7 +967,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
     private void DisableExternalRaycasts()
     {
-        // Disable specific images
+        // Disable specific images (serialized)
         if (disableRaycastOnDrag != null)
         {
             foreach (var img in disableRaycastOnDrag)
@@ -965,7 +981,21 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
             }
         }
 
-        // Disable canvas groups
+        // Disable specific images (runtime/dynamic)
+        if (runtimeDisableRaycastImages != null)
+        {
+            foreach (var img in runtimeDisableRaycastImages)
+            {
+                if (img != null)
+                {
+                    img.raycastTarget = false;
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Disabled runtime raycast on: {img.name}");
+                }
+            }
+        }
+
+        // Disable canvas groups (serialized)
         if (disableCanvasGroupsOnDrag != null)
         {
             foreach (var cg in disableCanvasGroupsOnDrag)
@@ -978,11 +1008,25 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 }
             }
         }
+
+        // Disable canvas groups (runtime/dynamic)
+        if (runtimeDisableCanvasGroups != null)
+        {
+            foreach (var cg in runtimeDisableCanvasGroups)
+            {
+                if (cg != null)
+                {
+                    cg.blocksRaycasts = false;
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Disabled runtime CanvasGroup raycasts on: {cg.name}");
+                }
+            }
+        }
     }
 
     private void EnableExternalRaycasts()
     {
-        // Re-enable specific images
+        // Re-enable specific images (serialized)
         if (disableRaycastOnDrag != null)
         {
             foreach (var img in disableRaycastOnDrag)
@@ -996,7 +1040,21 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
             }
         }
 
-        // Re-enable canvas groups
+        // Re-enable specific images (runtime/dynamic)
+        if (runtimeDisableRaycastImages != null)
+        {
+            foreach (var img in runtimeDisableRaycastImages)
+            {
+                if (img != null)
+                {
+                    img.raycastTarget = true;
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Re-enabled runtime raycast on: {img.name}");
+                }
+            }
+        }
+
+        // Re-enable canvas groups (serialized)
         if (disableCanvasGroupsOnDrag != null)
         {
             foreach (var cg in disableCanvasGroupsOnDrag)
@@ -1006,6 +1064,20 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     cg.blocksRaycasts = true;
                     if (debugMode)
                         Debug.Log($"[DraggableButton] Re-enabled CanvasGroup raycasts on: {cg.name}");
+                }
+            }
+        }
+
+        // Re-enable canvas groups (runtime/dynamic)
+        if (runtimeDisableCanvasGroups != null)
+        {
+            foreach (var cg in runtimeDisableCanvasGroups)
+            {
+                if (cg != null)
+                {
+                    cg.blocksRaycasts = true;
+                    if (debugMode)
+                        Debug.Log($"[DraggableButton] Re-enabled runtime CanvasGroup raycasts on: {cg.name}");
                 }
             }
         }

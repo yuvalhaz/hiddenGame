@@ -49,6 +49,12 @@ public class ScrollableButtonBar : MonoBehaviour
     [SerializeField] private RectTransform contentPanel;
     [SerializeField] private ScrollRect scrollRect;
 
+    [Header("Raycast Blocking During Drag")]
+    [Tooltip("Images to disable raycast on during button drag (e.g. clickable overlays like DropSpots)")]
+    [SerializeField] private Image[] disableRaycastOnDrag;
+    [Tooltip("CanvasGroups to disable during button drag")]
+    [SerializeField] private CanvasGroup[] disableCanvasGroupsOnDrag;
+
     private List<DraggableButton> buttons = new List<DraggableButton>();
     private List<bool> buttonStates = new List<bool>();
     private List<Vector2> targetPositions = new List<Vector2>();
@@ -305,6 +311,9 @@ public class ScrollableButtonBar : MonoBehaviour
             }
             draggable.SetButtonBar(this, i);
             draggable.SetButtonID(buttonDataList[i].buttonID);
+
+            // ✅ Pass raycast targets to the draggable button
+            draggable.SetRaycastTargets(disableRaycastOnDrag, disableCanvasGroupsOnDrag);
 
             if (useCenterDragArea)
             {
