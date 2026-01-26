@@ -173,52 +173,52 @@ public class DragVisualManager
     /// Update the position of the drag visual - follows finger with diagonal offset.
     /// PERFORMANCE: This is called 60 times per second during drag - must be fast!
     /// Smart offset: Moves diagonally (right + up) so finger never hides the object.
-    /// Automatically reduces offset when finger is near bottom of screen.
     /// </summary>
     public void UpdatePosition(PointerEventData eventData)
     {
         if (dragVisualRT == null) return;
         if (cachedCanvas == null) return;
 
-        // 1) Finger position in screen pixels
+        // Get canvas scale factor to convert local units to screen pixels
+        float canvasScale = cachedCanvas.scaleFactor;
+
+        // Object size in SCREEN PIXELS (not local canvas units)
+        float objectScreenHeight = dragVisualRT.rect.height * canvasScale;
+        float objectScreenWidth = dragVisualRT.rect.width * canvasScale;
+
+        // Finger position in screen pixels
         Vector2 pointer = eventData.position;
 
-        // 2) Adaptive Y offset
-        float yOffset = GetAdaptiveOffset(pointer.y);
+        // Fixed offset: always keep object fully visible above and to the right of finger
+        // Y offset = half object height + finger clearance (so bottom edge is above finger)
+        // X offset = enough to clear finger width (~100px)
+        float yOffset = (objectScreenHeight * 0.5f) + FINGER_CLEARANCE_PX;
+        float xOffset = Mathf.Max(yOffset * X_OFFSET_RATIO, MIN_X_OFFSET_PX);
 
-        // 3) Calculate X offset - MUST be large enough when Y offset is small
-        // When Y offset is small/negative, increase X offset to keep object visible
-        float objectHeight = dragVisualRT.rect.height;
-        float minVisibleXOffset = objectHeight * 0.5f + FINGER_CLEARANCE_PX; // Same as full Y offset
+        // Position up-right from finger
+        Vector2 finalScreenPos = pointer + new Vector2(xOffset, yOffset);
 
-        float xOffset;
-        if (yOffset < objectHeight * 0.5f)
+        // If would go off top of screen, flip to down-right
+        float topY = finalScreenPos.y + objectScreenHeight * 0.5f;
+        if (topY > Screen.height)
         {
-            // Y offset too small - compensate with larger X offset
-            xOffset = minVisibleXOffset;
-        }
-        else
-        {
-            xOffset = Mathf.Max(yOffset * X_OFFSET_RATIO, MIN_X_OFFSET_PX);
+            finalScreenPos = pointer + new Vector2(xOffset, -yOffset);
         }
 
-        // Try positioning up-right first
-        Vector2 candidateUp = pointer + new Vector2(xOffset, yOffset);
-        float topY = candidateUp.y + dragVisualRT.rect.height * 0.5f;
+        // If would go off right of screen, flip to left
+        float rightX = finalScreenPos.x + objectScreenWidth * 0.5f;
+        if (rightX > Screen.width)
+        {
+            finalScreenPos.x = pointer.x - xOffset;
+        }
 
-        // If would go off top of screen, flip to down-right instead
-        Vector2 finalScreenPos = (topY > Screen.height)
-            ? pointer + new Vector2(xOffset, -yOffset)
-            : candidateUp;
-
-        // 4) Clamp within screen bounds
-        float halfW = dragVisualRT.rect.width * 0.5f;
-        float halfH = dragVisualRT.rect.height * 0.5f;
-
+        // Clamp within screen bounds (in screen pixels)
+        float halfW = objectScreenWidth * 0.5f;
+        float halfH = objectScreenHeight * 0.5f;
         finalScreenPos.x = Mathf.Clamp(finalScreenPos.x, halfW, Screen.width - halfW);
         finalScreenPos.y = Mathf.Clamp(finalScreenPos.y, halfH, Screen.height - halfH);
 
-        // 5) Convert to world position and apply
+        // Convert screen position to world position and apply
         Vector3 worldPos;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(
             (RectTransform)cachedCanvas.transform,
