@@ -125,6 +125,18 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        // ✅ כבה את כל הכפתורים בזמן גרירה כדי שלא יחסמו את ה-raycast
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.DisableAllButtonsForDrag();
+        }
+
+        // ✅ כבה raycast על כל הכפתורים בבר (חוץ מהנוכחי)
+        if (buttonBar != null)
+        {
+            buttonBar.DisableAllButtonRaycasts(this);
+        }
+
         originalPosition = rectTransform.anchoredPosition;
         isDragging = true;
         dragStartPosition = eventData.position;
@@ -228,6 +240,18 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
             buttonBar.OnButtonReturned(this, originalIndex);
 
+            // ✅ החזר את הכפתורים למצב הרגיל
+            if (SmlAnimManager.Instance != null)
+            {
+                SmlAnimManager.Instance.RestoreButtonsAfterDrag();
+            }
+
+            // ✅ החזר raycast לכל הכפתורים בבר
+            if (buttonBar != null)
+            {
+                buttonBar.EnableAllButtonRaycasts();
+            }
+
             if (debugMode)
                 Debug.Log($"[DraggableButton] ScrollRect drag ended");
 
@@ -303,6 +327,18 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         if (!wasSuccessfullyPlaced)
         {
             buttonBar.OnButtonReturned(this, originalIndex);
+        }
+
+        // ✅ החזר את הכפתורים למצב הרגיל
+        if (SmlAnimManager.Instance != null)
+        {
+            SmlAnimManager.Instance.RestoreButtonsAfterDrag();
+        }
+
+        // ✅ החזר raycast לכל הכפתורים בבר
+        if (buttonBar != null)
+        {
+            buttonBar.EnableAllButtonRaycasts();
         }
 
         isDraggingOut = false;

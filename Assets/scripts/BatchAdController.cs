@@ -61,6 +61,14 @@ public class BatchAdController : MonoBehaviour
             return false;
         }
 
+        // ✅ IAP CHECK - User bought "Remove Ads"
+        if (IAPManager.Instance != null && IAPManager.Instance.AreAdsRemoved())
+        {
+            if (debugMode)
+                Debug.Log("📺 Ads removed by IAP - skipping");
+            return false;
+        }
+
         if (!showAdsOnBatchComplete)
         {
             if (debugMode)

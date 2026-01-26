@@ -40,9 +40,18 @@ public static class DropSpotCache
             return null;
         }
 
-        cache.TryGetValue(spotId, out DropSpot spot);
+        // ניסיון ראשון
+        if (cache.TryGetValue(spotId, out DropSpot spot) && spot != null)
+            return spot;
+
+        // ✅ אם לא נמצא – נרענן פעם אחת (DropSpots אולי נוצרו/הופעלו אחרי שהקאש נבנה)
+        Refresh();
+
+        cache.TryGetValue(spotId, out spot);
         return spot;
     }
+
+
 
     /// <summary>
     /// Refresh the cache by finding all DropSpots in the scene.
