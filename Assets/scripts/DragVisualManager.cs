@@ -24,11 +24,10 @@ public class DragVisualManager
     private const bool USE_PHYSICAL_OFFSET = false;   // Toggle: true = fixed cm, false = adaptive %
 
     // Small object visibility fix - ensures finger never hides dragged objects
-    private const float MIN_OFFSET_PX = 200f;         // Minimum distance from finger (increased for small objects)
-    private const float SMALL_BOOST_MAX = 250f;       // Max extra boost for very small objects
-    private const float SMALL_BOOST_REF = 250f;       // Objects smaller than this get boost
-    private const float X_OFFSET_RATIO = 0.7f;        // Diagonal ratio (move right as well as up)
-    private const float MIN_X_OFFSET_PX = 100f;       // Minimum horizontal offset for small objects
+    // Key insight: offset must be at least object height + finger clearance
+    private const float FINGER_CLEARANCE_PX = 120f;   // Extra space above object for finger (~0.75cm)
+    private const float X_OFFSET_RATIO = 0.5f;        // Diagonal ratio (move right as well as up)
+    private const float MIN_X_OFFSET_PX = 80f;        // Minimum horizontal offset
 
     private RectTransform dragVisualRT;
     private Image dragVisualImage;
@@ -135,54 +134,34 @@ public class DragVisualManager
 
     /// <summary>
     /// Calculate offset above finger, adjusted by screen position.
-    /// - USE_PHYSICAL_OFFSET = true: Fixed physical distance (1.5cm ≈ 240px)
-    /// - USE_PHYSICAL_OFFSET = false: Adaptive (screen/object) + strong boost for small objects
-    /// - Automatically reduces offset in bottom third of screen
+    /// Simple rule: object bottom edge should be above the finger by FINGER_CLEARANCE_PX
+    /// This means: offset = half object height + clearance
+    /// Near screen bottom: gradually reduce offset for precise placement
     /// </summary>
     private float GetAdaptiveOffset(float fingerScreenY)
     {
-        if (dragVisualRT == null) return MIN_OFFSET_PX;
+        if (dragVisualRT == null) return FINGER_CLEARANCE_PX;
 
-        // Calculate base offset
-        float baseOffset;
-        if (USE_PHYSICAL_OFFSET)
-        {
-            baseOffset = FINGER_OFFSET_CM * CM_TO_PX;
-        }
-        else
-        {
-            float screenBased = Screen.height * SCREEN_HEIGHT_RATIO;
-            float objectHeight = dragVisualRT.rect.height;
-            float objectBased = objectHeight * OBJECT_HEIGHT_RATIO;
+        float objectHeight = dragVisualRT.rect.height;
 
-            // Strong boost for small objects: smaller height => bigger boost
-            float smallObjectBoost = Mathf.Clamp(
-                SMALL_BOOST_REF - objectHeight,
-                0f,
-                SMALL_BOOST_MAX
-            );
-
-            // Build adaptive base, but never below MIN_OFFSET_PX
-            baseOffset = Mathf.Max(
-                MIN_OFFSET_PX,
-                Mathf.Min(screenBased, objectBased) + smallObjectBoost
-            );
-        }
+        // Base offset: ensures object bottom is above finger
+        // Since object is centered, we need half height + clearance
+        float baseOffset = (objectHeight * 0.5f) + FINGER_CLEARANCE_PX;
 
         // Calculate finger position (0 = bottom, 1 = top)
         float fingerPosNormalized = fingerScreenY / Screen.height;
 
         // Special case: In bottom 10% of screen, finger is at 20% from object bottom
-        // This means finger is right on the lower part of the object for precise placement
+        // For precise placement near drop targets
         if (fingerPosNormalized < 0.1f)
         {
-            return -0.2f * dragVisualRT.rect.height;
+            return -0.2f * objectHeight;
         }
 
-        // Smart offset reduction in bottom third (10%-33%) of screen
+        // Smooth transition in bottom third (10%-33%) of screen
         if (fingerPosNormalized < 0.33f)
         {
-            float bottomThresholdOffset = -0.2f * dragVisualRT.rect.height;
+            float bottomThresholdOffset = -0.2f * objectHeight;
             float t = (fingerPosNormalized - 0.1f) / (0.33f - 0.1f);
             return Mathf.Lerp(bottomThresholdOffset, baseOffset, t);
         }
