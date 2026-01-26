@@ -422,7 +422,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 Debug.LogWarning($"[DraggableButton] UpdateDragPosition called but activeDragRT is null!");
             return;
         }
-        
+
         Canvas host = topCanvas;
         if (host == null)
         {
@@ -436,22 +436,30 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 }
             }
         }
-        
+
         if (host == null) return;
-        
+
         // ✅ חישוב מיקום מדויק יותר
         Vector3 worldPos;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(
-            (RectTransform)host.transform, 
-            eventData.position, 
-            eventData.pressEventCamera, 
+            (RectTransform)host.transform,
+            eventData.position,
+            eventData.pressEventCamera,
             out worldPos
         );
-        
-        // ✅ אופסט מדויק - התמונה ממורכזת מעל האצבע
-        Vector3 offset = new Vector3(0, activeDragRT.rect.height * 0.5f, 0);
+
+        // ✅ אופסט אלכסוני - התמונה למעלה וימינה מהאצבע
+        float objectHeight = activeDragRT.rect.height;
+        float objectWidth = activeDragRT.rect.width;
+        float fingerClearance = 200f;  // מרחק מהאצבע
+        float minXOffset = 150f;       // תזוזה ימינה
+
+        float yOffset = objectHeight * 0.5f + fingerClearance;
+        float xOffset = Mathf.Max(objectWidth * 0.5f, minXOffset);
+
+        Vector3 offset = new Vector3(xOffset, yOffset, 0);
         activeDragRT.position = worldPos + offset;
-        
+
         if (debugMode)
         {
             Debug.Log($"[DraggableButton] UpdateDragPosition: screen={eventData.position}, world={worldPos}, final={activeDragRT.position}");
