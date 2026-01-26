@@ -171,63 +171,34 @@ public class DragVisualManager
 
     /// <summary>
     /// Update the position of the drag visual - follows finger with diagonal offset.
-    /// PERFORMANCE: This is called 60 times per second during drag - must be fast!
-    /// Smart offset: Moves diagonally (right + up) so finger never hides the object.
+    /// Uses world-space offset (like main branch) but adds diagonal movement.
     /// </summary>
     public void UpdatePosition(PointerEventData eventData)
     {
         if (dragVisualRT == null) return;
         if (cachedCanvas == null) return;
 
-        // Get canvas scale factor to convert local units to screen pixels
-        float canvasScale = cachedCanvas.scaleFactor;
-
-        // Object size in SCREEN PIXELS (not local canvas units)
-        float objectScreenHeight = dragVisualRT.rect.height * canvasScale;
-        float objectScreenWidth = dragVisualRT.rect.width * canvasScale;
-
-        // Finger position in screen pixels
-        Vector2 pointer = eventData.position;
-
-        // Fixed offset: always keep object fully visible above and to the right of finger
-        // Y offset = half object height + finger clearance (so bottom edge is above finger)
-        // X offset = enough to clear finger width (~100px)
-        float yOffset = (objectScreenHeight * 0.5f) + FINGER_CLEARANCE_PX;
-        float xOffset = Mathf.Max(yOffset * X_OFFSET_RATIO, MIN_X_OFFSET_PX);
-
-        // Position up-right from finger
-        Vector2 finalScreenPos = pointer + new Vector2(xOffset, yOffset);
-
-        // If would go off top of screen, flip to down-right
-        float topY = finalScreenPos.y + objectScreenHeight * 0.5f;
-        if (topY > Screen.height)
-        {
-            finalScreenPos = pointer + new Vector2(xOffset, -yOffset);
-        }
-
-        // If would go off right of screen, flip to left
-        float rightX = finalScreenPos.x + objectScreenWidth * 0.5f;
-        if (rightX > Screen.width)
-        {
-            finalScreenPos.x = pointer.x - xOffset;
-        }
-
-        // Clamp within screen bounds (in screen pixels)
-        float halfW = objectScreenWidth * 0.5f;
-        float halfH = objectScreenHeight * 0.5f;
-        finalScreenPos.x = Mathf.Clamp(finalScreenPos.x, halfW, Screen.width - halfW);
-        finalScreenPos.y = Mathf.Clamp(finalScreenPos.y, halfH, Screen.height - halfH);
-
-        // Convert screen position to world position and apply
+        // Convert finger screen position to world position
         Vector3 worldPos;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(
             (RectTransform)cachedCanvas.transform,
-            finalScreenPos,
+            eventData.position,
             eventData.pressEventCamera,
             out worldPos
         );
 
-        dragVisualRT.position = worldPos;
+        // Calculate offset in LOCAL/WORLD units (not screen pixels)
+        // Y: half height + clearance ensures bottom edge is above finger
+        // X: diagonal offset so finger doesn't cover object
+        float objectHeight = dragVisualRT.rect.height;
+        float objectWidth = dragVisualRT.rect.width;
+
+        float yOffset = objectHeight * 0.5f + FINGER_CLEARANCE_PX;
+        float xOffset = Mathf.Max(objectWidth * 0.5f, MIN_X_OFFSET_PX);
+
+        // Apply diagonal offset (up + right)
+        Vector3 offset = new Vector3(xOffset, yOffset, 0);
+        dragVisualRT.position = worldPos + offset;
     }
 
     /// <summary>
