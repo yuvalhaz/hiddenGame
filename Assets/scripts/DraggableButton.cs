@@ -7,16 +7,13 @@ using System.Collections.Generic;
 public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     [Header("Settings")]
-    [SerializeField] private float dragThreshold = 50f;
     [SerializeField] private float dropDistanceThreshold = 150f;
     [SerializeField] private Canvas topCanvas;
     [SerializeField] private bool debugMode = false;
-    [SerializeField] private bool animateSizeChange = true;
     [SerializeField] private float sizeAnimationDuration = 0.5f;
     
     [Header("Success Effects")]
     [SerializeField] private bool showConfettiOnSuccess = true;
-    [SerializeField] private int confettiCount = 50;
 
     [Header("Audio")]
     [SerializeField] private AudioClip dragStartSound;
@@ -750,15 +747,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     {
         return t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
     }
-    
-    // ✅ easing חלק וטבעי יותר לחזרה למקום
-    private float EaseOutBack(float t)
-    {
-        float c1 = 1.70158f;
-        float c3 = c1 + 1f;
-        return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
-    }
-    
+
     // ===== Raycast & Drop =====
     
     private DropSpot RaycastForDropSpot(PointerEventData eventData)
