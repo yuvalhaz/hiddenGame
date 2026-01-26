@@ -25,9 +25,9 @@ public class DragVisualManager
 
     // Small object visibility fix - ensures finger never hides dragged objects
     // Key insight: offset must be at least object height + finger clearance
-    private const float FINGER_CLEARANCE_PX = 120f;   // Extra space above object for finger (~0.75cm)
+    private const float FINGER_CLEARANCE_PX = 200f;   // Extra space above object for finger
     private const float X_OFFSET_RATIO = 0.5f;        // Diagonal ratio (move right as well as up)
-    private const float MIN_X_OFFSET_PX = 80f;        // Minimum horizontal offset
+    private const float MIN_X_OFFSET_PX = 150f;       // Minimum horizontal offset
 
     private RectTransform dragVisualRT;
     private Image dragVisualImage;
