@@ -183,11 +183,24 @@ public class DragVisualManager
         // 1) Finger position in screen pixels
         Vector2 pointer = eventData.position;
 
-        // 2) Adaptive Y offset (boosted for small objects)
+        // 2) Adaptive Y offset
         float yOffset = GetAdaptiveOffset(pointer.y);
 
-        // 3) Diagonal movement: move right + up (or right + down if near top edge)
-        float xOffset = Mathf.Max(yOffset * X_OFFSET_RATIO, MIN_X_OFFSET_PX);
+        // 3) Calculate X offset - MUST be large enough when Y offset is small
+        // When Y offset is small/negative, increase X offset to keep object visible
+        float objectHeight = dragVisualRT.rect.height;
+        float minVisibleXOffset = objectHeight * 0.5f + FINGER_CLEARANCE_PX; // Same as full Y offset
+
+        float xOffset;
+        if (yOffset < objectHeight * 0.5f)
+        {
+            // Y offset too small - compensate with larger X offset
+            xOffset = minVisibleXOffset;
+        }
+        else
+        {
+            xOffset = Mathf.Max(yOffset * X_OFFSET_RATIO, MIN_X_OFFSET_PX);
+        }
 
         // Try positioning up-right first
         Vector2 candidateUp = pointer + new Vector2(xOffset, yOffset);
