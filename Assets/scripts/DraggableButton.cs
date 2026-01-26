@@ -451,11 +451,11 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         // ✅ אופסט אלכסוני - התמונה למעלה וימינה מהאצבע
         float objectHeight = activeDragRT.rect.height;
         float objectWidth = activeDragRT.rect.width;
-        float fingerClearance = 200f;  // מרחק מהאצבע
-        float minXOffset = 150f;       // תזוזה ימינה
+        float fingerClearance = 80f;   // מרחק מהאצבע
+        float minXOffset = 60f;        // תזוזה ימינה
 
         float yOffset = objectHeight * 0.5f + fingerClearance;
-        float xOffset = Mathf.Max(objectWidth * 0.5f, minXOffset);
+        float xOffset = Mathf.Max(objectWidth * 0.3f, minXOffset);
 
         Vector3 offset = new Vector3(xOffset, yOffset, 0);
         activeDragRT.position = worldPos + offset;
