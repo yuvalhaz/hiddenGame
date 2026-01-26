@@ -16,12 +16,19 @@ public class DragVisualManager
     // Offset configuration - physical distance above finger
     // Using approximate conversion: 1cm ≈ 160px on typical phones (420 DPI)
     private const float FINGER_OFFSET_CM = 1.5f;      // Target: 1.5cm above finger
-    private const float CM_TO_PX = 160f;               // Conversion factor (adjust based on device DPI)
+    private const float CM_TO_PX = 160f;              // Conversion factor (adjust based on device DPI)
 
     // Alternative: Adaptive offset based on screen/object ratio (more flexible)
     private const float SCREEN_HEIGHT_RATIO = 0.08f;  // 8% of screen height
     private const float OBJECT_HEIGHT_RATIO = 0.6f;   // 60% of object height
-    private const bool USE_PHYSICAL_OFFSET = false;    // Toggle: true = fixed cm, false = adaptive %
+    private const bool USE_PHYSICAL_OFFSET = false;   // Toggle: true = fixed cm, false = adaptive %
+
+    // Small object visibility fix - ensures finger never hides dragged objects
+    private const float MIN_OFFSET_PX = 200f;         // Minimum distance from finger (increased for small objects)
+    private const float SMALL_BOOST_MAX = 250f;       // Max extra boost for very small objects
+    private const float SMALL_BOOST_REF = 250f;       // Objects smaller than this get boost
+    private const float X_OFFSET_RATIO = 0.7f;        // Diagonal ratio (move right as well as up)
+    private const float MIN_X_OFFSET_PX = 100f;       // Minimum horizontal offset for small objects
 
     private RectTransform dragVisualRT;
     private Image dragVisualImage;
@@ -129,11 +136,13 @@ public class DragVisualManager
     /// <summary>
     /// Calculate offset above finger, adjusted by screen position.
     /// - USE_PHYSICAL_OFFSET = true: Fixed physical distance (1.5cm ≈ 240px)
-    /// - USE_PHYSICAL_OFFSET = false: Adaptive (smaller of 8% screen OR 60% object)
+    /// - USE_PHYSICAL_OFFSET = false: Adaptive (screen/object) + strong boost for small objects
     /// - Automatically reduces offset in bottom third of screen
     /// </summary>
     private float GetAdaptiveOffset(float fingerScreenY)
     {
+        if (dragVisualRT == null) return MIN_OFFSET_PX;
+
         // Calculate base offset
         float baseOffset;
         if (USE_PHYSICAL_OFFSET)
@@ -143,8 +152,21 @@ public class DragVisualManager
         else
         {
             float screenBased = Screen.height * SCREEN_HEIGHT_RATIO;
-            float objectBased = dragVisualRT.rect.height * OBJECT_HEIGHT_RATIO;
-            baseOffset = Mathf.Min(screenBased, objectBased);
+            float objectHeight = dragVisualRT.rect.height;
+            float objectBased = objectHeight * OBJECT_HEIGHT_RATIO;
+
+            // Strong boost for small objects: smaller height => bigger boost
+            float smallObjectBoost = Mathf.Clamp(
+                SMALL_BOOST_REF - objectHeight,
+                0f,
+                SMALL_BOOST_MAX
+            );
+
+            // Build adaptive base, but never below MIN_OFFSET_PX
+            baseOffset = Mathf.Max(
+                MIN_OFFSET_PX,
+                Mathf.Min(screenBased, objectBased) + smallObjectBoost
+            );
         }
 
         // Calculate finger position (0 = bottom, 1 = top)
@@ -154,19 +176,12 @@ public class DragVisualManager
         // This means finger is right on the lower part of the object for precise placement
         if (fingerPosNormalized < 0.1f)
         {
-            // Offset = -0.2 * object height (finger at 20% from bottom)
-            // Combined with the base 0.5*height centering, finger ends up at 0.3*height from center
-            // Which is 20% from the bottom of the object
             return -0.2f * dragVisualRT.rect.height;
         }
 
         // Smart offset reduction in bottom third (10%-33%) of screen
-        // Top 2/3 (33%-100%): Full offset (like original 120f behavior)
-        // Bottom third (10%-33%): Gradual reduction from 100% to the 10% threshold
         if (fingerPosNormalized < 0.33f)
         {
-            // Smoothly reduce offset from 100% at 33% down to the 10% special case
-            // Maps 10%-33% range to 0-1 where 0 = special case, 1 = full offset
             float bottomThresholdOffset = -0.2f * dragVisualRT.rect.height;
             float t = (fingerPosNormalized - 0.1f) / (0.33f - 0.1f);
             return Mathf.Lerp(bottomThresholdOffset, baseOffset, t);
@@ -176,30 +191,51 @@ public class DragVisualManager
     }
 
     /// <summary>
-    /// Update the position of the drag visual - follows finger with offset above.
+    /// Update the position of the drag visual - follows finger with diagonal offset.
     /// PERFORMANCE: This is called 60 times per second during drag - must be fast!
-    /// Smart offset: Automatically reduces when finger is near bottom of screen.
+    /// Smart offset: Moves diagonally (right + up) so finger never hides the object.
+    /// Automatically reduces offset when finger is near bottom of screen.
     /// </summary>
     public void UpdatePosition(PointerEventData eventData)
     {
         if (dragVisualRT == null) return;
-
-        // PERFORMANCE FIX: Use cached canvas instead of FindTopCanvas()
         if (cachedCanvas == null) return;
 
+        // 1) Finger position in screen pixels
+        Vector2 pointer = eventData.position;
+
+        // 2) Adaptive Y offset (boosted for small objects)
+        float yOffset = GetAdaptiveOffset(pointer.y);
+
+        // 3) Diagonal movement: move right + up (or right + down if near top edge)
+        float xOffset = Mathf.Max(yOffset * X_OFFSET_RATIO, MIN_X_OFFSET_PX);
+
+        // Try positioning up-right first
+        Vector2 candidateUp = pointer + new Vector2(xOffset, yOffset);
+        float topY = candidateUp.y + dragVisualRT.rect.height * 0.5f;
+
+        // If would go off top of screen, flip to down-right instead
+        Vector2 finalScreenPos = (topY > Screen.height)
+            ? pointer + new Vector2(xOffset, -yOffset)
+            : candidateUp;
+
+        // 4) Clamp within screen bounds
+        float halfW = dragVisualRT.rect.width * 0.5f;
+        float halfH = dragVisualRT.rect.height * 0.5f;
+
+        finalScreenPos.x = Mathf.Clamp(finalScreenPos.x, halfW, Screen.width - halfW);
+        finalScreenPos.y = Mathf.Clamp(finalScreenPos.y, halfH, Screen.height - halfH);
+
+        // 5) Convert to world position and apply
         Vector3 worldPos;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(
             (RectTransform)cachedCanvas.transform,
-            eventData.position,
+            finalScreenPos,
             eventData.pressEventCamera,
             out worldPos
         );
 
-        // Position the image above the finger/cursor
-        // Center it (half height) + adaptive offset that reduces near screen bottom
-        float adaptiveOffset = GetAdaptiveOffset(eventData.position.y);
-        Vector3 offset = new Vector3(0, dragVisualRT.rect.height * 0.5f + adaptiveOffset, 0);
-        dragVisualRT.position = worldPos + offset;
+        dragVisualRT.position = worldPos;
     }
 
     /// <summary>
