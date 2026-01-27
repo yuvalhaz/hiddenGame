@@ -27,6 +27,8 @@ public class HintDialog : MonoBehaviour
     [Header("Sound Effects")]
     [SerializeField] private AudioClip openDialogSound;
     [Tooltip("Sound played when hint dialog opens")]
+    [SerializeField] private AudioClip closeDialogSound;
+    [Tooltip("Sound played when hint dialog closes")]
     private AudioSource sfxAudioSource;
 
     // Prevent infinite recursion if onClosed event is misconfigured
@@ -109,6 +111,10 @@ public class HintDialog : MonoBehaviour
         if (isClosing) return;
 
         isClosing = true;
+
+        // Play close sound
+        PlaySound(closeDialogSound);
+
         HideImmediate();
         // Notify UIManager that hint dialog closed
         UIManager.Instance.NotifyHintDialogClosed();

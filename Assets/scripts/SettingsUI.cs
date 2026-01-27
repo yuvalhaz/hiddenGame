@@ -56,6 +56,8 @@ public class SettingsUI : MonoBehaviour
     [Header("Sound Effects")]
     [SerializeField] private AudioClip openSettingsSound;
     [Tooltip("Sound played when settings panel opens")]
+    [SerializeField] private AudioClip closeSettingsSound;
+    [Tooltip("Sound played when settings panel closes")]
     private AudioSource sfxAudioSource;
 
     [Header("UI Blocking")]
@@ -409,6 +411,9 @@ public class SettingsUI : MonoBehaviour
     public void CloseSettings()
     {
         if (settingsPanel == null) return;
+
+        // Play close sound
+        PlaySound(closeSettingsSound);
 
         if (animatePanel && panelCanvasGroup != null)
         {
