@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Manages the settings menu UI including shop/IAP
@@ -10,6 +11,7 @@ public class SettingsUI : MonoBehaviour
     [SerializeField] private GameObject settingsPanel;
     [SerializeField] private Button settingsButton; // The gear icon button
     [SerializeField] private Button closeButton; // Close settings button
+    [SerializeField] private Button exitButton; // Exit to level selection button
     [SerializeField] private Button musicToggleButton;
     [SerializeField] private Image musicButtonIcon; // Optional - icon that shows music state
 
@@ -97,6 +99,11 @@ public class SettingsUI : MonoBehaviour
         if (closeButton != null)
         {
             closeButton.onClick.AddListener(CloseSettings);
+        }
+
+        if (exitButton != null)
+        {
+            exitButton.onClick.AddListener(ExitToLevelSelection);
         }
 
         if (musicToggleButton != null)
@@ -433,6 +440,23 @@ public class SettingsUI : MonoBehaviour
         }
 
         Debug.Log("[SettingsUI] Settings closed");
+    }
+
+    /// <summary>
+    /// Exit to level selection screen
+    /// </summary>
+    public void ExitToLevelSelection()
+    {
+        // Use LevelManager if available
+        if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.LoadLevelSelection();
+        }
+        else
+        {
+            // Fallback - load LevelSelection scene directly
+            SceneManager.LoadScene("LevelSelection");
+        }
     }
 
     /// <summary>
