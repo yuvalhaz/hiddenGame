@@ -485,10 +485,11 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         float objectHeight = activeDragRT.rect.height;
         float objectWidth = activeDragRT.rect.width;
         float fingerClearance = 80f;   // מרחק קבוע מהאצבע
-        float minXOffset = 60f;        // תזוזה מינימלית ימינה
+        float minXOffset = 60f;        // תזוזה מינימלית ימינה (לאובייקטים קטנים)
+        float maxXOffset = 80f;        // תזוזה מקסימלית ימינה (לאובייקטים גדולים)
 
         float yOffset = objectHeight * 0.5f + fingerClearance;
-        float xOffset = Mathf.Max(objectWidth * 0.3f, minXOffset);
+        float xOffset = Mathf.Clamp(objectWidth * 0.3f, minXOffset, maxXOffset);
 
         Vector3 offset = new Vector3(xOffset, yOffset, 0);
         activeDragRT.position = worldPos + offset;
