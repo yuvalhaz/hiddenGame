@@ -41,18 +41,16 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
 
     // ✅ Auto-clear cache on scene change to prevent stale references
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void InitializeSceneHandler()
+    private static void InitializeDropSpotCacheHandler()
     {
-        SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.sceneLoaded += ClearDropSpotCacheOnSceneLoad;
     }
 
-    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    private static void ClearDropSpotCacheOnSceneLoad(Scene scene, LoadSceneMode mode)
     {
-        // Clear the cache when a new scene loads to ensure fresh DropSpot references
         if (dropSpotCache != null)
         {
             dropSpotCache.Clear();
-            Debug.Log($"[DraggableButton] Cache cleared on scene load: {scene.name}");
         }
     }
 
