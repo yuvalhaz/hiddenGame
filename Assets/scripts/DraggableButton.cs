@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -37,6 +38,23 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     private Image activeDragImage;
 
     private static Dictionary<string, DropSpot> dropSpotCache;
+
+    // ✅ Auto-clear cache on scene change to prevent stale references
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void InitializeSceneHandler()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Clear the cache when a new scene loads to ensure fresh DropSpot references
+        if (dropSpotCache != null)
+        {
+            dropSpotCache.Clear();
+            Debug.Log($"[DraggableButton] Cache cleared on scene load: {scene.name}");
+        }
+    }
 
     private bool wasSuccessfullyPlaced = false;
 
