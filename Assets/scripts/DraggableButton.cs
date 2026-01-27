@@ -475,14 +475,22 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         // ✅ חישוב מיקום מדויק יותר
         Vector3 worldPos;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(
-            (RectTransform)host.transform, 
-            eventData.position, 
-            eventData.pressEventCamera, 
+            (RectTransform)host.transform,
+            eventData.position,
+            eventData.pressEventCamera,
             out worldPos
         );
-        
-        // ✅ אופסט מדויק - התמונה ממורכזת מעל האצבע
-        Vector3 offset = new Vector3(0, activeDragRT.rect.height * 0.5f, 0);
+
+        // ✅ אופסט אלכסוני - התמונה למעלה וימינה מהאצבע
+        float objectHeight = activeDragRT.rect.height;
+        float objectWidth = activeDragRT.rect.width;
+        float fingerClearance = 80f;   // מרחק קבוע מהאצבע
+        float minXOffset = 60f;        // תזוזה מינימלית ימינה
+
+        float yOffset = objectHeight * 0.5f + fingerClearance;
+        float xOffset = Mathf.Max(objectWidth * 0.3f, minXOffset);
+
+        Vector3 offset = new Vector3(xOffset, yOffset, 0);
         activeDragRT.position = worldPos + offset;
         
         if (debugMode)
