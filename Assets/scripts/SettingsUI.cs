@@ -53,6 +53,11 @@ public class SettingsUI : MonoBehaviour
     [SerializeField] private bool animatePanel = true;
     [SerializeField] private float animationDuration = 0.3f;
 
+    [Header("Sound Effects")]
+    [SerializeField] private AudioClip openSettingsSound;
+    [Tooltip("Sound played when settings panel opens")]
+    private AudioSource sfxAudioSource;
+
     [Header("UI Blocking")]
     [SerializeField] private HintDialog hintDialog;
     [Tooltip("Optional: HintDialog reference to prevent opening both panels together")]
@@ -62,6 +67,10 @@ public class SettingsUI : MonoBehaviour
 
     void Start()
     {
+        // Setup audio source for SFX
+        sfxAudioSource = gameObject.AddComponent<AudioSource>();
+        sfxAudioSource.playOnAwake = false;
+
         // Setup panel
         if (settingsPanel != null)
         {
@@ -377,6 +386,9 @@ public class SettingsUI : MonoBehaviour
         settingsPanel.SetActive(true);
         isPanelOpen = true;
 
+        // Play open sound
+        PlaySound(openSettingsSound);
+
         // Change color of the color-changing object
         ChangeRandomColor();
 
@@ -525,5 +537,16 @@ public class SettingsUI : MonoBehaviour
 
         panelCanvasGroup.alpha = endAlpha;
         onComplete?.Invoke();
+    }
+
+    /// <summary>
+    /// Play a sound effect
+    /// </summary>
+    private void PlaySound(AudioClip clip)
+    {
+        if (sfxAudioSource != null && clip != null)
+        {
+            sfxAudioSource.PlayOneShot(clip);
+        }
     }
 }

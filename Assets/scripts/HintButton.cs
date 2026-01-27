@@ -19,6 +19,11 @@ public class HintButton : MonoBehaviour
     [SerializeField] private bool isTutorialLevel = false;
     [Tooltip("אם מסומן - רמז יופעל ישירות ללא דיאלוג")]
 
+    [Header("Sound Effects")]
+    [SerializeField] private AudioClip clickSound;
+    [Tooltip("Sound played when hint button is clicked")]
+    private AudioSource sfxAudioSource;
+
     [Header("Optional")]
     public UnityEvent onPressed;
 
@@ -29,6 +34,10 @@ public class HintButton : MonoBehaviour
 
     private void Awake()
     {
+        // Setup audio source for SFX
+        sfxAudioSource = gameObject.AddComponent<AudioSource>();
+        sfxAudioSource.playOnAwake = false;
+
         if (button == null) button = GetComponent<Button>();
         if (button != null) button.onClick.AddListener(OnClick);
 
@@ -70,6 +79,9 @@ public class HintButton : MonoBehaviour
 
     private void OnClick()
     {
+        // Play click sound
+        PlaySound(clickSound);
+
         // ✅ Notify TutorialSlideManager that hint was clicked
         if (TutorialSlideManager.Instance != null)
         {
@@ -114,6 +126,17 @@ public class HintButton : MonoBehaviour
         else
         {
             Debug.LogError("❌ [HintButton] VisualHintSystem not assigned!");
+        }
+    }
+
+    /// <summary>
+    /// Play a sound effect
+    /// </summary>
+    private void PlaySound(AudioClip clip)
+    {
+        if (sfxAudioSource != null && clip != null)
+        {
+            sfxAudioSource.PlayOneShot(clip);
         }
     }
 }

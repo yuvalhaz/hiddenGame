@@ -24,11 +24,20 @@ public class HintDialog : MonoBehaviour
     [SerializeField] private SettingsUI settingsUI;
     [Tooltip("Optional: SettingsUI reference to prevent opening both panels together")]
 
+    [Header("Sound Effects")]
+    [SerializeField] private AudioClip openDialogSound;
+    [Tooltip("Sound played when hint dialog opens")]
+    private AudioSource sfxAudioSource;
+
     // Prevent infinite recursion if onClosed event is misconfigured
     private bool isClosing = false;
 
     private void Awake()
     {
+        // Setup audio source for SFX
+        sfxAudioSource = gameObject.AddComponent<AudioSource>();
+        sfxAudioSource.playOnAwake = false;
+
         if (dialogGroup == null)
             dialogGroup = GetComponent<CanvasGroup>();
 
@@ -84,6 +93,10 @@ public class HintDialog : MonoBehaviour
 
         ShowImmediate();
         transform.SetAsLastSibling();
+
+        // Play open sound
+        PlaySound(openDialogSound);
+
         Debug.Log("[HintDialog] ✅ Opened");
     }
 
@@ -215,5 +228,16 @@ public class HintDialog : MonoBehaviour
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;
         dialogGroup.blocksRaycasts = false;
+    }
+
+    /// <summary>
+    /// Play a sound effect
+    /// </summary>
+    private void PlaySound(AudioClip clip)
+    {
+        if (sfxAudioSource != null && clip != null)
+        {
+            sfxAudioSource.PlayOneShot(clip);
+        }
     }
 }
