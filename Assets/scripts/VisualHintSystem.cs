@@ -170,23 +170,6 @@ public class VisualHintSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// בדיקה האם אפשר להפעיל רמז עכשיו (לא בcooldown ולא באמצע רמז)
-    /// </summary>
-    public bool CanTriggerHint()
-    {
-        // רמז כבר פעיל?
-        if (isHintActive)
-            return false;
-
-        // בדיקת Cooldown
-        float timeSinceLastHint = Time.time - lastHintTime;
-        if (timeSinceLastHint < hintCooldown)
-            return false;
-
-        return true;
-    }
-
-    /// <summary>
     /// בדיקה האם יש כפתורים זמינים לרמז
     /// </summary>
     public bool HasAvailableButtons()
@@ -210,7 +193,7 @@ public class VisualHintSystem : MonoBehaviour
     /// <summary>
     /// מפעיל רמז - נקרא מ-HintDialog אחרי Rewarded Ad
     /// </summary>
-    public void TriggerHint()
+    public bool TriggerHint()
     {
         Debug.Log("───────────────────────────────────────────");
         Debug.Log("🎯 [VisualHintSystem] TriggerHint() נקרא!");
@@ -220,7 +203,7 @@ public class VisualHintSystem : MonoBehaviour
         {
             Debug.LogWarning("⏳ [VisualHintSystem] רמז כבר פעיל - מחכה שיסתיים");
             Debug.Log("───────────────────────────────────────────\n");
-            return;
+            return false;
         }
 
         // בדיקה 2: Cooldown
@@ -230,7 +213,7 @@ public class VisualHintSystem : MonoBehaviour
             float remaining = hintCooldown - timeSinceLastHint;
             Debug.LogWarning($"⏳ [VisualHintSystem] Cooldown - המתן {remaining:F1} שניות");
             Debug.Log("───────────────────────────────────────────\n");
-            return;
+            return false;
         }
 
         // בדיקה 3: חיבורים
@@ -238,7 +221,7 @@ public class VisualHintSystem : MonoBehaviour
         {
             Debug.LogError("❌ [VisualHintSystem] חסרים חיבורים נדרשים!");
             Debug.Log("───────────────────────────────────────────\n");
-            return;
+            return false;
         }
 
         Debug.Log("✅ [VisualHintSystem] כל הבדיקות עברו - מחפש כפתורים זמינים...");
@@ -260,7 +243,7 @@ public class VisualHintSystem : MonoBehaviour
             {
                 Debug.LogWarning("❌ [VisualHintSystem] אין spots זמינים ב-batch הנוכחי");
                 Debug.Log("───────────────────────────────────────────\n");
-                return;
+                return false;
             }
 
             Debug.Log($"✅ [VisualHintSystem] נמצאו {targetSpots.Count} spots זמינים ב-batch {batchManager.GetCurrentBatchIndex()}");
@@ -279,7 +262,7 @@ public class VisualHintSystem : MonoBehaviour
         {
             Debug.LogWarning("❌ [VisualHintSystem] אין כפתורים זמינים להצגת רמז");
             Debug.Log("───────────────────────────────────────────\n");
-            return;
+            return false;
         }
 
         Debug.Log($"✅ [VisualHintSystem] נמצאו {availableButtons.Count} כפתורים זמינים");
@@ -297,7 +280,7 @@ public class VisualHintSystem : MonoBehaviour
         {
             Debug.LogError($"❌ [VisualHintSystem] לא נמצא DropSpot עבור {buttonID}");
             Debug.Log("───────────────────────────────────────────\n");
-            return;
+            return false;
         }
 
         Debug.Log($"✅ [VisualHintSystem] נמצא יעד: {targetSpot.spotId}");
@@ -306,6 +289,7 @@ public class VisualHintSystem : MonoBehaviour
 
         // הפעלת האנימציה
         StartCoroutine(ShowHintAnimation(selectedButton, targetSpot));
+        return true;
     }
 
     /// <summary>
