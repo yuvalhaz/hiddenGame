@@ -170,6 +170,23 @@ public class VisualHintSystem : MonoBehaviour
     }
 
     /// <summary>
+    /// בדיקה האם אפשר להפעיל רמז עכשיו (לא בcooldown ולא באמצע רמז)
+    /// </summary>
+    public bool CanTriggerHint()
+    {
+        // רמז כבר פעיל?
+        if (isHintActive)
+            return false;
+
+        // בדיקת Cooldown
+        float timeSinceLastHint = Time.time - lastHintTime;
+        if (timeSinceLastHint < hintCooldown)
+            return false;
+
+        return true;
+    }
+
+    /// <summary>
     /// בדיקה האם יש כפתורים זמינים לרמז
     /// </summary>
     public bool HasAvailableButtons()

@@ -85,6 +85,13 @@ public class HintButton : MonoBehaviour
         // Check if player has purchased hints or unlimited hints
         else if (IAPManager.Instance != null && IAPManager.Instance.CanUseHint())
         {
+            // ✅ FIX: בדוק cooldown לפני שמורידים רמז - למנוע בזבוז רמזים!
+            if (visualHintSystem != null && !visualHintSystem.CanTriggerHint())
+            {
+                Debug.LogWarning("⏳ [HintButton] Cooldown active - not using hint");
+                return;
+            }
+
             Debug.Log("💎 [HintButton] Player has hints - using purchased hint!");
             IAPManager.Instance.UseHint();
             TriggerHintAnimation();
