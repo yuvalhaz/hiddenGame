@@ -29,11 +29,22 @@ if (-not (Test-Path $InputFile)) {
 # Read, truncate, and write
 $lines = Get-Content $InputFile -Encoding UTF8
 $truncatedLines = $lines | ForEach-Object {
-    if ($_.Length -gt $MaxLength) {
-        $_.Substring(0, $MaxLength)
-    } else {
-        $_
+    $line = $_
+
+    # First truncate to MaxLength
+    if ($line.Length -gt $MaxLength) {
+        $line = $line.Substring(0, $MaxLength)
     }
+
+    # If character 21 (index 20) is a space, replace characters 21-39 with characters 1-19
+    if ($line.Length -ge 39 -and $line[20] -eq ' ') {
+        $first19 = $line.Substring(0, 19)
+        $before = $line.Substring(0, 20)  # Characters 1-20
+        $after = if ($line.Length -gt 39) { $line.Substring(39) } else { "" }
+        $line = $before + $first19 + $after
+    }
+
+    $line
 }
 
 $truncatedLines | Set-Content $OutputFile -Encoding UTF8
