@@ -19,30 +19,26 @@ public class PushNotificationManager : MonoBehaviour
     [SerializeField] private bool notificationsEnabled = true;
     [SerializeField] private bool debugMode = false;
 
-    [Header("Return Reminder")]
-    [SerializeField] private float returnReminderHours = 24f;
-    [Tooltip("Hours after leaving the game to send a 'come back' reminder")]
+    [Header("24h - Return Reminder")]
     [SerializeField] private string returnReminderTitle = "We miss you!";
     [SerializeField] private string returnReminderText = "Your puzzles are waiting! Come back and find the hidden objects.";
 
-    [Header("Daily Challenge")]
-    [SerializeField] private bool enableDailyReminder = true;
-    [SerializeField] private int dailyReminderHour = 19;
-    [Tooltip("Hour of the day (0-23) to send daily reminder")]
-    [SerializeField] private string dailyReminderTitle = "Daily Puzzle Time!";
-    [SerializeField] private string dailyReminderText = "Ready for today's challenge? New puzzles are waiting for you!";
+    [Header("48h - Second Reminder")]
+    [SerializeField] private string secondReminderTitle = "Your puzzles miss you!";
+    [SerializeField] private string secondReminderText = "It's been a while... Your hidden objects are still waiting to be found!";
 
-    [Header("Level Progress Reminder")]
-    [SerializeField] private float progressReminderHours = 48f;
-    [Tooltip("Hours after leaving mid-level to remind about unfinished level")]
+    [Header("Weekly - Recurring Reminder")]
+    [SerializeField] private int weeklyRemindersCount = 4;
+    [Tooltip("How many weekly reminders to schedule (e.g. 4 = up to 4 weeks)")]
+    [SerializeField] private string weeklyReminderTitle = "Come back and play!";
+    [SerializeField] private string weeklyReminderText = "New challenges await! Can you find all the hidden objects?";
+
+    [Header("Level Progress Reminder (48h)")]
     [SerializeField] private string progressReminderTitle = "Unfinished puzzle!";
     [SerializeField] private string progressReminderText = "You were so close! Come back and finish your puzzle.";
 
     private const string NOTIFICATIONS_ENABLED_KEY = "NotificationsEnabled";
     private const string ANDROID_CHANNEL_ID = "hidden_game_channel";
-    private const string RETURN_REMINDER_ID_KEY = "ReturnReminderNotifId";
-    private const string DAILY_REMINDER_ID_KEY = "DailyReminderNotifId";
-    private const string PROGRESS_REMINDER_ID_KEY = "ProgressReminderNotifId";
 
     private void Awake()
     {
@@ -130,9 +126,7 @@ public class PushNotificationManager : MonoBehaviour
             // App going to background - schedule notifications
             if (notificationsEnabled)
             {
-                ScheduleReturnReminder();
-                ScheduleDailyReminder();
-                ScheduleProgressReminder();
+                ScheduleAllReminders();
 
                 if (debugMode)
                     Debug.Log("[PushNotificationManager] App paused - notifications scheduled");
@@ -155,9 +149,7 @@ public class PushNotificationManager : MonoBehaviour
     {
         if (notificationsEnabled)
         {
-            ScheduleReturnReminder();
-            ScheduleDailyReminder();
-            ScheduleProgressReminder();
+            ScheduleAllReminders();
 
             if (debugMode)
                 Debug.Log("[PushNotificationManager] App quitting - notifications scheduled");
@@ -167,121 +159,58 @@ public class PushNotificationManager : MonoBehaviour
     // ===== SCHEDULING =====
 
     /// <summary>
-    /// Schedule a "come back and play" reminder
+    /// Schedule all reminders when app goes to background/quits:
+    /// 24h  - "We miss you!"
+    /// 48h  - Second nice message (or unfinished level reminder)
+    /// 7d, 14d, 21d, 28d - Weekly "come back" reminders
     /// </summary>
-    private void ScheduleReturnReminder()
+    private void ScheduleAllReminders()
     {
-        var fireTime = System.DateTime.Now.AddHours(returnReminderHours);
+        // 1. After 24 hours - "We miss you!"
+        ScheduleNotification("return_reminder", returnReminderTitle, returnReminderText, 24);
 
-#if UNITY_ANDROID
-        var notification = new AndroidNotification()
-        {
-            Title = returnReminderTitle,
-            Text = returnReminderText,
-            FireTime = fireTime,
-            SmallIcon = "icon_small",
-            LargeIcon = "icon_large",
-        };
-        int id = AndroidNotificationCenter.SendNotification(notification, ANDROID_CHANNEL_ID);
-        PlayerPrefs.SetInt(RETURN_REMINDER_ID_KEY, id);
-#endif
+        // 2. After 48 hours - second message (unfinished level or general)
+        string title48 = secondReminderTitle;
+        string text48 = secondReminderText;
 
-#if UNITY_IOS
-        var timeTrigger = new iOSNotificationTimeIntervalTrigger()
+        // If player has an unfinished level, customize the 48h message
+        if (GameProgressManager.Instance != null)
         {
-            TimeInterval = System.TimeSpan.FromHours(returnReminderHours),
-            Repeats = false,
-        };
-        var notification = new iOSNotification()
+            var progressData = GameProgressManager.Instance.GetProgressData();
+            if (progressData != null && progressData.placedItems != null && progressData.placedItems.Count > 0)
+            {
+                title48 = progressReminderTitle;
+                text48 = progressReminderText;
+
+                if (LevelManager.Instance != null)
+                {
+                    int levelNum = LevelManager.Instance.GetCurrentLevelNumber();
+                    text48 = $"You were working on Level {levelNum}. Come back and complete it!";
+                }
+            }
+        }
+        ScheduleNotification("second_reminder", title48, text48, 48);
+
+        // 3. Weekly reminders - every 7 days as long as they don't come back
+        for (int i = 0; i < weeklyRemindersCount; i++)
         {
-            Identifier = "return_reminder",
-            Title = returnReminderTitle,
-            Body = returnReminderText,
-            ShowInForeground = false,
-            Trigger = timeTrigger,
-        };
-        iOSNotificationCenter.ScheduleNotification(notification);
-#endif
+            float hoursDelay = (7 + i * 7) * 24f; // 168h, 336h, 504h, 672h (1w, 2w, 3w, 4w)
+            ScheduleNotification($"weekly_reminder_{i}", weeklyReminderTitle, weeklyReminderText, hoursDelay);
+        }
 
         if (debugMode)
-            Debug.Log($"[PushNotificationManager] Return reminder scheduled for {fireTime}");
+        {
+            Debug.Log("[PushNotificationManager] Scheduled: 24h, 48h, and weekly reminders");
+            Debug.Log($"[PushNotificationManager] Weekly count: {weeklyRemindersCount} (up to {weeklyRemindersCount} weeks)");
+        }
     }
 
     /// <summary>
-    /// Schedule a daily reminder at the configured hour
+    /// Schedule a single notification (cross-platform helper)
     /// </summary>
-    private void ScheduleDailyReminder()
+    private void ScheduleNotification(string identifier, string title, string text, float delayHours)
     {
-        if (!enableDailyReminder) return;
-
-        // Calculate next occurrence of the daily reminder hour
-        var now = System.DateTime.Now;
-        var fireTime = new System.DateTime(now.Year, now.Month, now.Day, dailyReminderHour, 0, 0);
-
-        // If the time already passed today, schedule for tomorrow
-        if (fireTime <= now)
-        {
-            fireTime = fireTime.AddDays(1);
-        }
-
-#if UNITY_ANDROID
-        var notification = new AndroidNotification()
-        {
-            Title = dailyReminderTitle,
-            Text = dailyReminderText,
-            FireTime = fireTime,
-            SmallIcon = "icon_small",
-            LargeIcon = "icon_large",
-        };
-        int id = AndroidNotificationCenter.SendNotification(notification, ANDROID_CHANNEL_ID);
-        PlayerPrefs.SetInt(DAILY_REMINDER_ID_KEY, id);
-#endif
-
-#if UNITY_IOS
-        var calendarTrigger = new iOSNotificationCalendarTrigger()
-        {
-            Hour = dailyReminderHour,
-            Minute = 0,
-            Repeats = false,
-        };
-        var notification = new iOSNotification()
-        {
-            Identifier = "daily_reminder",
-            Title = dailyReminderTitle,
-            Body = dailyReminderText,
-            ShowInForeground = false,
-            Trigger = calendarTrigger,
-        };
-        iOSNotificationCenter.ScheduleNotification(notification);
-#endif
-
-        if (debugMode)
-            Debug.Log($"[PushNotificationManager] Daily reminder scheduled for {fireTime}");
-    }
-
-    /// <summary>
-    /// Schedule a reminder about unfinished level progress
-    /// </summary>
-    private void ScheduleProgressReminder()
-    {
-        // Only schedule if the player has an unfinished level
-        if (GameProgressManager.Instance == null) return;
-
-        var progressData = GameProgressManager.Instance.GetProgressData();
-        if (progressData == null || progressData.placedItems == null || progressData.placedItems.Count == 0)
-            return; // No progress to remind about
-
-        var fireTime = System.DateTime.Now.AddHours(progressReminderHours);
-
-        // Customize message with level info
-        string title = progressReminderTitle;
-        string text = progressReminderText;
-
-        if (LevelManager.Instance != null)
-        {
-            int levelNum = LevelManager.Instance.GetCurrentLevelNumber();
-            text = $"You were working on Level {levelNum}. Come back and complete it!";
-        }
+        var fireTime = System.DateTime.Now.AddHours(delayHours);
 
 #if UNITY_ANDROID
         var notification = new AndroidNotification()
@@ -292,19 +221,18 @@ public class PushNotificationManager : MonoBehaviour
             SmallIcon = "icon_small",
             LargeIcon = "icon_large",
         };
-        int id = AndroidNotificationCenter.SendNotification(notification, ANDROID_CHANNEL_ID);
-        PlayerPrefs.SetInt(PROGRESS_REMINDER_ID_KEY, id);
+        AndroidNotificationCenter.SendNotification(notification, ANDROID_CHANNEL_ID);
 #endif
 
 #if UNITY_IOS
         var timeTrigger = new iOSNotificationTimeIntervalTrigger()
         {
-            TimeInterval = System.TimeSpan.FromHours(progressReminderHours),
+            TimeInterval = System.TimeSpan.FromHours(delayHours),
             Repeats = false,
         };
         var notification = new iOSNotification()
         {
-            Identifier = "progress_reminder",
+            Identifier = identifier,
             Title = title,
             Body = text,
             ShowInForeground = false,
@@ -314,7 +242,7 @@ public class PushNotificationManager : MonoBehaviour
 #endif
 
         if (debugMode)
-            Debug.Log($"[PushNotificationManager] Progress reminder scheduled for {fireTime}");
+            Debug.Log($"[PushNotificationManager] '{identifier}' scheduled for {fireTime} ({delayHours}h)");
     }
 
     // ===== CANCELLATION =====
@@ -377,39 +305,7 @@ public class PushNotificationManager : MonoBehaviour
     {
         if (!notificationsEnabled) return;
 
-        var fireTime = System.DateTime.Now.AddHours(delayHours);
-
-#if UNITY_ANDROID
-        var notification = new AndroidNotification()
-        {
-            Title = title,
-            Text = text,
-            FireTime = fireTime,
-            SmallIcon = "icon_small",
-            LargeIcon = "icon_large",
-        };
-        AndroidNotificationCenter.SendNotification(notification, ANDROID_CHANNEL_ID);
-#endif
-
-#if UNITY_IOS
-        var timeTrigger = new iOSNotificationTimeIntervalTrigger()
-        {
-            TimeInterval = System.TimeSpan.FromHours(delayHours),
-            Repeats = false,
-        };
-        var notification = new iOSNotification()
-        {
-            Identifier = $"custom_{System.DateTime.Now.Ticks}",
-            Title = title,
-            Body = text,
-            ShowInForeground = false,
-            Trigger = timeTrigger,
-        };
-        iOSNotificationCenter.ScheduleNotification(notification);
-#endif
-
-        if (debugMode)
-            Debug.Log($"[PushNotificationManager] Custom notification scheduled: '{title}' at {fireTime}");
+        ScheduleNotification($"custom_{System.DateTime.Now.Ticks}", title, text, delayHours);
     }
 
     /// <summary>
@@ -451,9 +347,9 @@ public class PushNotificationManager : MonoBehaviour
     {
         Debug.Log("=== NOTIFICATION STATUS ===");
         Debug.Log($"Enabled: {notificationsEnabled}");
-        Debug.Log($"Return Reminder: {returnReminderHours}h");
-        Debug.Log($"Daily Reminder: {enableDailyReminder} at {dailyReminderHour}:00");
-        Debug.Log($"Progress Reminder: {progressReminderHours}h");
+        Debug.Log($"24h: \"{returnReminderTitle}\"");
+        Debug.Log($"48h: \"{secondReminderTitle}\"");
+        Debug.Log($"Weekly: {weeklyRemindersCount} weeks - \"{weeklyReminderTitle}\"");
         Debug.Log("===========================");
     }
 }
