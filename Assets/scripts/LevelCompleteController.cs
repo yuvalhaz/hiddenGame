@@ -161,6 +161,13 @@ public class LevelCompleteController : MonoBehaviour
         // ✅ השלם את הלבל כאן - לפני הבועות!
         if (LevelManager.Instance != null)
         {
+            // Schedule push notification reminder for next level
+            if (PushNotificationManager.Instance != null)
+            {
+                PushNotificationManager.Instance.ScheduleLevelCompleteReminder(
+                    LevelManager.Instance.GetCurrentLevelNumber());
+            }
+
             Debug.Log("[LevelCompleteController] ✅ Completing level and advancing pointer...");
             LevelManager.Instance.CompleteCurrentLevelAndAdvancePointer();
         }

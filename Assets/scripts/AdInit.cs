@@ -97,7 +97,9 @@ public class AdInit : MonoBehaviour
             {
                 AdRequest.TestDeviceSimulator,
                 "f8a502bf-0bb6-4ad5-974f-80295916dbaa" // your real device
-            }
+            },
+            TagForChildDirectedTreatment = TagForChildDirectedTreatment.True,
+            MaxAdContentRating = MaxAdContentRating.G
         };
 
         // ✅ Initialize first, THEN apply RequestConfiguration

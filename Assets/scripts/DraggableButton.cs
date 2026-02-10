@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -22,7 +23,10 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     [SerializeField] private AudioClip dragStartSound;
     [SerializeField] private AudioClip dropSuccessSound;
     [SerializeField] private AudioClip dropFailSound;
-    
+
+    // Finger clearance - extra pixels above object so finger doesn't hide it
+    private const float FINGER_CLEARANCE_PX = 120f;
+
     private ScrollableButtonBar buttonBar;
     private RectTransform rectTransform;
     private Canvas canvas;
@@ -37,6 +41,21 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     private Image activeDragImage;
 
     private static Dictionary<string, DropSpot> dropSpotCache;
+
+    // ✅ Auto-clear cache on scene change to prevent stale references
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void InitializeDropSpotCacheHandler()
+    {
+        SceneManager.sceneLoaded += ClearDropSpotCacheOnSceneLoad;
+    }
+
+    private static void ClearDropSpotCacheOnSceneLoad(Scene scene, LoadSceneMode mode)
+    {
+        if (dropSpotCache != null)
+        {
+            dropSpotCache.Clear();
+        }
+    }
 
     private bool wasSuccessfullyPlaced = false;
 
@@ -484,8 +503,9 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
             out worldPos
         );
         
-        // ✅ אופסט מדויק - התמונה ממורכזת מעל האצבע
-        Vector3 offset = new Vector3(0, activeDragRT.rect.height * 0.5f, 0);
+        // ✅ אופסט מדויק - התמונה מעל האצבע עם clearance נוסף
+        // חצי גובה (כדי שהמרכז יהיה מעל) + clearance (כדי שהאצבע לא תסתיר)
+        Vector3 offset = new Vector3(0, activeDragRT.rect.height * 0.5f + FINGER_CLEARANCE_PX, 0);
         activeDragRT.position = worldPos + offset;
         
         if (debugMode)

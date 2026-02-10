@@ -85,9 +85,16 @@ public class HintButton : MonoBehaviour
         // Check if player has purchased hints or unlimited hints
         else if (IAPManager.Instance != null && IAPManager.Instance.CanUseHint())
         {
-            Debug.Log("💎 [HintButton] Player has hints - using purchased hint!");
-            IAPManager.Instance.UseHint();
-            TriggerHintAnimation();
+            Debug.Log("💎 [HintButton] Player has hints - trying to use purchased hint!");
+            // ✅ FIX: הפעל רמז קודם, רק אם הצליח - הורד מהקאונטר
+            if (TriggerHintAnimation())
+            {
+                IAPManager.Instance.UseHint();
+            }
+            else
+            {
+                Debug.LogWarning("⏳ [HintButton] Hint not triggered (cooldown/active) - not consuming hint");
+            }
         }
         // Normal level - open dialog for rewarded ad
         else if (hintDialog != null)
@@ -105,15 +112,16 @@ public class HintButton : MonoBehaviour
         onPressed?.Invoke();
     }
 
-    private void TriggerHintAnimation()
+    private bool TriggerHintAnimation()
     {
         if (visualHintSystem != null)
         {
-            visualHintSystem.TriggerHint();
+            return visualHintSystem.TriggerHint();
         }
         else
         {
             Debug.LogError("❌ [HintButton] VisualHintSystem not assigned!");
+            return false;
         }
     }
 }
