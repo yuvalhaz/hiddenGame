@@ -41,6 +41,8 @@ public class IAPManager : MonoBehaviour, IStoreListener
     private const string ADS_REMOVED_KEY = "AdsRemoved";
     private const string HINTS_COUNT_KEY = "HintsCount";
     private const string UNLIMITED_HINTS_KEY = "UnlimitedHints";
+    private const string FIRST_LAUNCH_KEY = "FirstLaunchDone";
+    private const int INITIAL_HINTS = 3;
 
     private IStoreController storeController;
     private IExtensionProvider storeExtensionProvider;
@@ -80,6 +82,7 @@ public class IAPManager : MonoBehaviour, IStoreListener
         instance = this;
         DontDestroyOnLoad(gameObject);
 
+        GrantInitialHints();
         InitializePurchasing();
     }
 
@@ -93,6 +96,20 @@ public class IAPManager : MonoBehaviour, IStoreListener
         if (instance == this)
         {
             instance = null;
+        }
+    }
+
+    /// <summary>
+    /// נותן לשחקן חדש 3 רמזים בהפעלה הראשונה
+    /// </summary>
+    private void GrantInitialHints()
+    {
+        if (PlayerPrefs.GetInt(FIRST_LAUNCH_KEY, 0) == 0)
+        {
+            PlayerPrefs.SetInt(HINTS_COUNT_KEY, INITIAL_HINTS);
+            PlayerPrefs.SetInt(FIRST_LAUNCH_KEY, 1);
+            PlayerPrefs.Save();
+            Debug.Log($"[IAPManager] 🎁 First launch - granted {INITIAL_HINTS} initial hints!");
         }
     }
 
