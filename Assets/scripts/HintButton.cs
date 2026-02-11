@@ -21,13 +21,14 @@ public class HintButton : MonoBehaviour
 
     [Header("Cooldown Visual")]
     [SerializeField] private Image hintIcon;
-    [Tooltip("אייקון הרמז - יהפוך חצי שקוף בזמן cooldown")]
-    [SerializeField] private float cooldownAlpha = 0.5f;
+    [Tooltip("אייקון הרמז - מוחלף לספרייט cooldown בזמן קולדאון")]
+    [SerializeField] private Sprite cooldownSprite;
+    [Tooltip("ספרייט שמוצג בזמן cooldown")]
 
     [Header("Optional")]
     public UnityEvent onPressed;
 
-    private float normalAlpha = 1f;
+    private Sprite normalSprite;
 
     private void Reset()
     {
@@ -46,7 +47,7 @@ public class HintButton : MonoBehaviour
         }
         if (hintIcon != null)
         {
-            normalAlpha = hintIcon.color.a;
+            normalSprite = hintIcon.sprite;
         }
 
         // Auto-find components if not assigned
@@ -69,16 +70,14 @@ public class HintButton : MonoBehaviour
 
     private void Update()
     {
-        if (hintIcon == null || visualHintSystem == null) return;
+        if (hintIcon == null || visualHintSystem == null || cooldownSprite == null) return;
 
         bool onCooldown = visualHintSystem.IsOnCooldown();
-        float targetAlpha = onCooldown ? cooldownAlpha : normalAlpha;
+        Sprite targetSprite = onCooldown ? cooldownSprite : normalSprite;
 
-        Color c = hintIcon.color;
-        if (!Mathf.Approximately(c.a, targetAlpha))
+        if (hintIcon.sprite != targetSprite)
         {
-            c.a = targetAlpha;
-            hintIcon.color = c;
+            hintIcon.sprite = targetSprite;
         }
     }
 
