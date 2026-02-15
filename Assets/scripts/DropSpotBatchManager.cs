@@ -282,9 +282,11 @@ public class DropSpotBatchManager : MonoBehaviour
             // Update UI after advancing
             UpdateProgressUI();
 
-            // Check if should show ad - only on the batch before last
+            // Check if should show ad - only on the batch before last, and not on levels 0-1
             bool isBeforeLastBatch = (completedBatch == GetTotalBatches() - 2);
-            if (adController != null && isBeforeLastBatch && adController.ShouldShowAd(completedBatch))
+            int currentLevel = LevelManager.Instance != null ? LevelManager.Instance.GetCurrentLevelNumber() : 1;
+            bool isEarlyLevel = (currentLevel <= 2); // Levels 1-2 (display) = levels 0-1 (internal) - no ads
+            if (adController != null && isBeforeLastBatch && !isEarlyLevel && adController.ShouldShowAd(completedBatch))
             {
                 if (debugMode)
                     Debug.Log($"📺 Will show ad after message for batch {completedBatch}");
