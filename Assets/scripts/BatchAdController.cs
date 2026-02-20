@@ -2,7 +2,9 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Handles ad timing, display, and waiting logic for batch completions
+/// Handles ad timing, display, and waiting logic for batch completions.
+/// Shows interstitial ad only after 19 minutes of cumulative gameplay,
+/// triggered at the next batch completion.
 /// </summary>
 public class BatchAdController : MonoBehaviour
 {
@@ -12,13 +14,7 @@ public class BatchAdController : MonoBehaviour
 
     [Header("Ad Settings")]
     [SerializeField] private bool showAdsOnBatchComplete = true;
-    [Tooltip("Show ads when completing batches")]
-
-    [SerializeField] private int adFrequency = 1;
-    [Tooltip("Show ad every X batches (1 = every batch, 2 = every 2 batches)")]
-
-    [SerializeField] private bool skipAdOnFirstBatch = false;
-    [Tooltip("Don't show ad after completing the first batch")]
+    [Tooltip("Show ads when completing batches (after 19 minutes of gameplay)")]
 
     [SerializeField] private float delayBeforeAd = 0.5f;
     [Tooltip("Extra delay after message disappears before showing ad")]
@@ -29,8 +25,14 @@ public class BatchAdController : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool debugMode = true;
 
-    // State tracking
-    private int batchesCompleted = 0;
+    // 19-minute threshold
+    private const float AD_TIME_THRESHOLD = 19f * 60f;
+    private const string PLAY_TIME_KEY = "AdTimer_TotalPlayTime";
+    private const float SAVE_INTERVAL = 15f;
+
+    // In-memory accumulator (flushed to PlayerPrefs periodically)
+    private float sessionPlayTime = 0f;
+    private float saveTimer = 0f;
 
     void Start()
     {
@@ -38,14 +40,69 @@ public class BatchAdController : MonoBehaviour
         {
             Debug.Log("[BatchAdController] 🎓 TUTORIAL MODE - All ads disabled for this level");
         }
+
+        if (debugMode)
+        {
+            float stored = PlayerPrefs.GetFloat(PLAY_TIME_KEY, 0f);
+            Debug.Log($"[BatchAdController] ⏱ Stored play time: {stored:F0}s / {AD_TIME_THRESHOLD:F0}s");
+        }
+    }
+
+    void Update()
+    {
+        sessionPlayTime += Time.deltaTime;
+        saveTimer += Time.deltaTime;
+
+        if (saveTimer >= SAVE_INTERVAL)
+        {
+            PersistPlayTime();
+            saveTimer = 0f;
+        }
+    }
+
+    private void OnApplicationPause(bool pause)
+    {
+        if (pause) PersistPlayTime();
+    }
+
+    private void OnApplicationQuit()
+    {
+        PersistPlayTime();
     }
 
     /// <summary>
-    /// Increment completed batch counter
+    /// Flush in-memory time to PlayerPrefs
     /// </summary>
-    public void IncrementBatchesCompleted()
+    private void PersistPlayTime()
     {
-        batchesCompleted++;
+        float stored = PlayerPrefs.GetFloat(PLAY_TIME_KEY, 0f);
+        PlayerPrefs.SetFloat(PLAY_TIME_KEY, stored + sessionPlayTime);
+        PlayerPrefs.Save();
+        sessionPlayTime = 0f;
+
+        if (debugMode)
+            Debug.Log($"[BatchAdController] ⏱ Saved play time: {PlayerPrefs.GetFloat(PLAY_TIME_KEY):F0}s");
+    }
+
+    /// <summary>
+    /// Total cumulative gameplay time (stored + current session)
+    /// </summary>
+    private float GetTotalPlayTime()
+    {
+        return PlayerPrefs.GetFloat(PLAY_TIME_KEY, 0f) + sessionPlayTime;
+    }
+
+    /// <summary>
+    /// Reset the play time timer (called after ad is shown)
+    /// </summary>
+    private void ResetPlayTimer()
+    {
+        sessionPlayTime = 0f;
+        PlayerPrefs.SetFloat(PLAY_TIME_KEY, 0f);
+        PlayerPrefs.Save();
+
+        if (debugMode)
+            Debug.Log("[BatchAdController] ⏱ Play time timer reset after ad");
     }
 
     /// <summary>
@@ -82,26 +139,14 @@ public class BatchAdController : MonoBehaviour
             return false;
         }
 
-        if (skipAdOnFirstBatch && completedBatchIndex == 0)
-        {
-            if (debugMode)
-                Debug.Log("📺 Skipping ad on first batch");
-            return false;
-        }
-
-        if (adFrequency <= 0)
-        {
-            if (debugMode)
-                Debug.Log("📺 Ad frequency is 0");
-            return false;
-        }
-
-        bool shouldShow = (batchesCompleted % adFrequency) == 0;
+        // ✅ TIME CHECK - 19 minutes of gameplay required
+        float totalTime = GetTotalPlayTime();
+        bool enoughTimePassed = totalTime >= AD_TIME_THRESHOLD;
 
         if (debugMode)
-            Debug.Log($"📺 Completed: {batchesCompleted}, Freq: {adFrequency}, Show: {shouldShow}");
+            Debug.Log($"📺 Play time: {totalTime:F0}s / {AD_TIME_THRESHOLD:F0}s → Show ad: {enoughTimePassed}");
 
-        return shouldShow;
+        return enoughTimePassed;
     }
 
     /// <summary>
@@ -114,8 +159,7 @@ public class BatchAdController : MonoBehaviour
         {
             if (debugMode)
                 Debug.Log("🎓 Tutorial mode - skipping ad wait, continuing immediately");
-            
-            // Still wait for message to finish for better UX
+
             yield return new WaitForSeconds(messageTime);
             onAdComplete?.Invoke();
             yield break;
@@ -168,14 +212,13 @@ public class BatchAdController : MonoBehaviour
 
         if (waitForAdToClose)
         {
-            // Check if ad is even ready
             if (!InterstitialAdsManager.Instance.IsReady())
             {
                 Debug.LogWarning("📺 Ad was not ready, skipping wait");
                 adClosed = true;
             }
 
-            float timeout = 5f; // Short timeout for better UX
+            float timeout = 5f;
             float elapsed = 0f;
 
             while (!adClosed && elapsed < timeout)
@@ -188,19 +231,13 @@ public class BatchAdController : MonoBehaviour
                 Debug.LogWarning("📺 Ad timeout!");
         }
 
+        // ✅ Reset timer after ad is shown
+        ResetPlayTimer();
+
         if (debugMode)
             Debug.Log("📺 Ad finished. Continuing...");
 
-        // Invoke callback
         onAdComplete?.Invoke();
-    }
-
-    /// <summary>
-    /// Reset the completed batches counter (for testing)
-    /// </summary>
-    public void ResetBatchCounter()
-    {
-        batchesCompleted = 0;
     }
 
     [ContextMenu("📺 Test Ad")]
@@ -224,5 +261,19 @@ public class BatchAdController : MonoBehaviour
             onFailed: (error) => Debug.LogError($"❌ Failed: {error}"),
             onOpened: () => Debug.Log("📺 Opened!")
         );
+    }
+
+    [ContextMenu("⏱ Show Play Time")]
+    private void ShowPlayTime()
+    {
+        float total = GetTotalPlayTime();
+        Debug.Log($"[BatchAdController] ⏱ Total play time: {total:F0}s ({total / 60f:F1} min) / {AD_TIME_THRESHOLD / 60f:F0} min needed");
+    }
+
+    [ContextMenu("🔄 Reset Play Time (Testing)")]
+    public void ResetPlayTimerForTesting()
+    {
+        ResetPlayTimer();
+        Debug.Log("[BatchAdController] ⏱ Play time reset for testing");
     }
 }

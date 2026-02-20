@@ -237,10 +237,6 @@ public class DropSpotBatchManager : MonoBehaviour
 
             int completedBatch = currentBatch;
 
-            // Increment ad controller counter
-            if (adController != null)
-                adController.IncrementBatchesCompleted();
-
             // Check if this is the last batch
             bool isLastBatch = (currentBatch >= GetTotalBatches() - 1);
 
