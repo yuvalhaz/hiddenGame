@@ -276,4 +276,13 @@ public class BatchAdController : MonoBehaviour
         ResetPlayTimer();
         Debug.Log("[BatchAdController] ⏱ Play time reset for testing");
     }
+
+    /// <summary>
+    /// Reset the ad timer/counter (called from debug tools on level/progress reset)
+    /// </summary>
+    public void ResetBatchCounter()
+    {
+        ResetPlayTimer();
+        Debug.Log("[BatchAdController] 🔄 Batch counter (play time) reset");
+    }
 }
