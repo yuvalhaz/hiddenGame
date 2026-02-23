@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Handles ad timing, display, and waiting logic for batch completions.
-/// Shows interstitial ad only after 19 minutes of cumulative gameplay,
+/// Shows interstitial ad only after 15 minutes of cumulative gameplay,
 /// triggered at the next batch completion.
 /// </summary>
 public class BatchAdController : MonoBehaviour
@@ -14,7 +14,7 @@ public class BatchAdController : MonoBehaviour
 
     [Header("Ad Settings")]
     [SerializeField] private bool showAdsOnBatchComplete = true;
-    [Tooltip("Show ads when completing batches (after 19 minutes of gameplay)")]
+    [Tooltip("Show ads when completing batches (after 15 minutes of gameplay)")]
 
     [SerializeField] private float delayBeforeAd = 0.5f;
     [Tooltip("Extra delay after message disappears before showing ad")]
@@ -25,8 +25,8 @@ public class BatchAdController : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool debugMode = true;
 
-    // 19-minute threshold
-    private const float AD_TIME_THRESHOLD = 19f * 60f;
+    // 15-minute threshold
+    private const float AD_TIME_THRESHOLD = 15f * 60f;
     private const string PLAY_TIME_KEY = "AdTimer_TotalPlayTime";
     private const float SAVE_INTERVAL = 15f;
 
