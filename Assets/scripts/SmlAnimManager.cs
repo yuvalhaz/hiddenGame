@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class SmlAnimManager : MonoBehaviour
 {
@@ -42,8 +43,15 @@ public class SmlAnimManager : MonoBehaviour
     [SerializeField] private float clickCooldown = 10f;
     [Tooltip("Seconds between clicks on the same button")]
 
+    [Header("Breathe Hint")]
+    [SerializeField] private float breatheMinInterval = 15f;
+    [SerializeField] private float breatheMaxInterval = 20f;
+    [SerializeField] private float breatheScale = 1.08f;
+    [SerializeField] private float breatheDuration = 0.6f;
+
     private readonly HashSet<Button> wired = new HashSet<Button>();
     private readonly Dictionary<Button, Coroutine> running = new Dictionary<Button, Coroutine>();
+    private readonly Dictionary<Button, Coroutine> breatheRoutines = new Dictionary<Button, Coroutine>();
     private readonly Dictionary<Button, float> lastClickTime = new Dictionary<Button, float>();
 
     private void Awake()
@@ -161,11 +169,20 @@ public class SmlAnimManager : MonoBehaviour
         if (btn == null) return;
         if (wired.Contains(btn)) return;
 
+        // Disable navigation to prevent color bleed between buttons
+        btn.navigation = new Navigation { mode = Navigation.Mode.None };
+
         // Simply add the onClick listener, nothing else!
         Button local = btn;
         local.onClick.AddListener(() => OnClicked(local));
 
         wired.Add(btn);
+
+        // Start breathe hint loop
+        if (!breatheRoutines.ContainsKey(btn))
+        {
+            breatheRoutines[btn] = StartCoroutine(BreatheHintLoop(btn));
+        }
 
         Debug.Log($"[SmlAnimManager] Wired button: {btn.name} - onClick listener added");
     }
@@ -256,6 +273,58 @@ public class SmlAnimManager : MonoBehaviour
             case 4: k0 = +A;  k1 = 0f;  break;
         }
         return Mathf.Lerp(k0, k1, t);
+    }
+
+    private IEnumerator BreatheHintLoop(Button btn)
+    {
+        // Random initial delay so buttons don't all breathe together
+        yield return new WaitForSeconds(Random.Range(3f, breatheMaxInterval));
+
+        while (btn != null && btn.gameObject != null)
+        {
+            // Only breathe if the button is wired and not mid-click animation
+            if (wired.Contains(btn) && !running.ContainsKey(btn))
+            {
+                RectTransform rt = btn.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    yield return StartCoroutine(BreatheOnce(rt));
+                }
+            }
+
+            float wait = Random.Range(breatheMinInterval, breatheMaxInterval);
+            yield return new WaitForSeconds(wait);
+        }
+    }
+
+    private IEnumerator BreatheOnce(RectTransform rt)
+    {
+        Vector3 startScale = rt.localScale;
+        float half = breatheDuration * 0.5f;
+
+        // Scale up
+        float time = 0f;
+        while (time < half)
+        {
+            float t = time / half;
+            float smooth = t * t * (3f - 2f * t); // smoothstep
+            rt.localScale = startScale * Mathf.Lerp(1f, breatheScale, smooth);
+            time += Time.deltaTime;
+            yield return null;
+        }
+
+        // Scale down
+        time = 0f;
+        while (time < half)
+        {
+            float t = time / half;
+            float smooth = t * t * (3f - 2f * t);
+            rt.localScale = startScale * Mathf.Lerp(breatheScale, 1f, smooth);
+            time += Time.deltaTime;
+            yield return null;
+        }
+
+        rt.localScale = startScale;
     }
 
     public void OnLevelComplete(int levelIndex)

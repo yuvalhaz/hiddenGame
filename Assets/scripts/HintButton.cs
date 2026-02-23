@@ -19,8 +19,16 @@ public class HintButton : MonoBehaviour
     [SerializeField] private bool isTutorialLevel = false;
     [Tooltip("אם מסומן - רמז יופעל ישירות ללא דיאלוג")]
 
+    [Header("Cooldown Visual")]
+    [SerializeField] private Image hintIcon;
+    [Tooltip("אייקון הרמז - מוחלף לספרייט cooldown בזמן קולדאון")]
+    [SerializeField] private Sprite cooldownSprite;
+    [Tooltip("ספרייט שמוצג בזמן cooldown")]
+
     [Header("Optional")]
     public UnityEvent onPressed;
+
+    private Sprite normalSprite;
 
     private void Reset()
     {
@@ -31,6 +39,16 @@ public class HintButton : MonoBehaviour
     {
         if (button == null) button = GetComponent<Button>();
         if (button != null) button.onClick.AddListener(OnClick);
+
+        // Auto-find hint icon if not assigned
+        if (hintIcon == null)
+        {
+            hintIcon = GetComponent<Image>();
+        }
+        if (hintIcon != null)
+        {
+            normalSprite = hintIcon.sprite;
+        }
 
         // Auto-find components if not assigned
         if (visualHintSystem == null)
@@ -47,6 +65,19 @@ public class HintButton : MonoBehaviour
         if (hintDialog != null)
         {
             hintDialog.onHintGranted.AddListener(OnHintGranted);
+        }
+    }
+
+    private void Update()
+    {
+        if (hintIcon == null || visualHintSystem == null || cooldownSprite == null) return;
+
+        bool onCooldown = visualHintSystem.IsOnCooldown();
+        Sprite targetSprite = onCooldown ? cooldownSprite : normalSprite;
+
+        if (hintIcon.sprite != targetSprite)
+        {
+            hintIcon.sprite = targetSprite;
         }
     }
 

@@ -42,6 +42,15 @@ public class VisualHintSystem : MonoBehaviour
     private GameObject currentGhostImage;
     private AudioSource audioSource;
 
+    /// <summary>
+    /// האם הרמז בקולדאון או פעיל כרגע?
+    /// </summary>
+    public bool IsOnCooldown()
+    {
+        if (isHintActive) return true;
+        return (Time.time - lastHintTime) < hintCooldown;
+    }
+
     // PERFORMANCE FIX: Removed local cache - now uses global DropSpotCache instead
 
     void Awake()
