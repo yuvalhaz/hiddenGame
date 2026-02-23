@@ -249,7 +249,9 @@ public class GameDebugTools : MonoBehaviour
 
         if (adController != null)
         {
-            adController.ResetBatchCounter();
+            // ✅ FIX: BatchAdController doesn't have ResetBatchCounter()
+            // We reset the ad timer instead:
+            adController.ResetPlayTimerForTesting();
         }
 
         // Reload current scene
@@ -277,7 +279,9 @@ public class GameDebugTools : MonoBehaviour
 
         if (adController != null)
         {
-            adController.ResetBatchCounter();
+            // ✅ FIX: BatchAdController doesn't have ResetBatchCounter()
+            // We reset the ad timer instead:
+            adController.ResetPlayTimerForTesting();
         }
 
         // Reload current scene
