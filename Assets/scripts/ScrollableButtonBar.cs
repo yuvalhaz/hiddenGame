@@ -189,18 +189,18 @@ public class ScrollableButtonBar : MonoBehaviour
         }
         activeIndices.Sort((a, b) => targetPositions[a].x.CompareTo(targetPositions[b].x));
 
-        // Move all buttons off-screen to the right before revealing
+        // Keep buttons at their correct positions but invisible.
+        // This way the content panel size never changes — no scroll gap.
         foreach (int i in activeIndices)
         {
             RectTransform rect = buttons[i].GetComponent<RectTransform>();
-            if (rect != null)
-            {
-                rect.anchoredPosition = targetPositions[i] + new Vector2(entranceOffscreenOffset, 0f);
-                buttonsAnimating.Remove(rect);
-            }
+            if (rect != null) buttonsAnimating.Remove(rect);
+
+            if (i < buttonCanvasGroups.Count && buttonCanvasGroups[i] != null)
+                buttonCanvasGroups[i].alpha = 0f;
         }
 
-        // Reveal bar (buttons are off-screen, so no flash)
+        // Reveal bar — buttons are invisible but layout is correct.
         if (contentCanvasGroup != null)
             contentCanvasGroup.alpha = 1f;
 
@@ -220,8 +220,16 @@ public class ScrollableButtonBar : MonoBehaviour
             yield break;
 
         RectTransform rect = buttons[globalIndex].GetComponent<RectTransform>();
-        if (rect != null)
-            buttonsAnimating[rect] = true; // Update() will slide it to targetPositions[globalIndex]
+        if (rect == null) yield break;
+
+        // Only now move to slide-start — one button at a time, so no big layout shift.
+        rect.anchoredPosition = targetPositions[globalIndex] + new Vector2(entranceOffscreenOffset, 0f);
+
+        // Make visible and let Update() slide it to the target.
+        if (globalIndex < buttonCanvasGroups.Count && buttonCanvasGroups[globalIndex] != null)
+            buttonCanvasGroups[globalIndex].alpha = 1f;
+
+        buttonsAnimating[rect] = true;
     }
 
     private void OnValidate()
