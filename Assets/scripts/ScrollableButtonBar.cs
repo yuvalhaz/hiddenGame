@@ -80,38 +80,71 @@ public class ScrollableButtonBar : MonoBehaviour
 
         CreateButtons();
 
-        // Calculate auto spacing AFTER creating buttons (so we know actual button sizes)
-        if (useAutoSpacing && scrollRect != null && scrollRect.viewport != null && buttons.Count > 0)
+        // Calculate auto spacing AFTER canvas layout is ready (wait one frame)
+        if (useAutoSpacing)
         {
-            float viewportWidth = scrollRect.viewport.rect.width;
+            StartCoroutine(InitAutoSpacingAfterLayout());
+        }
+    }
 
-            // Calculate average button width from first few buttons
-            float totalWidth = 0f;
-            int sampled = Mathf.Min(buttonsToFitOnScreen, buttons.Count);
-            for (int i = 0; i < sampled; i++)
+    private IEnumerator InitAutoSpacingAfterLayout()
+    {
+        // Wait for canvas to finish layout calculations
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+
+        if (scrollRect == null || scrollRect.viewport == null || buttons.Count == 0)
+            yield break;
+
+        float viewportWidth = scrollRect.viewport.rect.width;
+
+        // If still 0, wait one more frame
+        if (viewportWidth <= 0f)
+        {
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            viewportWidth = scrollRect.viewport.rect.width;
+        }
+
+        if (viewportWidth <= 0f)
+        {
+            Debug.LogWarning("[ScrollableButtonBar] Viewport width is 0 - skipping auto spacing");
+            yield break;
+        }
+
+        // Calculate average button width from first few buttons
+        float totalWidth = 0f;
+        int sampled = Mathf.Min(buttonsToFitOnScreen, buttons.Count);
+        for (int i = 0; i < sampled; i++)
+        {
+            if (buttons[i] != null)
             {
-                if (buttons[i] != null)
+                RectTransform rect = buttons[i].GetComponent<RectTransform>();
+                if (rect != null)
                 {
-                    RectTransform rect = buttons[i].GetComponent<RectTransform>();
-                    if (rect != null)
-                    {
-                        totalWidth += rect.sizeDelta.x;
-                    }
+                    totalWidth += rect.sizeDelta.x;
                 }
             }
-            float avgButtonWidth = totalWidth / sampled;
-
-            // Calculate spacing to fit exactly N buttons on screen
-            // Formula: viewportWidth = (N * avgWidth) + ((N + 1) * spacing)
-            // Solving for spacing: spacing = (viewportWidth - (N * avgWidth)) / (N + 1)
-            float totalButtonWidth = buttonsToFitOnScreen * avgButtonWidth;
-            buttonSpacing = (viewportWidth - totalButtonWidth) / (buttonsToFitOnScreen + 1);
-
-            Debug.Log($"[ScrollableButtonBar] Auto spacing calculated: {buttonSpacing}px (viewport: {viewportWidth}px, avg button: {avgButtonWidth}px, {buttonsToFitOnScreen} buttons to fit)");
-
-            // Recalculate positions with new spacing
-            RecalculateAllPositions();
         }
+        float avgButtonWidth = totalWidth / sampled;
+
+        // Calculate spacing to fit exactly N buttons on screen
+        // Formula: viewportWidth = (N * avgWidth) + ((N + 1) * spacing)
+        // Solving for spacing: spacing = (viewportWidth - (N * avgWidth)) / (N + 1)
+        float totalButtonWidth = buttonsToFitOnScreen * avgButtonWidth;
+        float newSpacing = (viewportWidth - totalButtonWidth) / (buttonsToFitOnScreen + 1);
+
+        if (newSpacing < 0f)
+        {
+            Debug.LogWarning($"[ScrollableButtonBar] Calculated spacing is negative ({newSpacing}px) - buttons too wide for viewport. Clamping to 0.");
+            newSpacing = 0f;
+        }
+
+        buttonSpacing = newSpacing;
+        Debug.Log($"[ScrollableButtonBar] Auto spacing calculated: {buttonSpacing}px (viewport: {viewportWidth}px, avg button: {avgButtonWidth}px, {buttonsToFitOnScreen} buttons to fit)");
+
+        // Recalculate positions with new spacing
+        RecalculateAllPositions();
     }
 
     private void OnValidate()
