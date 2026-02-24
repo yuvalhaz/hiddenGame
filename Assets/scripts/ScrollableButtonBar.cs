@@ -43,6 +43,12 @@ public class ScrollableButtonBar : MonoBehaviour
     [Tooltip("כמה זמן בשניות עד שהמהירות משתנה (ברירת מחדל: 30 = חצי דקה)")]
     [SerializeField] private float speedChangeDelay = 30f;
 
+    [Header("Entrance Animation")]
+    [Tooltip("כמה פיקסלים מימין לנקודת היעד שהכפתורים מתחילים (ברירת מחדל: 800)")]
+    [SerializeField] private float entranceOffscreenOffset = 800f;
+    [Tooltip("עיכוב בשניות בין כפתור לכפתור (ברירת מחדל: 0.08)")]
+    [SerializeField] private float entranceStaggerDelay = 0.08f;
+
     [Header("References")]
     [SerializeField] private RectTransform contentPanel;
     [SerializeField] private ScrollRect scrollRect;
@@ -161,17 +167,61 @@ public class ScrollableButtonBar : MonoBehaviour
         // Snap buttons directly to correct positions (no animation on initial layout)
         RecalculateAllPositions(immediate: true);
 
-        // Reveal the bar now that positions are correct
-        if (contentCanvasGroup != null)
-            contentCanvasGroup.alpha = 1f;
+        // Play entrance animation (also reveals the bar)
+        PlayEntranceAnimation();
     }
 
     private IEnumerator RevealNextFrame()
     {
         yield return null;
+        PlayEntranceAnimation();
+        revealCoroutine = null;
+    }
+
+    private void PlayEntranceAnimation()
+    {
+        // Collect active buttons sorted left-to-right by target X (relative order)
+        List<int> activeIndices = new List<int>();
+        for (int i = 0; i < buttons.Count; i++)
+        {
+            if (buttonStates[i] && buttons[i] != null)
+                activeIndices.Add(i);
+        }
+        activeIndices.Sort((a, b) => targetPositions[a].x.CompareTo(targetPositions[b].x));
+
+        // Move all buttons off-screen to the right before revealing
+        foreach (int i in activeIndices)
+        {
+            RectTransform rect = buttons[i].GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchoredPosition = targetPositions[i] + new Vector2(entranceOffscreenOffset, 0f);
+                buttonsAnimating.Remove(rect);
+            }
+        }
+
+        // Reveal bar (buttons are off-screen, so no flash)
         if (contentCanvasGroup != null)
             contentCanvasGroup.alpha = 1f;
-        revealCoroutine = null;
+
+        // Stagger each button's entrance by relative index
+        for (int r = 0; r < activeIndices.Count; r++)
+        {
+            StartCoroutine(EntranceDelayed(activeIndices[r], r * entranceStaggerDelay));
+        }
+    }
+
+    private IEnumerator EntranceDelayed(int globalIndex, float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (globalIndex >= buttons.Count || buttons[globalIndex] == null)
+            yield break;
+
+        RectTransform rect = buttons[globalIndex].GetComponent<RectTransform>();
+        if (rect != null)
+            buttonsAnimating[rect] = true; // Update() will slide it to targetPositions[globalIndex]
     }
 
     private void OnValidate()
