@@ -56,6 +56,7 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<Image> buttonImages = new List<Image>();
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
+    private Coroutine revealCoroutine;
 
     private float currentAnimationSpeed;
     private float startTime;
@@ -84,8 +85,8 @@ public class ScrollableButtonBar : MonoBehaviour
         if (contentCanvasGroup == null)
             contentCanvasGroup = contentPanel.gameObject.AddComponent<CanvasGroup>();
 
-        if (useAutoSpacing)
-            contentCanvasGroup.alpha = 0f;
+        // Always hide until positions are ready (prevents flash of wrong positions)
+        contentCanvasGroup.alpha = 0f;
 
         CreateButtons();
 
@@ -93,6 +94,11 @@ public class ScrollableButtonBar : MonoBehaviour
         if (useAutoSpacing)
         {
             StartCoroutine(InitAutoSpacingAfterLayout());
+        }
+        else
+        {
+            // Sprites may be set this frame via SetButtonSprite — reveal after one frame
+            revealCoroutine = StartCoroutine(RevealNextFrame());
         }
     }
 
@@ -158,6 +164,14 @@ public class ScrollableButtonBar : MonoBehaviour
         // Reveal the bar now that positions are correct
         if (contentCanvasGroup != null)
             contentCanvasGroup.alpha = 1f;
+    }
+
+    private IEnumerator RevealNextFrame()
+    {
+        yield return null;
+        if (contentCanvasGroup != null)
+            contentCanvasGroup.alpha = 1f;
+        revealCoroutine = null;
     }
 
     private void OnValidate()
@@ -572,6 +586,9 @@ public class ScrollableButtonBar : MonoBehaviour
                         img.SetNativeSize();
                         // Size changed — recalculate positions immediately
                         RecalculateAllPositions(immediate: true);
+                        // Debounce reveal: wait one frame after the last sprite is set
+                        if (revealCoroutine != null) StopCoroutine(revealCoroutine);
+                        revealCoroutine = StartCoroutine(RevealNextFrame());
                     }
                 }
             }
