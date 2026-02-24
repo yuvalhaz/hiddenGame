@@ -64,6 +64,9 @@ public class ScrollableButtonBar : MonoBehaviour
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
     private Coroutine revealCoroutine;
 
+    // Used to cancel stale entrance-animation coroutines when a new one starts.
+    private int entranceVersion = 0;
+
     private float currentAnimationSpeed;
     private float startTime;
     private CanvasGroup contentCanvasGroup;
@@ -180,7 +183,14 @@ public class ScrollableButtonBar : MonoBehaviour
 
     private void PlayEntranceAnimation()
     {
-        // Collect active buttons sorted left-to-right by target X (relative order)
+        // Cancel any stale entrance coroutines from a previous call.
+        entranceVersion++;
+        int myVersion = entranceVersion;
+
+        // Snap all buttons to correct positions first (needed if sprites changed sizes).
+        RecalculateAllPositions(immediate: true);
+
+        // Collect active buttons sorted left-to-right by target X.
         List<int> activeIndices = new List<int>();
         for (int i = 0; i < buttons.Count; i++)
         {
@@ -189,8 +199,8 @@ public class ScrollableButtonBar : MonoBehaviour
         }
         activeIndices.Sort((a, b) => targetPositions[a].x.CompareTo(targetPositions[b].x));
 
-        // Keep buttons at their correct positions but invisible.
-        // This way the content panel size never changes — no scroll gap.
+        // Hide all buttons via their own CanvasGroup (buttons are at correct positions,
+        // so content panel size is always right — no scroll gap).
         foreach (int i in activeIndices)
         {
             RectTransform rect = buttons[i].GetComponent<RectTransform>();
@@ -200,21 +210,24 @@ public class ScrollableButtonBar : MonoBehaviour
                 buttonCanvasGroups[i].alpha = 0f;
         }
 
-        // Reveal bar — buttons are invisible but layout is correct.
+        // Reveal bar — buttons invisible, layout correct.
         if (contentCanvasGroup != null)
             contentCanvasGroup.alpha = 1f;
 
-        // Stagger each button's entrance by relative index
+        // Stagger each button's entrance by relative left-to-right index.
         for (int r = 0; r < activeIndices.Count; r++)
         {
-            StartCoroutine(EntranceDelayed(activeIndices[r], r * entranceStaggerDelay));
+            StartCoroutine(EntranceDelayed(activeIndices[r], r * entranceStaggerDelay, myVersion));
         }
     }
 
-    private IEnumerator EntranceDelayed(int globalIndex, float delay)
+    private IEnumerator EntranceDelayed(int globalIndex, float delay, int version)
     {
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
+
+        // Bail out if a newer entrance animation has started.
+        if (version != entranceVersion) yield break;
 
         if (globalIndex >= buttons.Count || buttons[globalIndex] == null)
             yield break;
@@ -222,13 +235,13 @@ public class ScrollableButtonBar : MonoBehaviour
         RectTransform rect = buttons[globalIndex].GetComponent<RectTransform>();
         if (rect == null) yield break;
 
-        // Only now move to slide-start — one button at a time, so no big layout shift.
+        // Move to slide-start (off-screen right), then make visible — one button at a time.
         rect.anchoredPosition = targetPositions[globalIndex] + new Vector2(entranceOffscreenOffset, 0f);
 
-        // Make visible and let Update() slide it to the target.
         if (globalIndex < buttonCanvasGroups.Count && buttonCanvasGroups[globalIndex] != null)
             buttonCanvasGroups[globalIndex].alpha = 1f;
 
+        // Update() slides it to targetPositions[globalIndex].
         buttonsAnimating[rect] = true;
     }
 
@@ -439,7 +452,10 @@ public class ScrollableButtonBar : MonoBehaviour
             targetPositions.Add(buttonRect.anchoredPosition);
 
             // ✅ Cache components לביצועים
-            buttonCanvasGroups.Add(draggable.GetComponent<CanvasGroup>());
+            // Ensure every button has a CanvasGroup so entrance-animation alpha works.
+            CanvasGroup buttonCG = buttonObj.GetComponent<CanvasGroup>();
+            if (buttonCG == null) buttonCG = buttonObj.AddComponent<CanvasGroup>();
+            buttonCanvasGroups.Add(buttonCG);
             buttonImages.Add(draggable.GetComponent<Image>());
 
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
