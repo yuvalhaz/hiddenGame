@@ -570,6 +570,8 @@ public class ScrollableButtonBar : MonoBehaviour
                     if (sprite != null)
                     {
                         img.SetNativeSize();
+                        // Size changed — recalculate positions immediately
+                        RecalculateAllPositions(immediate: true);
                     }
                 }
             }
