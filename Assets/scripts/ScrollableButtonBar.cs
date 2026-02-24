@@ -59,6 +59,7 @@ public class ScrollableButtonBar : MonoBehaviour
 
     private float currentAnimationSpeed;
     private float startTime;
+    private CanvasGroup contentCanvasGroup;
 
     void Start()
     {
@@ -77,6 +78,14 @@ public class ScrollableButtonBar : MonoBehaviour
                 });
             }
         }
+
+        // Hide content until positions are ready (prevents flash of wrong positions)
+        contentCanvasGroup = contentPanel.GetComponent<CanvasGroup>();
+        if (contentCanvasGroup == null)
+            contentCanvasGroup = contentPanel.gameObject.AddComponent<CanvasGroup>();
+
+        if (useAutoSpacing)
+            contentCanvasGroup.alpha = 0f;
 
         CreateButtons();
 
@@ -143,8 +152,12 @@ public class ScrollableButtonBar : MonoBehaviour
         buttonSpacing = newSpacing;
         Debug.Log($"[ScrollableButtonBar] Auto spacing calculated: {buttonSpacing}px (viewport: {viewportWidth}px, avg button: {avgButtonWidth}px, {buttonsToFitOnScreen} buttons to fit)");
 
-        // Recalculate positions with new spacing
-        RecalculateAllPositions();
+        // Snap buttons directly to correct positions (no animation on initial layout)
+        RecalculateAllPositions(immediate: true);
+
+        // Reveal the bar now that positions are correct
+        if (contentCanvasGroup != null)
+            contentCanvasGroup.alpha = 1f;
     }
 
     private void OnValidate()
@@ -449,7 +462,7 @@ public class ScrollableButtonBar : MonoBehaviour
         RecalculateAllPositions();
     }
 
-    void RecalculateAllPositions()
+    void RecalculateAllPositions(bool immediate = false)
     {
         Debug.Log("RecalculateAllPositions נקרא");
 
@@ -475,13 +488,21 @@ public class ScrollableButtonBar : MonoBehaviour
 
                 Debug.Log($"כפתור {i}: מיקום יעד חדש = {currentX}");
 
-                // ✅ Always animate buttons to their positions
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
                     RectTransform rect = buttons[i].GetComponent<RectTransform>();
                     if (rect != null)
                     {
-                        buttonsAnimating[rect] = true;
+                        if (immediate)
+                        {
+                            // Snap directly — no animation (used for initial layout)
+                            rect.anchoredPosition = newTarget;
+                            buttonsAnimating.Remove(rect);
+                        }
+                        else
+                        {
+                            buttonsAnimating[rect] = true;
+                        }
                     }
                 }
 
