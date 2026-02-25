@@ -321,6 +321,40 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     StartCoroutine(AnimateReturnToBar());
                 }
             }
+            else if (hitSpot != null && hitSpot.AcceptsTransformation(buttonID))
+            {
+                RectTransform spotRT = hitSpot.GetComponent<RectTransform>();
+                float distance = Vector3.Distance(activeDragRT.position, spotRT.position);
+
+                if (distance <= dropDistanceThreshold)
+                {
+                    Debug.Log($"[DraggableButton] ✅ TRANSFORMATION! {buttonID} → {hitSpot.spotId}");
+                    wasSuccessfullyPlaced = true;
+                    canvasGroup.alpha = 1f;
+                    PlaySound(dropSuccessSound);
+
+                    if (GameProgressManager.Instance != null)
+                    {
+                        GameProgressManager.Instance.MarkItemAsPlaced(buttonID, null);
+                        GameProgressManager.Instance.ForceSave();
+                    }
+
+                    hitSpot.ApplyTransformation(buttonID, activeDragRT);
+                    activeDragRT = null;
+                    activeDragImage = null;
+
+                    if (buttonBar != null)
+                    {
+                        buttonBar.OnButtonSuccessfullyPlaced(this, originalIndex);
+                        StartCoroutine(DestroyButtonAfterDelay());
+                    }
+                }
+                else
+                {
+                    PlaySound(dropFailSound);
+                    StartCoroutine(AnimateReturnToBar());
+                }
+            }
             else
             {
                 if (hitSpot != null)

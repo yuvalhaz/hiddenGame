@@ -1,5 +1,17 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
+using System.Collections.Generic;
+
+[System.Serializable]
+public class SpotTransformation
+{
+    [Tooltip("ה-buttonID של הפריט שגורר לכאן")]
+    public string triggerItemId;
+
+    [Tooltip("התמונה החדשה שתחליף את הנוכחית")]
+    public Sprite newSprite;
+}
 
 public class DropSpot : MonoBehaviour
 {
@@ -10,6 +22,9 @@ public class DropSpot : MonoBehaviour
 
     [Header("Reveal System")]
     [SerializeField] private ImageRevealController revealController;
+
+    [Header("Transformations (שילובי פריטים)")]
+    [SerializeField] private List<SpotTransformation> transformations;
 
     [Header("State (נקבע אוטומטית)")]
     public bool IsSettled { get; set; }
@@ -86,6 +101,42 @@ public class DropSpot : MonoBehaviour
             // הפעל burst של נצנצים קטנים מהמיקום של ה-DropSpot
             SparkleBurstEffect.Burst(canvas, rectTransform, count: 20, duration: 0.8f);
             Debug.Log($"[DropSpot] Sparkles triggered on {spotId}");
+        }
+    }
+
+    public bool AcceptsTransformation(string itemId)
+    {
+        if (!IsSettled || transformations == null) return false;
+
+        foreach (var t in transformations)
+        {
+            if (string.Equals(t.triggerItemId, itemId, System.StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
+
+    public void ApplyTransformation(string itemId, RectTransform placed)
+    {
+        Destroy(placed.gameObject);
+
+        foreach (var t in transformations)
+        {
+            if (string.Equals(t.triggerItemId, itemId, System.StringComparison.Ordinal))
+            {
+                if (revealController != null)
+                {
+                    var bgImage = revealController.GetBackgroundImage();
+                    if (bgImage != null)
+                    {
+                        bgImage.sprite = t.newSprite;
+                        Debug.Log($"[DropSpot] Transformation applied on {spotId}: {itemId} → {t.newSprite.name}");
+                    }
+                }
+
+                TriggerSparkles();
+                break;
+            }
         }
     }
 
