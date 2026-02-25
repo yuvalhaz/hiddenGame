@@ -321,31 +321,15 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     StartCoroutine(AnimateReturnToBar());
                 }
             }
-            else if (hitSpot != null && hitSpot.AcceptsTransformation(buttonID))
-            {
-                HandleTransformationPlacement(hitSpot);
-            }
             else
             {
-                // Raycast didn't find a direct or transformation match -
-                // check all settled DropSpots by distance for transformations
-                // (their raycast is disabled so RaycastForDropSpot can't find them)
-                DropSpot transformSpot = FindClosestTransformationSpot();
-
-                if (transformSpot != null)
-                {
-                    HandleTransformationPlacement(transformSpot);
-                }
+                if (hitSpot != null)
+                    Debug.Log($"[DraggableButton] ❌ Wrong spot! Expected: {buttonID}, Got: {hitSpot.spotId}");
                 else
-                {
-                    if (hitSpot != null)
-                        Debug.Log($"[DraggableButton] ❌ Wrong spot! Expected: {buttonID}, Got: {hitSpot.spotId}");
-                    else
-                        Debug.Log($"[DraggableButton] ❌ No spot found");
+                    Debug.Log($"[DraggableButton] ❌ No spot found");
 
-                    PlaySound(dropFailSound);
-                    StartCoroutine(AnimateReturnToBar());
-                }
+                PlaySound(dropFailSound);
+                StartCoroutine(AnimateReturnToBar());
             }
         }
         else
@@ -867,74 +851,6 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
         return null;
     }
 
-    private DropSpot FindClosestTransformationSpot()
-    {
-        if (activeDragRT == null) return null;
-
-        DropSpot[] allSpots = FindObjectsOfType<DropSpot>(true);
-        DropSpot closest = null;
-        float closestDistance = float.MaxValue;
-
-        foreach (var spot in allSpots)
-        {
-            if (!spot.AcceptsTransformation(buttonID)) continue;
-
-            RectTransform spotRT = spot.GetComponent<RectTransform>();
-            if (spotRT == null) continue;
-
-            float distance = Vector3.Distance(activeDragRT.position, spotRT.position);
-
-            if (distance <= dropDistanceThreshold && distance < closestDistance)
-            {
-                closest = spot;
-                closestDistance = distance;
-            }
-        }
-
-        if (closest != null)
-        {
-            Debug.Log($"[DraggableButton] Found transformation spot by distance: {closest.spotId} (distance: {closestDistance})");
-        }
-
-        return closest;
-    }
-
-    private void HandleTransformationPlacement(DropSpot spot)
-    {
-        RectTransform spotRT = spot.GetComponent<RectTransform>();
-        float distance = Vector3.Distance(activeDragRT.position, spotRT.position);
-
-        if (distance <= dropDistanceThreshold)
-        {
-            Debug.Log($"[DraggableButton] ✅ TRANSFORMATION! {buttonID} → {spot.spotId}");
-            wasSuccessfullyPlaced = true;
-            canvasGroup.alpha = 1f;
-            PlaySound(dropSuccessSound);
-
-            if (GameProgressManager.Instance != null)
-            {
-                GameProgressManager.Instance.MarkItemAsPlaced(buttonID, null);
-                GameProgressManager.Instance.ForceSave();
-            }
-
-            spot.ApplyTransformation(buttonID, activeDragRT);
-            activeDragRT = null;
-            activeDragImage = null;
-
-            if (buttonBar != null)
-            {
-                buttonBar.OnButtonSuccessfullyPlaced(this, originalIndex);
-                StartCoroutine(DestroyButtonAfterDelay());
-            }
-        }
-        else
-        {
-            Debug.Log($"[DraggableButton] ❌ Transformation too far! Distance: {distance} > {dropDistanceThreshold}");
-            PlaySound(dropFailSound);
-            StartCoroutine(AnimateReturnToBar());
-        }
-    }
-
     private void HandleSuccessfulPlacement(DropSpot hitSpot)
     {
         Debug.Log($"[DraggableButton] 🎉 HandleSuccessfulPlacement for {buttonID}");
@@ -1019,7 +935,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
             RefreshDropSpotCache();
         }
 
-        // Direct match only - transformation targets are found by distance, no raycast needed
+        // Direct match only - transformations are handled by DropSpot listening to OnItemPlaced
         if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
         {
             if (!spot.IsSettled)

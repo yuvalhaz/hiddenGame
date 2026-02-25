@@ -37,6 +37,51 @@ public class DropSpot : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.OnItemPlaced += OnAnyItemPlaced;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.OnItemPlaced -= OnAnyItemPlaced;
+        }
+    }
+
+    private void Start()
+    {
+        // Subscribe again in Start in case GameProgressManager wasn't ready in OnEnable
+        if (GameProgressManager.Instance != null)
+        {
+            GameProgressManager.Instance.OnItemPlaced -= OnAnyItemPlaced; // avoid double
+            GameProgressManager.Instance.OnItemPlaced += OnAnyItemPlaced;
+        }
+    }
+
+    /// <summary>
+    /// Called whenever ANY item is placed anywhere. If it's a transformation trigger for this spot, apply it.
+    /// </summary>
+    private void OnAnyItemPlaced(string itemId)
+    {
+        if (!IsSettled || transformations == null) return;
+
+        foreach (var t in transformations)
+        {
+            if (string.Equals(t.triggerItemId, itemId, System.StringComparison.Ordinal))
+            {
+                ApplyTransformationSprite(itemId);
+                TriggerSparkles();
+                Debug.Log($"[DropSpot] Auto-transformation on {spotId}: {itemId} placed → sprite changed");
+                break;
+            }
+        }
+    }
+
     public bool Accepts(string itemId)
     {
         return string.Equals(itemId, spotId, System.StringComparison.Ordinal);
@@ -114,13 +159,6 @@ public class DropSpot : MonoBehaviour
                 return true;
         }
         return false;
-    }
-
-    public void ApplyTransformation(string itemId, RectTransform placed)
-    {
-        Destroy(placed.gameObject);
-        ApplyTransformationSprite(itemId);
-        TriggerSparkles();
     }
 
     public void ApplyTransformationSprite(string itemId)
