@@ -475,7 +475,29 @@ public class GameProgressManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[GameProgressManager] ❌ Spot not found: {placedItem.itemId}");
+                // No direct DropSpot - check if this item is a transformation on another spot
+                DropSpot transformSpot = System.Array.Find(allDropSpots, s => s.AcceptsTransformation(placedItem.itemId));
+
+                if (transformSpot != null)
+                {
+                    Debug.Log($"[GameProgressManager] ✅ Found transformation spot for: {placedItem.itemId} on {transformSpot.spotId}");
+
+                    if (dragButton != null)
+                    {
+                        var bar = dragButton.GetComponentInParent<ScrollableButtonBar>();
+                        if (bar != null)
+                        {
+                            allBars.Add(bar);
+                        }
+                        Destroy(dragButton.gameObject);
+                    }
+
+                    transformSpot.ApplyTransformationSprite(placedItem.itemId);
+                }
+                else
+                {
+                    Debug.LogWarning($"[GameProgressManager] ❌ Spot not found: {placedItem.itemId}");
+                }
             }
         }
 

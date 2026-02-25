@@ -119,6 +119,13 @@ public class DropSpot : MonoBehaviour
     public void ApplyTransformation(string itemId, RectTransform placed)
     {
         Destroy(placed.gameObject);
+        ApplyTransformationSprite(itemId);
+        TriggerSparkles();
+    }
+
+    public void ApplyTransformationSprite(string itemId)
+    {
+        if (transformations == null) return;
 
         foreach (var t in transformations)
         {
@@ -133,8 +140,6 @@ public class DropSpot : MonoBehaviour
                         Debug.Log($"[DropSpot] Transformation applied on {spotId}: {itemId} → {t.newSprite.name}");
                     }
                 }
-
-                TriggerSparkles();
                 break;
             }
         }
