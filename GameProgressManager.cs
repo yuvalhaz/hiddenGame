@@ -475,28 +475,33 @@ public class GameProgressManager : MonoBehaviour
             }
             else
             {
-                // No direct DropSpot - check if this item is a transformation on another spot
-                DropSpot transformSpot = System.Array.Find(allDropSpots, s => s.AcceptsTransformation(placedItem.itemId));
-
-                if (transformSpot != null)
+                // Item has no direct DropSpot (transformation-only items handled in second pass)
+                if (dragButton != null)
                 {
-                    Debug.Log($"[GameProgressManager] ✅ Found transformation spot for: {placedItem.itemId} on {transformSpot.spotId}");
-
-                    if (dragButton != null)
+                    var bar = dragButton.GetComponentInParent<ScrollableButtonBar>();
+                    if (bar != null)
                     {
-                        var bar = dragButton.GetComponentInParent<ScrollableButtonBar>();
-                        if (bar != null)
-                        {
-                            allBars.Add(bar);
-                        }
-                        Destroy(dragButton.gameObject);
+                        allBars.Add(bar);
                     }
-
-                    transformSpot.ApplyTransformationSprite(placedItem.itemId);
+                    Destroy(dragButton.gameObject);
                 }
                 else
                 {
                     Debug.LogWarning($"[GameProgressManager] ❌ Spot not found: {placedItem.itemId}");
+                }
+            }
+        }
+
+        // Second pass: apply transformations on settled spots
+        // (e.g., "apple" placed → person spot transforms)
+        foreach (var placedItem in progressData.placedItems)
+        {
+            foreach (var spot in allDropSpots)
+            {
+                if (spot.AcceptsTransformation(placedItem.itemId))
+                {
+                    spot.ApplyTransformationSprite(placedItem.itemId);
+                    Debug.Log($"[GameProgressManager] ✅ Transformation restored: {placedItem.itemId} on {spot.spotId}");
                 }
             }
         }
