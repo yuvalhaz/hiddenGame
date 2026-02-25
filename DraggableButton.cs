@@ -969,41 +969,54 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
             RefreshDropSpotCache();
         }
 
+        bool found = false;
+
+        // 1. Direct match - DropSpot with same spotId as buttonID
         if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
         {
-            if (spot.IsSettled)
+            if (!spot.IsSettled)
             {
-                if (debugMode)
-                    Debug.Log($"[EnableMatchingDropSpot] DropSpot {spot.spotId} is already settled - skipping");
-                return;
+                SetDropSpotRaycast(spot, enable);
+                found = true;
             }
-
-            var revealController = spot.GetComponent<ImageRevealController>();
-
-            if (revealController != null)
+            else if (debugMode)
             {
-                var backgroundImage = revealController.GetBackgroundImage();
-
-                if (backgroundImage != null)
-                {
-                    backgroundImage.raycastTarget = enable;
-
-                    if (debugMode)
-                        Debug.Log($"[EnableMatchingDropSpot] DropSpot {spot.spotId} - raycastTarget set to: {enable}");
-                }
-                else
-                {
-                    Debug.LogWarning($"[EnableMatchingDropSpot] Background image is NULL for {spot.spotId}");
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"[EnableMatchingDropSpot] No ImageRevealController for {spot.spotId}");
+                Debug.Log($"[EnableMatchingDropSpot] DropSpot {spot.spotId} is already settled - skipping direct");
             }
         }
-        else
+
+        // 2. Transformation match - find settled DropSpots that accept this button as a transformation
+        foreach (var kvp in dropSpotCache)
         {
-            Debug.LogWarning($"[EnableMatchingDropSpot] No DropSpot found with buttonID: {buttonID}");
+            if (kvp.Value.AcceptsTransformation(buttonID))
+            {
+                SetDropSpotRaycast(kvp.Value, enable);
+                found = true;
+
+                if (debugMode)
+                    Debug.Log($"[EnableMatchingDropSpot] Transformation target {kvp.Value.spotId} - raycastTarget set to: {enable}");
+            }
+        }
+
+        if (!found)
+        {
+            Debug.LogWarning($"[EnableMatchingDropSpot] No DropSpot found for buttonID: {buttonID}");
+        }
+    }
+
+    private void SetDropSpotRaycast(DropSpot spot, bool enable)
+    {
+        var revealController = spot.GetComponent<ImageRevealController>();
+        if (revealController != null)
+        {
+            var backgroundImage = revealController.GetBackgroundImage();
+            if (backgroundImage != null)
+            {
+                backgroundImage.raycastTarget = enable;
+
+                if (debugMode)
+                    Debug.Log($"[EnableMatchingDropSpot] DropSpot {spot.spotId} - raycastTarget set to: {enable}");
+            }
         }
     }
 
