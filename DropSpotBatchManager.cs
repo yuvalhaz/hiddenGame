@@ -33,6 +33,9 @@ public class DropSpotBatchManager : MonoBehaviour
     [SerializeField] private LevelCompleteController levelCompleteController;
     [Tooltip("Controller that handles level completion and ending dialog")]
 
+    [Header("🎞️ Reveal Animation")]
+    [SerializeField] private float staggerDelay = 0.12f;
+
     [Header("🐛 Debug")]
     [SerializeField] private bool debugMode = true;
 
@@ -345,9 +348,6 @@ public class DropSpotBatchManager : MonoBehaviour
             }
         }
     }
-
-    [Header("Reveal Animation")]
-    [SerializeField] private float staggerDelay = 0.12f;
 
     private void RevealBatch(int batch)
     {
