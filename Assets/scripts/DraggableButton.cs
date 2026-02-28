@@ -298,9 +298,13 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 {
                     float distance = Vector3.Distance(activeDragRT.position, spotRT.position);
 
-                    Debug.Log($"[DraggableButton] Distance to spot: {distance}, Max allowed: {dropDistanceThreshold}");
+                    // ✅ סף דינמי ביחס לגודל התמונה - 50% מהמימד הגדול, עם מינימום 80
+                    float spotMaxDim = Mathf.Max(spotRT.rect.width, spotRT.rect.height);
+                    float dynamicThreshold = Mathf.Max(spotMaxDim * 0.5f, 80f);
 
-                    if (distance <= dropDistanceThreshold)
+                    Debug.Log($"[DraggableButton] Distance to spot: {distance}, Dynamic threshold: {dynamicThreshold} (spot size: {spotRT.rect.size})");
+
+                    if (distance <= dynamicThreshold)
                     {
                         Debug.Log($"[DraggableButton] ✅ SUCCESS! Dropped on correct spot and close enough: {hitSpot.spotId}");
                         wasSuccessfullyPlaced = true;
@@ -310,7 +314,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     }
                     else
                     {
-                        Debug.Log($"[DraggableButton] ❌ Too far! Distance: {distance} > {dropDistanceThreshold}");
+                        Debug.Log($"[DraggableButton] ❌ Too far! Distance: {distance} > {dynamicThreshold}");
                         PlaySound(dropFailSound);
                         StartCoroutine(AnimateReturnToBar());
                     }
