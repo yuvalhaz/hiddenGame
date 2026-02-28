@@ -99,10 +99,14 @@ public class DropSpot : MonoBehaviour
                 var triggerReveal = spot.GetComponent<ImageRevealController>();
                 if (triggerReveal != null)
                 {
+                    // ResetReveal stops the reveal coroutine and sets alpha to 0
+                    triggerReveal.ResetReveal();
+
+                    // Also disable the Image component so nothing can override it
                     var bgImage = triggerReveal.GetBackgroundImage();
                     if (bgImage != null)
                     {
-                        bgImage.color = new Color(1f, 1f, 1f, 0f);
+                        bgImage.enabled = false;
                         Debug.Log($"[DropSpot] Hidden trigger spot image: {triggerItemId}");
                     }
                 }

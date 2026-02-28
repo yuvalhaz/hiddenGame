@@ -509,10 +509,11 @@ public class GameProgressManager : MonoBehaviour
                         var triggerReveal = triggerSpot.GetComponent<ImageRevealController>();
                         if (triggerReveal != null)
                         {
+                            triggerReveal.ResetReveal();
                             var bgImage = triggerReveal.GetBackgroundImage();
                             if (bgImage != null)
                             {
-                                bgImage.color = new Color(1f, 1f, 1f, 0f);
+                                bgImage.enabled = false;
                                 Debug.Log($"[GameProgressManager] Hidden trigger spot image: {placedItem.itemId}");
                             }
                         }
