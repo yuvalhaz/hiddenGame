@@ -24,8 +24,9 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
     [SerializeField] private AudioClip dropSuccessSound;
     [SerializeField] private AudioClip dropFailSound;
 
-    // Finger clearance - extra pixels above object so finger doesn't hide it
-    private const float FINGER_CLEARANCE_PX = 120f;
+    // Finger clearance - dynamic: more at top of screen, less at bottom
+    private const float FINGER_CLEARANCE_MAX_PX = 120f;
+    private const float FINGER_CLEARANCE_MIN_PX = 20f;
 
     private ScrollableButtonBar buttonBar;
     private RectTransform rectTransform;
@@ -503,9 +504,10 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
             out worldPos
         );
         
-        // ✅ אופסט מדויק - התמונה מעל האצבע עם clearance נוסף
-        // חצי גובה (כדי שהמרכז יהיה מעל) + clearance (כדי שהאצבע לא תסתיר)
-        Vector3 offset = new Vector3(0, activeDragRT.rect.height * 0.5f + FINGER_CLEARANCE_PX, 0);
+        // ✅ אופסט דינמי - ככל שהאצבע קרובה יותר לתחתית המסך, המרחק קטן יותר
+        float screenNormalizedY = Mathf.Clamp01(eventData.position.y / Screen.height);
+        float dynamicClearance = Mathf.Lerp(FINGER_CLEARANCE_MIN_PX, FINGER_CLEARANCE_MAX_PX, screenNormalizedY);
+        Vector3 offset = new Vector3(0, activeDragRT.rect.height * 0.5f + dynamicClearance, 0);
         activeDragRT.position = worldPos + offset;
         
         if (debugMode)

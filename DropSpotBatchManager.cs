@@ -346,7 +346,15 @@ public class DropSpotBatchManager : MonoBehaviour
         }
     }
 
+    [Header("Reveal Animation")]
+    [SerializeField] private float staggerDelay = 0.12f;
+
     private void RevealBatch(int batch)
+    {
+        StartCoroutine(RevealBatchStaggered(batch));
+    }
+
+    private IEnumerator RevealBatchStaggered(int batch)
     {
         int start = GetBatchStartIndex(batch);
         int size = GetBatchSize(batch);
@@ -363,6 +371,7 @@ public class DropSpotBatchManager : MonoBehaviour
                 continue;
 
             allDropSpots[i].gameObject.SetActive(true);
+            yield return new WaitForSeconds(staggerDelay);
         }
 
         // Update UI after revealing batch
