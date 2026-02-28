@@ -475,7 +475,34 @@ public class GameProgressManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[GameProgressManager] ❌ Spot not found: {placedItem.itemId}");
+                // Item has no direct DropSpot (transformation-only items handled in second pass)
+                if (dragButton != null)
+                {
+                    var bar = dragButton.GetComponentInParent<ScrollableButtonBar>();
+                    if (bar != null)
+                    {
+                        allBars.Add(bar);
+                    }
+                    Destroy(dragButton.gameObject);
+                }
+                else
+                {
+                    Debug.LogWarning($"[GameProgressManager] ❌ Spot not found: {placedItem.itemId}");
+                }
+            }
+        }
+
+        // Second pass: apply transformations on settled spots
+        // (e.g., "apple" placed → person spot transforms)
+        foreach (var placedItem in progressData.placedItems)
+        {
+            foreach (var spot in allDropSpots)
+            {
+                if (spot.AcceptsTransformation(placedItem.itemId))
+                {
+                    spot.ApplyTransformationSprite(placedItem.itemId);
+                    Debug.Log($"[GameProgressManager] ✅ Transformation restored: {placedItem.itemId} on {spot.spotId}");
+                }
             }
         }
 

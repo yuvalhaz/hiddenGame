@@ -43,6 +43,12 @@ public class ScrollableButtonBar : MonoBehaviour
     [Tooltip("כמה זמן בשניות עד שהמהירות משתנה (ברירת מחדל: 30 = חצי דקה)")]
     [SerializeField] private float speedChangeDelay = 30f;
 
+    [Header("Entrance Animation")]
+    [Tooltip("כמה פיקסלים מימין לנקודת היעד שהכפתורים מתחילים (ברירת מחדל: 800)")]
+    [SerializeField] private float entranceOffscreenOffset = 800f;
+    [Tooltip("עיכוב בשניות בין כפתור לכפתור (ברירת מחדל: 0.08)")]
+    [SerializeField] private float entranceStaggerDelay = 0.08f;
+
     [Header("References")]
     [SerializeField] private RectTransform contentPanel;
     [SerializeField] private ScrollRect scrollRect;
@@ -56,9 +62,14 @@ public class ScrollableButtonBar : MonoBehaviour
     private List<Image> buttonImages = new List<Image>();
 
     private Dictionary<RectTransform, bool> buttonsAnimating = new Dictionary<RectTransform, bool>();
+    private Coroutine revealCoroutine;
+
+    // Used to cancel stale entrance-animation coroutines when a new one starts.
+    private int entranceVersion = 0;
 
     private float currentAnimationSpeed;
     private float startTime;
+    private CanvasGroup contentCanvasGroup;
 
     void Start()
     {
@@ -78,40 +89,160 @@ public class ScrollableButtonBar : MonoBehaviour
             }
         }
 
+        // Hide content until positions are ready (prevents flash of wrong positions)
+        contentCanvasGroup = contentPanel.GetComponent<CanvasGroup>();
+        if (contentCanvasGroup == null)
+            contentCanvasGroup = contentPanel.gameObject.AddComponent<CanvasGroup>();
+
+        // Always hide until positions are ready (prevents flash of wrong positions)
+        contentCanvasGroup.alpha = 0f;
+
         CreateButtons();
 
-        // Calculate auto spacing AFTER creating buttons (so we know actual button sizes)
-        if (useAutoSpacing && scrollRect != null && scrollRect.viewport != null && buttons.Count > 0)
+        // Calculate auto spacing AFTER canvas layout is ready (wait one frame)
+        if (useAutoSpacing)
         {
-            float viewportWidth = scrollRect.viewport.rect.width;
+            StartCoroutine(InitAutoSpacingAfterLayout());
+        }
+        else
+        {
+            // Sprites may be set this frame via SetButtonSprite — reveal after one frame
+            revealCoroutine = StartCoroutine(RevealNextFrame());
+        }
+    }
 
-            // Calculate average button width from first few buttons
-            float totalWidth = 0f;
-            int sampled = Mathf.Min(buttonsToFitOnScreen, buttons.Count);
-            for (int i = 0; i < sampled; i++)
+    private IEnumerator InitAutoSpacingAfterLayout()
+    {
+        // Wait for canvas to finish layout calculations
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+
+        if (scrollRect == null || scrollRect.viewport == null || buttons.Count == 0)
+            yield break;
+
+        float viewportWidth = scrollRect.viewport.rect.width;
+
+        // If still 0, wait one more frame
+        if (viewportWidth <= 0f)
+        {
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            viewportWidth = scrollRect.viewport.rect.width;
+        }
+
+        if (viewportWidth <= 0f)
+        {
+            Debug.LogWarning("[ScrollableButtonBar] Viewport width is 0 - skipping auto spacing");
+            yield break;
+        }
+
+        // Calculate average button width from first few buttons
+        float totalWidth = 0f;
+        int sampled = Mathf.Min(buttonsToFitOnScreen, buttons.Count);
+        for (int i = 0; i < sampled; i++)
+        {
+            if (buttons[i] != null)
             {
-                if (buttons[i] != null)
+                RectTransform rect = buttons[i].GetComponent<RectTransform>();
+                if (rect != null)
                 {
-                    RectTransform rect = buttons[i].GetComponent<RectTransform>();
-                    if (rect != null)
-                    {
-                        totalWidth += rect.sizeDelta.x;
-                    }
+                    totalWidth += rect.sizeDelta.x;
                 }
             }
-            float avgButtonWidth = totalWidth / sampled;
-
-            // Calculate spacing to fit exactly N buttons on screen
-            // Formula: viewportWidth = (N * avgWidth) + ((N + 1) * spacing)
-            // Solving for spacing: spacing = (viewportWidth - (N * avgWidth)) / (N + 1)
-            float totalButtonWidth = buttonsToFitOnScreen * avgButtonWidth;
-            buttonSpacing = (viewportWidth - totalButtonWidth) / (buttonsToFitOnScreen + 1);
-
-            Debug.Log($"[ScrollableButtonBar] Auto spacing calculated: {buttonSpacing}px (viewport: {viewportWidth}px, avg button: {avgButtonWidth}px, {buttonsToFitOnScreen} buttons to fit)");
-
-            // Recalculate positions with new spacing
-            RecalculateAllPositions();
         }
+        float avgButtonWidth = totalWidth / sampled;
+
+        // Calculate spacing to fit exactly N buttons on screen
+        // Formula: viewportWidth = (N * avgWidth) + ((N + 1) * spacing)
+        // Solving for spacing: spacing = (viewportWidth - (N * avgWidth)) / (N + 1)
+        float totalButtonWidth = buttonsToFitOnScreen * avgButtonWidth;
+        float newSpacing = (viewportWidth - totalButtonWidth) / (buttonsToFitOnScreen + 1);
+
+        if (newSpacing < 0f)
+        {
+            Debug.LogWarning($"[ScrollableButtonBar] Calculated spacing is negative ({newSpacing}px) - buttons too wide for viewport. Clamping to 0.");
+            newSpacing = 0f;
+        }
+
+        buttonSpacing = newSpacing;
+        Debug.Log($"[ScrollableButtonBar] Auto spacing calculated: {buttonSpacing}px (viewport: {viewportWidth}px, avg button: {avgButtonWidth}px, {buttonsToFitOnScreen} buttons to fit)");
+
+        // Snap buttons directly to correct positions (no animation on initial layout)
+        RecalculateAllPositions(immediate: true);
+
+        // Play entrance animation (also reveals the bar)
+        PlayEntranceAnimation();
+    }
+
+    private IEnumerator RevealNextFrame()
+    {
+        yield return null;
+        PlayEntranceAnimation();
+        revealCoroutine = null;
+    }
+
+    private void PlayEntranceAnimation()
+    {
+        // Cancel any stale entrance coroutines from a previous call.
+        entranceVersion++;
+        int myVersion = entranceVersion;
+
+        // Snap all buttons to correct positions first (needed if sprites changed sizes).
+        RecalculateAllPositions(immediate: true);
+
+        // Collect active buttons sorted left-to-right by target X.
+        List<int> activeIndices = new List<int>();
+        for (int i = 0; i < buttons.Count; i++)
+        {
+            if (buttonStates[i] && buttons[i] != null)
+                activeIndices.Add(i);
+        }
+        activeIndices.Sort((a, b) => targetPositions[a].x.CompareTo(targetPositions[b].x));
+
+        // Hide all buttons via their own CanvasGroup (buttons are at correct positions,
+        // so content panel size is always right — no scroll gap).
+        foreach (int i in activeIndices)
+        {
+            RectTransform rect = buttons[i].GetComponent<RectTransform>();
+            if (rect != null) buttonsAnimating.Remove(rect);
+
+            if (i < buttonCanvasGroups.Count && buttonCanvasGroups[i] != null)
+                buttonCanvasGroups[i].alpha = 0f;
+        }
+
+        // Reveal bar — buttons invisible, layout correct.
+        if (contentCanvasGroup != null)
+            contentCanvasGroup.alpha = 1f;
+
+        // Stagger each button's entrance by relative left-to-right index.
+        for (int r = 0; r < activeIndices.Count; r++)
+        {
+            StartCoroutine(EntranceDelayed(activeIndices[r], r * entranceStaggerDelay, myVersion));
+        }
+    }
+
+    private IEnumerator EntranceDelayed(int globalIndex, float delay, int version)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        // Bail out if a newer entrance animation has started.
+        if (version != entranceVersion) yield break;
+
+        if (globalIndex >= buttons.Count || buttons[globalIndex] == null)
+            yield break;
+
+        RectTransform rect = buttons[globalIndex].GetComponent<RectTransform>();
+        if (rect == null) yield break;
+
+        // Move to slide-start (off-screen right), then make visible — one button at a time.
+        rect.anchoredPosition = targetPositions[globalIndex] + new Vector2(entranceOffscreenOffset, 0f);
+
+        if (globalIndex < buttonCanvasGroups.Count && buttonCanvasGroups[globalIndex] != null)
+            buttonCanvasGroups[globalIndex].alpha = 1f;
+
+        // Update() slides it to targetPositions[globalIndex].
+        buttonsAnimating[rect] = true;
     }
 
     private void OnValidate()
@@ -321,7 +452,10 @@ public class ScrollableButtonBar : MonoBehaviour
             targetPositions.Add(buttonRect.anchoredPosition);
 
             // ✅ Cache components לביצועים
-            buttonCanvasGroups.Add(draggable.GetComponent<CanvasGroup>());
+            // Ensure every button has a CanvasGroup so entrance-animation alpha works.
+            CanvasGroup buttonCG = buttonObj.GetComponent<CanvasGroup>();
+            if (buttonCG == null) buttonCG = buttonObj.AddComponent<CanvasGroup>();
+            buttonCanvasGroups.Add(buttonCG);
             buttonImages.Add(draggable.GetComponent<Image>());
 
             Text buttonText = buttonObj.GetComponentInChildren<Text>();
@@ -416,7 +550,7 @@ public class ScrollableButtonBar : MonoBehaviour
         RecalculateAllPositions();
     }
 
-    void RecalculateAllPositions()
+    void RecalculateAllPositions(bool immediate = false)
     {
         Debug.Log("RecalculateAllPositions נקרא");
 
@@ -442,13 +576,21 @@ public class ScrollableButtonBar : MonoBehaviour
 
                 Debug.Log($"כפתור {i}: מיקום יעד חדש = {currentX}");
 
-                // ✅ Always animate buttons to their positions
                 if (buttons[i] != null && !buttons[i].IsDragging())
                 {
                     RectTransform rect = buttons[i].GetComponent<RectTransform>();
                     if (rect != null)
                     {
-                        buttonsAnimating[rect] = true;
+                        if (immediate)
+                        {
+                            // Snap directly — no animation (used for initial layout)
+                            rect.anchoredPosition = newTarget;
+                            buttonsAnimating.Remove(rect);
+                        }
+                        else
+                        {
+                            buttonsAnimating[rect] = true;
+                        }
                     }
                 }
 
@@ -516,6 +658,11 @@ public class ScrollableButtonBar : MonoBehaviour
                     if (sprite != null)
                     {
                         img.SetNativeSize();
+                        // Size changed — recalculate positions immediately
+                        RecalculateAllPositions(immediate: true);
+                        // Debounce reveal: wait one frame after the last sprite is set
+                        if (revealCoroutine != null) StopCoroutine(revealCoroutine);
+                        revealCoroutine = StartCoroutine(RevealNextFrame());
                     }
                 }
             }
