@@ -298,9 +298,9 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 {
                     float distance = Vector3.Distance(activeDragRT.position, spotRT.position);
 
-                    // ✅ סף דינמי ביחס לגודל התמונה - 50% מהמימד הגדול, עם מינימום 80
+                    // ✅ סף דינמי: 21% מהמימד הגדול, מינימום 80px (לתמונות קטנות)
                     float spotMaxDim = Mathf.Max(spotRT.rect.width, spotRT.rect.height);
-                    float dynamicThreshold = Mathf.Max(spotMaxDim * 0.5f, 80f);
+                    float dynamicThreshold = Mathf.Max(spotMaxDim * 0.21f, 80f);
 
                     Debug.Log($"[DraggableButton] Distance to spot: {distance}, Dynamic threshold: {dynamicThreshold} (spot size: {spotRT.rect.size})");
 
