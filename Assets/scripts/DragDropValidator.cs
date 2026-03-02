@@ -54,9 +54,13 @@ public class DragDropValidator
 
         float distance = Vector3.Distance(dragVisual.position, spotRT.position);
 
-        if (distance > dropDistanceThreshold)
+        // סף דינמי: 5% מהמימד הגדול של ה-DropSpot
+        float spotMaxDim = Mathf.Max(spotRT.rect.width, spotRT.rect.height);
+        float dynamicThreshold = spotMaxDim * 0.05f;
+
+        if (distance > dynamicThreshold)
         {
-            failureReason = $"Too far: {distance:F0} > {dropDistanceThreshold}";
+            failureReason = $"Too far: {distance:F0} > {dynamicThreshold:F0} (spot size: {spotRT.rect.size})";
             return null;
         }
 
