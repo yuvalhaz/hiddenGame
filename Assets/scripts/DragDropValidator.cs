@@ -52,7 +52,11 @@ public class DragDropValidator
             return null;
         }
 
-        float distance = Vector3.Distance(dragVisual.position, spotRT.position);
+        // Compare in screen space so threshold is scale-independent
+        Camera cam = eventData.pressEventCamera;
+        Vector2 dragScreenPos = RectTransformUtility.WorldToScreenPoint(cam, dragVisual.position);
+        Vector2 spotScreenPos = RectTransformUtility.WorldToScreenPoint(cam, spotRT.position);
+        float distance = Vector2.Distance(dragScreenPos, spotScreenPos);
 
         if (distance > dropDistanceThreshold)
         {

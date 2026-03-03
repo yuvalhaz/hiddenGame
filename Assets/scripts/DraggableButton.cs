@@ -296,9 +296,12 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 RectTransform spotRT = hitSpot.GetComponent<RectTransform>();
                 if (spotRT != null)
                 {
-                    float distance = Vector3.Distance(activeDragRT.position, spotRT.position);
+                    // Compare in screen space so threshold is scale-independent
+                    Vector2 dragScreenPos = RectTransformUtility.WorldToScreenPoint(eventData.pressEventCamera, activeDragRT.position);
+                    Vector2 spotScreenPos = RectTransformUtility.WorldToScreenPoint(eventData.pressEventCamera, spotRT.position);
+                    float distance = Vector2.Distance(dragScreenPos, spotScreenPos);
 
-                    Debug.Log($"[DraggableButton] Distance to spot: {distance}, Max allowed: {dropDistanceThreshold}");
+                    Debug.Log($"[DraggableButton] Screen distance to spot: {distance}, Max allowed: {dropDistanceThreshold}");
 
                     if (distance <= dropDistanceThreshold)
                     {
@@ -310,7 +313,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     }
                     else
                     {
-                        Debug.Log($"[DraggableButton] ❌ Too far! Distance: {distance} > {dropDistanceThreshold}");
+                        Debug.Log($"[DraggableButton] ❌ Too far! Screen distance: {distance} > {dropDistanceThreshold}");
                         PlaySound(dropFailSound);
                         StartCoroutine(AnimateReturnToBar());
                     }
