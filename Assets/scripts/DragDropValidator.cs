@@ -54,9 +54,9 @@ public class DragDropValidator
 
         float distance = Vector3.Distance(dragVisual.position, spotRT.position);
 
-        // סף דינמי: 11.5% מהמימד הגדול של ה-DropSpot (~80px לתמונה 700x700)
+        // סף דינמי: 11.5% מהמימד הגדול של ה-DropSpot, מינימום 55px
         float spotMaxDim = Mathf.Max(spotRT.rect.width, spotRT.rect.height);
-        float dynamicThreshold = spotMaxDim * 0.115f;
+        float dynamicThreshold = Mathf.Max(spotMaxDim * 0.115f, 55f);
 
         if (distance > dynamicThreshold)
         {
