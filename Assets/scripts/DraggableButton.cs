@@ -298,9 +298,13 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                 {
                     float distance = Vector3.Distance(activeDragRT.position, spotRT.position);
 
-                    Debug.Log($"[DraggableButton] Distance to spot: {distance}, Max allowed: {dropDistanceThreshold}");
+                    // סף דינמי: 11.5% מהמימד הגדול של ה-DropSpot, מינימום 55px
+                    float spotMaxDim = Mathf.Max(spotRT.rect.width, spotRT.rect.height);
+                    float dynamicThreshold = Mathf.Max(spotMaxDim * 0.115f, 55f);
 
-                    if (distance <= dropDistanceThreshold)
+                    Debug.Log($"[DraggableButton] Distance to spot: {distance}, Dynamic threshold: {dynamicThreshold} (spot size: {spotRT.rect.size})");
+
+                    if (distance <= dynamicThreshold)
                     {
                         Debug.Log($"[DraggableButton] ✅ SUCCESS! Dropped on correct spot and close enough: {hitSpot.spotId}");
                         wasSuccessfullyPlaced = true;
@@ -310,7 +314,7 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     }
                     else
                     {
-                        Debug.Log($"[DraggableButton] ❌ Too far! Distance: {distance} > {dropDistanceThreshold}");
+                        Debug.Log($"[DraggableButton] ❌ Too far! Distance: {distance} > {dynamicThreshold}");
                         PlaySound(dropFailSound);
                         StartCoroutine(AnimateReturnToBar());
                     }
@@ -632,6 +636,21 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
             RefreshDropSpotCache();
         }
 
+        // Find root canvas for scale conversion
+        Canvas rootCanvas = topCanvas;
+        if (rootCanvas == null)
+        {
+            Canvas[] canvases = FindObjectsOfType<Canvas>();
+            foreach (var c in canvases)
+            {
+                if (c.renderMode == RenderMode.ScreenSpaceOverlay || c.isRootCanvas)
+                {
+                    rootCanvas = c;
+                    break;
+                }
+            }
+        }
+
         if (dropSpotCache.TryGetValue(buttonID, out DropSpot spot))
         {
             var revealController = spot.GetComponent<ImageRevealController>();
@@ -644,10 +663,23 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
                     if (bgRT != null)
                     {
                         Vector2 size = bgRT.rect.size;
-                        
+
+                        // Scale to match actual screen size: the ghost lives on the
+                        // root canvas, but the DropSpot may be under a scaled parent.
+                        if (rootCanvas != null)
+                        {
+                            Vector3 spotScale = bgRT.lossyScale;
+                            Vector3 canvasScale = rootCanvas.transform.lossyScale;
+                            if (canvasScale.x > 0f && canvasScale.y > 0f)
+                            {
+                                size.x *= spotScale.x / canvasScale.x;
+                                size.y *= spotScale.y / canvasScale.y;
+                            }
+                        }
+
                         if (debugMode)
-                            Debug.Log($"[DraggableButton] ✅ Real photo size: {size}");
-                        
+                            Debug.Log($"[DraggableButton] ✅ Real photo size (scale-adjusted): {size}");
+
                         return size;
                     }
                 }
@@ -659,15 +691,28 @@ public class DraggableButton : MonoBehaviour, IInitializePotentialDragHandler, I
             var spotRT = fallbackSpot.GetComponent<RectTransform>();
             if (spotRT != null)
             {
+                Vector2 size = spotRT.rect.size;
+
+                if (rootCanvas != null)
+                {
+                    Vector3 spotScale = spotRT.lossyScale;
+                    Vector3 canvasScale = rootCanvas.transform.lossyScale;
+                    if (canvasScale.x > 0f && canvasScale.y > 0f)
+                    {
+                        size.x *= spotScale.x / canvasScale.x;
+                        size.y *= spotScale.y / canvasScale.y;
+                    }
+                }
+
                 if (debugMode)
-                    Debug.Log($"[DraggableButton] Using DropSpot size as fallback: {spotRT.rect.size}");
-                return spotRT.rect.size;
+                    Debug.Log($"[DraggableButton] Using DropSpot size as fallback (scale-adjusted): {size}");
+                return size;
             }
         }
 
         if (debugMode)
             Debug.LogWarning($"[DraggableButton] ⚠️ Could not find size, using default 350x350");
-        
+
         return new Vector2(350f, 350f);
     }
     

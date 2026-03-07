@@ -133,6 +133,25 @@ public class DragVisualManager
     }
 
     /// <summary>
+    /// Returns a capped height for offset calculations.
+    /// Prevents extreme offsets with tall/narrow images (e.g. 144x292)
+    /// where using the raw height would push the drag visual too far from the finger,
+    /// making the raycast miss the DropSpot entirely.
+    /// </summary>
+    private float GetEffectiveHeight()
+    {
+        if (dragVisualRT == null) return 200f;
+
+        float h = dragVisualRT.rect.height;
+        float w = dragVisualRT.rect.width;
+
+        // Cap effective height to 1.5x the width (minimum 200px floor)
+        // This limits offset for tall images while leaving square/wide images unchanged
+        float cap = Mathf.Max(w * 1.5f, 200f);
+        return Mathf.Min(h, cap);
+    }
+
+    /// <summary>
     /// Calculate offset above finger, adjusted by screen position.
     /// Simple rule: object bottom edge should be above the finger by FINGER_CLEARANCE_PX
     /// This means: offset = half object height + clearance
@@ -142,7 +161,7 @@ public class DragVisualManager
     {
         if (dragVisualRT == null) return FINGER_CLEARANCE_PX;
 
-        float objectHeight = dragVisualRT.rect.height;
+        float objectHeight = GetEffectiveHeight();
 
         // Base offset: ensures object bottom is above finger
         // Since object is centered, we need half height + clearance
@@ -188,11 +207,12 @@ public class DragVisualManager
 
         // 3) Calculate X offset - MUST be large enough when Y offset is small
         // When Y offset is small/negative, increase X offset to keep object visible
-        float objectHeight = dragVisualRT.rect.height;
-        float minVisibleXOffset = objectHeight * 0.5f + FINGER_CLEARANCE_PX; // Same as full Y offset
+        // Use capped height to avoid extreme offsets for tall/narrow images
+        float effectiveHeight = GetEffectiveHeight();
+        float minVisibleXOffset = effectiveHeight * 0.5f + FINGER_CLEARANCE_PX;
 
         float xOffset;
-        if (yOffset < objectHeight * 0.5f)
+        if (yOffset < effectiveHeight * 0.5f)
         {
             // Y offset too small - compensate with larger X offset
             xOffset = minVisibleXOffset;

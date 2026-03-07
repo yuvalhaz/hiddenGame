@@ -501,6 +501,24 @@ public class GameProgressManager : MonoBehaviour
                 if (spot.AcceptsTransformation(placedItem.itemId))
                 {
                     spot.ApplyTransformationSprite(placedItem.itemId);
+
+                    // Hide the trigger item's DropSpot image so it doesn't cover the transformed sprite
+                    DropSpot triggerSpot = System.Array.Find(allDropSpots, s => s.spotId == placedItem.itemId);
+                    if (triggerSpot != null)
+                    {
+                        var triggerReveal = triggerSpot.GetComponent<ImageRevealController>();
+                        if (triggerReveal != null)
+                        {
+                            triggerReveal.ResetReveal();
+                            var bgImage = triggerReveal.GetBackgroundImage();
+                            if (bgImage != null)
+                            {
+                                bgImage.enabled = false;
+                                Debug.Log($"[GameProgressManager] Hidden trigger spot image: {placedItem.itemId}");
+                            }
+                        }
+                    }
+
                     Debug.Log($"[GameProgressManager] ✅ Transformation restored: {placedItem.itemId} on {spot.spotId}");
                 }
             }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Manages the settings menu UI including shop/IAP
@@ -55,6 +56,9 @@ public class SettingsUI : MonoBehaviour
     [SerializeField] private Sprite notificationOnIcon;
     [SerializeField] private Sprite notificationOffIcon;
 
+    [Header("Exit Game")]
+    [SerializeField] private Button exitButton;
+
     [Header("Animation (Optional)")]
     [SerializeField] private bool animatePanel = true;
     [SerializeField] private float animationDuration = 0.3f;
@@ -102,6 +106,11 @@ public class SettingsUI : MonoBehaviour
         if (notificationToggleButton != null)
         {
             notificationToggleButton.onClick.AddListener(ToggleNotificationSetting);
+        }
+
+        if (exitButton != null)
+        {
+            exitButton.onClick.AddListener(OnExitClicked);
         }
 
         // Setup IAP buttons
@@ -494,6 +503,15 @@ public class SettingsUI : MonoBehaviour
         {
             notificationButtonIcon.sprite = notificationOffIcon;
         }
+    }
+
+    /// <summary>
+    /// Exit to LevelSelection scene
+    /// </summary>
+    private void OnExitClicked()
+    {
+        Debug.Log("[SettingsUI] Exit button clicked - loading LevelSelection");
+        SceneManager.LoadScene("LevelSelection");
     }
 
     /// <summary>

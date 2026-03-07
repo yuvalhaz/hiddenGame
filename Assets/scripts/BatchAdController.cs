@@ -139,7 +139,7 @@ public class BatchAdController : MonoBehaviour
             return false;
         }
 
-        // ✅ TIME CHECK - 19 minutes of gameplay required
+        // ✅ TIME CHECK - 15 minutes of gameplay required
         float totalTime = GetTotalPlayTime();
         bool enoughTimePassed = totalTime >= AD_TIME_THRESHOLD;
 
