@@ -51,6 +51,8 @@ public class LevelSelectionUI : MonoBehaviour
     [Tooltip("Icon for locked bonus levels (e.g., video/ad icon)")]
     [SerializeField] private Color bonusLockedColor = new Color(1f, 0.8f, 0.2f, 1f);
     [Tooltip("Color for locked bonus level buttons (gold/yellow)")]
+    [SerializeField] private string bonusScenePrefix = "Bonus";
+    [Tooltip("Scene name prefix for bonus levels (e.g., Bonus1, Bonus2). Set in Build Settings accordingly.")]
     [SerializeField] private BonusLevelDialog bonusLevelDialog;
     [Tooltip("Reference to the bonus level popup dialog (asks player to watch ad)")]
 
@@ -559,7 +561,16 @@ public class LevelSelectionUI : MonoBehaviour
 
     private void LoadLevel(int levelNumber)
     {
-        string sceneName = $"{levelScenePrefix}{levelNumber}";
+        string sceneName;
+        if (IsBonusLevel(levelNumber))
+        {
+            int bonusIndex = bonusLevelNumbers.IndexOf(levelNumber) + 1;
+            sceneName = $"{bonusScenePrefix}{bonusIndex}";
+        }
+        else
+        {
+            sceneName = $"{levelScenePrefix}{levelNumber}";
+        }
 
         // Check if scene exists in build settings
         if (Application.CanStreamedLevelBeLoaded(sceneName))
