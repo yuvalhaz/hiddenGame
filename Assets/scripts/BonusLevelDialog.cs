@@ -57,7 +57,15 @@ public class BonusLevelDialog : MonoBehaviour
     {
         onWatchAdClicked = onConfirmWatchAd;
 
-        if (dialogGroup == null) return;
+        if (dialogGroup == null)
+        {
+            Debug.LogWarning("[BonusLevelDialog] No CanvasGroup found! Trying to activate GameObject directly.");
+            gameObject.SetActive(true);
+            transform.SetAsLastSibling();
+            PlaySound(openSound);
+            Debug.Log("[BonusLevelDialog] Opened (without CanvasGroup)");
+            return;
+        }
 
         dialogGroup.alpha = 1f;
         dialogGroup.interactable = true;
@@ -93,7 +101,11 @@ public class BonusLevelDialog : MonoBehaviour
 
     private void HideImmediate()
     {
-        if (dialogGroup == null) return;
+        if (dialogGroup == null)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
 
         dialogGroup.alpha = 0f;
         dialogGroup.interactable = false;

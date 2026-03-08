@@ -45,6 +45,8 @@ public class LevelSelectionUI : MonoBehaviour
     [Header("🎁 Bonus Level Settings")]
     [SerializeField] private List<int> bonusLevelNumbers = new List<int>();
     [Tooltip("Level numbers that are bonus levels (unlocked by watching rewarded ad)")]
+    [SerializeField] private List<Button> manualBonusLevelButtons = new List<Button>();
+    [Tooltip("Drag bonus level buttons here. Each button maps to the matching bonusLevelNumbers entry.")]
     [SerializeField] private Sprite bonusLockedIcon;
     [Tooltip("Icon for locked bonus levels (e.g., video/ad icon)")]
     [SerializeField] private Color bonusLockedColor = new Color(1f, 0.8f, 0.2f, 1f);
@@ -177,7 +179,7 @@ public class LevelSelectionUI : MonoBehaviour
             }
         }
 
-        // Setup each button
+        // Setup each regular button
         for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
         {
             Button button = manualLevelButtons[i];
@@ -190,6 +192,49 @@ public class LevelSelectionUI : MonoBehaviour
             int levelNumber = i + 1;
             SetupButton(button, levelNumber);
             levelButtons.Add(button);
+        }
+
+        // Setup bonus level buttons from separate list
+        SetupManualBonusButtons();
+    }
+
+    /// <summary>
+    /// Setup manually placed bonus level buttons from the separate list
+    /// </summary>
+    private void SetupManualBonusButtons()
+    {
+        if (manualBonusLevelButtons.Count == 0) return;
+
+        for (int i = 0; i < manualBonusLevelButtons.Count; i++)
+        {
+            Button button = manualBonusLevelButtons[i];
+            if (button == null)
+            {
+                Debug.LogWarning($"[LevelSelectionUI] Bonus button {i} is null!");
+                continue;
+            }
+
+            // Map to the corresponding bonus level number
+            int levelNumber;
+            if (i < bonusLevelNumbers.Count)
+            {
+                levelNumber = bonusLevelNumbers[i];
+            }
+            else
+            {
+                Debug.LogWarning($"[LevelSelectionUI] Bonus button {i} has no matching bonusLevelNumbers entry!");
+                continue;
+            }
+
+            // Hide initially for animation
+            if (animateButtonsOnStart)
+            {
+                button.transform.localScale = Vector3.zero;
+            }
+
+            SetupButton(button, levelNumber);
+            levelButtons.Add(button);
+            Debug.Log($"[LevelSelectionUI] Bonus button setup: index {i} -> Level {levelNumber}");
         }
     }
 
@@ -451,10 +496,8 @@ public class LevelSelectionUI : MonoBehaviour
     {
         if (RewardedAdsManager.Instance == null)
         {
-            Debug.LogWarning("[LevelSelectionUI] RewardedAdsManager not found!");
-            #if UNITY_EDITOR
+            Debug.LogWarning("[LevelSelectionUI] RewardedAdsManager not found! Unlocking bonus level directly.");
             OnBonusAdRewardGranted(levelNumber, button);
-            #endif
             return;
         }
 
