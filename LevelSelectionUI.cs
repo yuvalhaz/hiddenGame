@@ -561,11 +561,19 @@ public class LevelSelectionUI : MonoBehaviour
     {
         string sceneName = $"{levelScenePrefix}{levelNumber}";
 
-        // Save which level we're loading (0-indexed for CurrentLevel)
-        PlayerPrefs.SetInt("CurrentLevel", levelNumber - 1);
-        PlayerPrefs.Save();
+        // Check if scene exists in build settings
+        if (Application.CanStreamedLevelBeLoaded(sceneName))
+        {
+            // Save which level we're loading (0-indexed for CurrentLevel)
+            PlayerPrefs.SetInt("CurrentLevel", levelNumber - 1);
+            PlayerPrefs.Save();
 
-        SceneManager.LoadScene(sceneName);
+            SceneManager.LoadScene(sceneName);
+        }
+        else
+        {
+            Debug.LogError($"[LevelSelectionUI] Scene '{sceneName}' not found in Build Settings! Add it via File -> Build Profiles.");
+        }
     }
 
     private IEnumerator AnimateButtonsSequence()
