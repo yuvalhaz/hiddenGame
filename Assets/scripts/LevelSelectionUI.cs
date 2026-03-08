@@ -49,6 +49,8 @@ public class LevelSelectionUI : MonoBehaviour
     [Tooltip("Icon for locked bonus levels (e.g., video/ad icon)")]
     [SerializeField] private Color bonusLockedColor = new Color(1f, 0.8f, 0.2f, 1f);
     [Tooltip("Color for locked bonus level buttons (gold/yellow)")]
+    [SerializeField] private BonusLevelDialog bonusLevelDialog;
+    [Tooltip("Reference to the bonus level popup dialog (asks player to watch ad)")]
 
     [Header("✨ Animation Settings")]
     [SerializeField] private bool animateButtonsOnStart = true;
@@ -426,12 +428,30 @@ public class LevelSelectionUI : MonoBehaviour
     /// </summary>
     private void ShowRewardedAdForBonusLevel(int levelNumber, Button button)
     {
-        Debug.Log($"[LevelSelectionUI] 🎬 Showing rewarded ad to unlock Bonus Level {levelNumber}...");
+        Debug.Log($"[LevelSelectionUI] 🎬 Bonus Level {levelNumber} clicked, showing dialog...");
 
+        // Show dialog first - when user confirms, show the ad
+        if (bonusLevelDialog != null)
+        {
+            bonusLevelDialog.Open(() =>
+            {
+                // User clicked "Watch Ad" in the dialog
+                StartBonusAd(levelNumber, button);
+            });
+        }
+        else
+        {
+            // No dialog assigned - show ad directly (fallback)
+            Debug.LogWarning("[LevelSelectionUI] BonusLevelDialog not assigned! Showing ad directly.");
+            StartBonusAd(levelNumber, button);
+        }
+    }
+
+    private void StartBonusAd(int levelNumber, Button button)
+    {
         if (RewardedAdsManager.Instance == null)
         {
             Debug.LogWarning("[LevelSelectionUI] RewardedAdsManager not found!");
-            // Fallback: unlock anyway in editor
             #if UNITY_EDITOR
             OnBonusAdRewardGranted(levelNumber, button);
             #endif
