@@ -101,6 +101,13 @@ public class DebugMenuUI : MonoBehaviour
         {
             GameProgressManager.Instance.ResetAllProgress();
         }
+
+        // Refresh level selection UI buttons to show locked state
+        LevelSelectionUI levelSelectionUI = FindObjectOfType<LevelSelectionUI>();
+        if (levelSelectionUI != null)
+        {
+            levelSelectionUI.RefreshAllButtons();
+        }
     }
     
     private void OnShowDebugInfo()

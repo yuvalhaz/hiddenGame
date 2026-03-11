@@ -699,6 +699,31 @@ public class LevelSelectionUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Refresh all button visuals to match current PlayerPrefs state
+    /// Call after resetting progress to update lock/unlock appearance
+    /// </summary>
+    public void RefreshAllButtons()
+    {
+        // Re-setup regular buttons
+        for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
+        {
+            Button button = manualLevelButtons[i];
+            if (button == null) continue;
+            SetupButton(button, i + 1, false);
+        }
+
+        // Re-setup bonus buttons
+        for (int i = 0; i < manualBonusLevelButtons.Count; i++)
+        {
+            Button button = manualBonusLevelButtons[i];
+            if (button == null || i >= bonusLevelNumbers.Count) continue;
+            SetupButton(button, bonusLevelNumbers[i], true);
+        }
+
+        Debug.Log("[LevelSelectionUI] All buttons refreshed!");
+    }
+
+    /// <summary>
     /// Mark a level as complete (call this when level is finished!)
     /// </summary>
     public static void MarkLevelComplete(int levelNumber)
