@@ -94,9 +94,15 @@ public class HintButton : MonoBehaviour
 
     private void OnHintGranted()
     {
-        // Called after watching the ad - trigger the hint animation
+        // Called after watching the ad - trigger the hint animation and consume one hint
         Debug.Log("💰 [HintButton] Hint granted after watching ad - triggering hint!");
-        TriggerHintAnimation();
+        if (TriggerHintAnimation())
+        {
+            if (IAPManager.Instance != null)
+            {
+                IAPManager.Instance.UseHint();
+            }
+        }
     }
 
     private void OnClick()
