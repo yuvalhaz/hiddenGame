@@ -427,12 +427,12 @@ public class LevelSelectionUI : MonoBehaviour
     /// </summary>
     private bool IsLevelUnlocked(int levelNumber)
     {
-        if (levelNumber == 1)
-            return true;
-
-        // Bonus levels: unlocked by watching rewarded ad
+        // Bonus levels: always check via ad unlock first, regardless of level number
         if (IsBonusLevel(levelNumber))
             return IsBonusLevelUnlocked(levelNumber);
+
+        if (levelNumber == 1)
+            return true;
 
         return IsLevelCompleted(levelNumber - 1);
     }
