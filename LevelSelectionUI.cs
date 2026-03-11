@@ -311,35 +311,45 @@ public class LevelSelectionUI : MonoBehaviour
         // Set text - keep original name and add number
         if (buttonText != null)
         {
-            // Store original text (the custom name the user set)
-            string originalName = buttonText.text;
-
-            // If text is empty or already has a number pattern, use level number only
-            if (string.IsNullOrEmpty(originalName) || originalName == $"{levelNumber}" || originalName == $"{levelNumber}\n✓")
+            // Bonus levels: hide text when unlocked
+            if (isBonus && isUnlocked)
             {
-                originalName = "";
-            }
-
-            if (isCompleted)
-            {
-                if (string.IsNullOrEmpty(originalName))
-                {
-                    buttonText.text = $"{levelNumber}\n✓";
-                }
-                else
-                {
-                    buttonText.text = $"{originalName}\n{levelNumber} ✓";
-                }
+                buttonText.gameObject.SetActive(false);
             }
             else
             {
-                if (string.IsNullOrEmpty(originalName))
+                buttonText.gameObject.SetActive(true);
+
+                // Store original text (the custom name the user set)
+                string originalName = buttonText.text;
+
+                // If text is empty or already has a number pattern, use level number only
+                if (string.IsNullOrEmpty(originalName) || originalName == $"{levelNumber}" || originalName == $"{levelNumber}\n✓")
                 {
-                    buttonText.text = $"{levelNumber}";
+                    originalName = "";
+                }
+
+                if (isCompleted)
+                {
+                    if (string.IsNullOrEmpty(originalName))
+                    {
+                        buttonText.text = $"{levelNumber}\n✓";
+                    }
+                    else
+                    {
+                        buttonText.text = $"{originalName}\n{levelNumber} ✓";
+                    }
                 }
                 else
                 {
-                    buttonText.text = $"{originalName}\n{levelNumber}";
+                    if (string.IsNullOrEmpty(originalName))
+                    {
+                        buttonText.text = $"{levelNumber}";
+                    }
+                    else
+                    {
+                        buttonText.text = $"{originalName}\n{levelNumber}";
+                    }
                 }
             }
         }
