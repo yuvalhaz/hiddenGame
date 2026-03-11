@@ -126,7 +126,25 @@ public class DebugMenuUI : MonoBehaviour
         {
             info += "אין לבלים שהושלמו\n";
         }
-        
+
+        // Show unlocked bonus levels
+        info += "\nבונוס לבלים פתוחים:\n";
+        bool foundBonus = false;
+        for (int i = 0; i <= 10; i++)
+        {
+            string key = $"BonusLevel_{i}_Unlocked";
+            if (PlayerPrefs.HasKey(key) && PlayerPrefs.GetInt(key) == 1)
+            {
+                info += $"- Bonus {i} ✓\n";
+                foundBonus = true;
+            }
+        }
+
+        if (!foundBonus)
+        {
+            info += "אין בונוס לבלים פתוחים\n";
+        }
+
         info += "==================";
         
         UpdateStatusText(info);
