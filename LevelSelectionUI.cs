@@ -308,48 +308,45 @@ public class LevelSelectionUI : MonoBehaviour
             lockTransform.gameObject.SetActive(!isUnlocked);
         }
 
+        // Hide "watch ad" instruction text on bonus buttons when unlocked
+        Transform watchAdText = button.transform.Find("Text (watchAd)");
+        if (watchAdText != null)
+        {
+            watchAdText.gameObject.SetActive(!(isBonus && isUnlocked));
+        }
+
         // Set text - keep original name and add number
         if (buttonText != null)
         {
-            // Bonus levels: hide text when unlocked
-            if (isBonus && isUnlocked)
+            // Store original text (the custom name the user set)
+            string originalName = buttonText.text;
+
+            // If text is empty or already has a number pattern, use level number only
+            if (string.IsNullOrEmpty(originalName) || originalName == $"{levelNumber}" || originalName == $"{levelNumber}\n✓")
             {
-                buttonText.gameObject.SetActive(false);
+                originalName = "";
             }
-            else
+
+            if (isCompleted)
             {
-                buttonText.gameObject.SetActive(true);
-
-                // Store original text (the custom name the user set)
-                string originalName = buttonText.text;
-
-                // If text is empty or already has a number pattern, use level number only
-                if (string.IsNullOrEmpty(originalName) || originalName == $"{levelNumber}" || originalName == $"{levelNumber}\n✓")
+                if (string.IsNullOrEmpty(originalName))
                 {
-                    originalName = "";
-                }
-
-                if (isCompleted)
-                {
-                    if (string.IsNullOrEmpty(originalName))
-                    {
-                        buttonText.text = $"{levelNumber}\n✓";
-                    }
-                    else
-                    {
-                        buttonText.text = $"{originalName}\n{levelNumber} ✓";
-                    }
+                    buttonText.text = $"{levelNumber}\n✓";
                 }
                 else
                 {
-                    if (string.IsNullOrEmpty(originalName))
-                    {
-                        buttonText.text = $"{levelNumber}";
-                    }
-                    else
-                    {
-                        buttonText.text = $"{originalName}\n{levelNumber}";
-                    }
+                    buttonText.text = $"{originalName}\n{levelNumber} ✓";
+                }
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(originalName))
+                {
+                    buttonText.text = $"{levelNumber}";
+                }
+                else
+                {
+                    buttonText.text = $"{originalName}\n{levelNumber}";
                 }
             }
         }
