@@ -328,10 +328,11 @@ public class LevelManager : MonoBehaviour
     /// </summary>
     public void ResetAllProgress()
     {
-        // Reset level completion
+        // Reset level completion and bonus level unlocks
         for (int i = 1; i <= totalLevels; i++)
         {
             PlayerPrefs.DeleteKey($"Level_{i}_Completed");
+            PlayerPrefs.DeleteKey($"BonusLevel_{i}_Unlocked");
         }
         
         // Reset current level to 0
