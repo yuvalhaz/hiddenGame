@@ -42,6 +42,20 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private Color unlockedColor = new Color(1f, 1f, 1f, 1f);
     [SerializeField] private Color completedColor = new Color(0.3f, 1f, 0.3f, 1f);
 
+    [Header("🎁 Bonus Level Settings")]
+    [SerializeField] private List<int> bonusLevelNumbers = new List<int>();
+    [Tooltip("Level numbers that are bonus levels (unlocked by watching rewarded ad)")]
+    [SerializeField] private List<Button> manualBonusLevelButtons = new List<Button>();
+    [Tooltip("Drag bonus level buttons here. Each button maps to the matching bonusLevelNumbers entry.")]
+    [SerializeField] private Sprite bonusLockedIcon;
+    [Tooltip("Icon for locked bonus levels (e.g., video/ad icon)")]
+    [SerializeField] private Color bonusLockedColor = new Color(1f, 0.8f, 0.2f, 1f);
+    [Tooltip("Color for locked bonus level buttons (gold/yellow)")]
+    [SerializeField] private string bonusScenePrefix = "Bonus";
+    [Tooltip("Scene name prefix for bonus levels (e.g., Bonus1, Bonus2). Set in Build Settings accordingly.")]
+    [SerializeField] private BonusLevelDialog bonusLevelDialog;
+    [Tooltip("Reference to the bonus level popup dialog (asks player to watch ad)")]
+
     [Header("✨ Animation Settings")]
     [SerializeField] private bool animateButtonsOnStart = true;
     [SerializeField] private float buttonAnimationDelay = 0.5f;
@@ -167,7 +181,7 @@ public class LevelSelectionUI : MonoBehaviour
             }
         }
 
-        // Setup each button
+        // Setup each regular button
         for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
         {
             Button button = manualLevelButtons[i];
@@ -178,8 +192,51 @@ public class LevelSelectionUI : MonoBehaviour
             }
 
             int levelNumber = i + 1;
-            SetupButton(button, levelNumber);
+            SetupButton(button, levelNumber, false);
             levelButtons.Add(button);
+        }
+
+        // Setup bonus level buttons from separate list
+        SetupManualBonusButtons();
+    }
+
+    /// <summary>
+    /// Setup manually placed bonus level buttons from the separate list
+    /// </summary>
+    private void SetupManualBonusButtons()
+    {
+        if (manualBonusLevelButtons.Count == 0) return;
+
+        for (int i = 0; i < manualBonusLevelButtons.Count; i++)
+        {
+            Button button = manualBonusLevelButtons[i];
+            if (button == null)
+            {
+                Debug.LogWarning($"[LevelSelectionUI] Bonus button {i} is null!");
+                continue;
+            }
+
+            // Map to the corresponding bonus level number
+            int levelNumber;
+            if (i < bonusLevelNumbers.Count)
+            {
+                levelNumber = bonusLevelNumbers[i];
+            }
+            else
+            {
+                Debug.LogWarning($"[LevelSelectionUI] Bonus button {i} has no matching bonusLevelNumbers entry!");
+                continue;
+            }
+
+            // Hide initially for animation
+            if (animateButtonsOnStart)
+            {
+                button.transform.localScale = Vector3.zero;
+            }
+
+            SetupButton(button, levelNumber, true);
+            levelButtons.Add(button);
+            Debug.Log($"[LevelSelectionUI] Bonus button setup: index {i} -> Level {levelNumber}");
         }
     }
 
@@ -227,14 +284,14 @@ public class LevelSelectionUI : MonoBehaviour
             return;
         }
 
-        SetupButton(button, levelNumber);
+        SetupButton(button, levelNumber, IsBonusLevel(levelNumber));
         levelButtons.Add(button);
     }
 
     /// <summary>
     /// Setup a button's appearance and click handler
     /// </summary>
-    private void SetupButton(Button button, int levelNumber)
+    private void SetupButton(Button button, int levelNumber, bool isBonus)
     {
         Image buttonImage = button.GetComponent<Image>();
         Text buttonText = button.GetComponentInChildren<Text>();
@@ -246,6 +303,8 @@ public class LevelSelectionUI : MonoBehaviour
         Transform lockTransform = button.transform.Find("lock parent");
         if (lockTransform != null)
         {
+            // Bonus levels: show lock only if not unlocked via ad
+            // Regular levels: show lock if not unlocked
             lockTransform.gameObject.SetActive(!isUnlocked);
         }
 
@@ -298,6 +357,15 @@ public class LevelSelectionUI : MonoBehaviour
                 buttonImage.sprite = unlockedIcon;
                 buttonImage.color = unlockedColor;
             }
+            else if (!isUnlocked && isBonus)
+            {
+                // Bonus level locked - show special ad/bonus icon
+                if (bonusLockedIcon != null)
+                    buttonImage.sprite = bonusLockedIcon;
+                else if (lockedIcon != null)
+                    buttonImage.sprite = lockedIcon;
+                buttonImage.color = bonusLockedColor;
+            }
             else if (!isUnlocked && lockedIcon != null)
             {
                 buttonImage.sprite = lockedIcon;
@@ -313,17 +381,51 @@ public class LevelSelectionUI : MonoBehaviour
 
         int capturedLevelNum = levelNumber;
         bool capturedIsUnlocked = isUnlocked;
+        bool capturedIsBonus = isBonus;
         Button capturedButton = button;
-        button.onClick.AddListener(() => OnLevelButtonClicked(capturedLevelNum, capturedIsUnlocked, capturedButton));
+        button.onClick.AddListener(() => OnLevelButtonClicked(capturedLevelNum, capturedIsUnlocked, capturedButton, capturedIsBonus));
+    }
+
+    /// <summary>
+    /// Check if this level number is a bonus level
+    /// </summary>
+    private bool IsBonusLevel(int levelNumber)
+    {
+        return bonusLevelNumbers.Contains(levelNumber);
+    }
+
+    /// <summary>
+    /// Check if a bonus level has been unlocked by watching an ad
+    /// </summary>
+    private bool IsBonusLevelUnlocked(int levelNumber)
+    {
+        string key = $"BonusLevel_{levelNumber}_Unlocked";
+        return PlayerPrefs.GetInt(key, 0) == 1;
+    }
+
+    /// <summary>
+    /// Mark a bonus level as unlocked (after watching rewarded ad)
+    /// </summary>
+    public static void UnlockBonusLevel(int levelNumber)
+    {
+        string key = $"BonusLevel_{levelNumber}_Unlocked";
+        PlayerPrefs.SetInt(key, 1);
+        PlayerPrefs.Save();
+        Debug.Log($"[LevelSelectionUI] 🎁 Bonus Level {levelNumber} unlocked!");
     }
 
     /// <summary>
     /// Check if level is unlocked (Level 1 always unlocked, others need previous level complete)
+    /// Bonus levels require watching a rewarded ad
     /// </summary>
     private bool IsLevelUnlocked(int levelNumber)
     {
         if (levelNumber == 1)
             return true;
+
+        // Bonus levels: unlocked by watching rewarded ad
+        if (IsBonusLevel(levelNumber))
+            return IsBonusLevelUnlocked(levelNumber);
 
         return IsLevelCompleted(levelNumber - 1);
     }
@@ -337,14 +439,21 @@ public class LevelSelectionUI : MonoBehaviour
         return PlayerPrefs.GetInt(key, 0) == 1;
     }
 
-    private void OnLevelButtonClicked(int levelNumber, bool isUnlocked, Button button)
+    private void OnLevelButtonClicked(int levelNumber, bool isUnlocked, Button button, bool isBonus = false)
     {
         if (!isUnlocked)
         {
-            // Play locked button sound
+            // Bonus level: show rewarded ad to unlock
+            if (isBonus)
+            {
+                PlaySound(buttonClickSound);
+                ShowRewardedAdForBonusLevel(levelNumber, button);
+                return;
+            }
+
+            // Regular locked level: play error sound and shake
             PlaySound(lockedButtonSound);
 
-            // Shake the lock icon
             Transform lockTransform = button.transform.Find("lock parent");
             if (lockTransform != null)
             {
@@ -360,15 +469,121 @@ public class LevelSelectionUI : MonoBehaviour
         LoadLevel(levelNumber);
     }
 
+    /// <summary>
+    /// Show a rewarded ad to unlock a bonus level
+    /// </summary>
+    private void ShowRewardedAdForBonusLevel(int levelNumber, Button button)
+    {
+        Debug.Log($"[LevelSelectionUI] 🎬 Bonus Level {levelNumber} clicked, showing dialog...");
+
+        // Show dialog first - when user confirms, show the ad
+        if (bonusLevelDialog != null)
+        {
+            bonusLevelDialog.Open(() =>
+            {
+                // User clicked "Watch Ad" in the dialog
+                StartBonusAd(levelNumber, button);
+            });
+        }
+        else
+        {
+            // No dialog assigned - show ad directly (fallback)
+            Debug.LogWarning("[LevelSelectionUI] BonusLevelDialog not assigned! Showing ad directly.");
+            StartBonusAd(levelNumber, button);
+        }
+    }
+
+    private void StartBonusAd(int levelNumber, Button button)
+    {
+        if (RewardedAdsManager.Instance == null)
+        {
+            Debug.LogWarning("[LevelSelectionUI] RewardedAdsManager not found! Unlocking bonus level directly.");
+            OnBonusAdRewardGranted(levelNumber, button);
+            return;
+        }
+
+        if (!RewardedAdsManager.Instance.IsReady())
+        {
+            Debug.Log("[LevelSelectionUI] Ad not ready, preloading...");
+            RewardedAdsManager.Instance.Preload((loaded) =>
+            {
+                if (loaded)
+                {
+                    ShowBonusAdNow(levelNumber, button);
+                }
+                else
+                {
+                    Debug.LogWarning("[LevelSelectionUI] Failed to load ad for bonus level");
+                    PlaySound(lockedButtonSound);
+                }
+            });
+            return;
+        }
+
+        ShowBonusAdNow(levelNumber, button);
+    }
+
+    private void ShowBonusAdNow(int levelNumber, Button button)
+    {
+        RewardedAdsManager.Instance.ShowRewarded(
+            onReward: () =>
+            {
+                Debug.Log($"[LevelSelectionUI] 🎁 Ad reward received for Bonus Level {levelNumber}!");
+                OnBonusAdRewardGranted(levelNumber, button);
+            },
+            onClosed: (completed) =>
+            {
+                if (!completed)
+                {
+                    Debug.Log("[LevelSelectionUI] Ad closed without completing");
+                }
+            },
+            onFailed: (error) =>
+            {
+                Debug.LogWarning($"[LevelSelectionUI] Ad failed: {error}");
+                PlaySound(lockedButtonSound);
+            }
+        );
+    }
+
+    private void OnBonusAdRewardGranted(int levelNumber, Button button)
+    {
+        // Unlock the bonus level
+        UnlockBonusLevel(levelNumber);
+
+        // Refresh button appearance
+        SetupButton(button, levelNumber, true);
+
+        // Auto-load the bonus level
+        LoadLevel(levelNumber);
+    }
+
     private void LoadLevel(int levelNumber)
     {
-        string sceneName = $"{levelScenePrefix}{levelNumber}";
+        string sceneName;
+        if (IsBonusLevel(levelNumber))
+        {
+            int bonusIndex = bonusLevelNumbers.IndexOf(levelNumber) + 1;
+            sceneName = $"{bonusScenePrefix}{bonusIndex}";
+        }
+        else
+        {
+            sceneName = $"{levelScenePrefix}{levelNumber}";
+        }
 
-        // Save which level we're loading (0-indexed for CurrentLevel)
-        PlayerPrefs.SetInt("CurrentLevel", levelNumber - 1);
-        PlayerPrefs.Save();
+        // Check if scene exists in build settings
+        if (Application.CanStreamedLevelBeLoaded(sceneName))
+        {
+            // Save which level we're loading (0-indexed for CurrentLevel)
+            PlayerPrefs.SetInt("CurrentLevel", levelNumber - 1);
+            PlayerPrefs.Save();
 
-        SceneManager.LoadScene(sceneName);
+            SceneManager.LoadScene(sceneName);
+        }
+        else
+        {
+            Debug.LogError($"[LevelSelectionUI] Scene '{sceneName}' not found in Build Settings! Add it via File -> Build Profiles.");
+        }
     }
 
     private IEnumerator AnimateButtonsSequence()

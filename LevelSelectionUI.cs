@@ -192,7 +192,7 @@ public class LevelSelectionUI : MonoBehaviour
             }
 
             int levelNumber = i + 1;
-            SetupButton(button, levelNumber);
+            SetupButton(button, levelNumber, false);
             levelButtons.Add(button);
         }
 
@@ -234,7 +234,7 @@ public class LevelSelectionUI : MonoBehaviour
                 button.transform.localScale = Vector3.zero;
             }
 
-            SetupButton(button, levelNumber);
+            SetupButton(button, levelNumber, true);
             levelButtons.Add(button);
             Debug.Log($"[LevelSelectionUI] Bonus button setup: index {i} -> Level {levelNumber}");
         }
@@ -284,19 +284,18 @@ public class LevelSelectionUI : MonoBehaviour
             return;
         }
 
-        SetupButton(button, levelNumber);
+        SetupButton(button, levelNumber, IsBonusLevel(levelNumber));
         levelButtons.Add(button);
     }
 
     /// <summary>
     /// Setup a button's appearance and click handler
     /// </summary>
-    private void SetupButton(Button button, int levelNumber)
+    private void SetupButton(Button button, int levelNumber, bool isBonus)
     {
         Image buttonImage = button.GetComponent<Image>();
         Text buttonText = button.GetComponentInChildren<Text>();
 
-        bool isBonus = IsBonusLevel(levelNumber);
         bool isUnlocked = IsLevelUnlocked(levelNumber);
         bool isCompleted = IsLevelCompleted(levelNumber);
 
@@ -553,7 +552,7 @@ public class LevelSelectionUI : MonoBehaviour
         UnlockBonusLevel(levelNumber);
 
         // Refresh button appearance
-        SetupButton(button, levelNumber);
+        SetupButton(button, levelNumber, true);
 
         // Auto-load the bonus level
         LoadLevel(levelNumber);
