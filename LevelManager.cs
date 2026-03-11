@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 
 /// <summary>
 /// Manages level progression, completion, and scene loading
@@ -11,6 +12,11 @@ public class LevelManager : MonoBehaviour
     [SerializeField] private string levelSelectionScene = "LevelSelection";
     [SerializeField] private string levelScenePrefix = "Level";
     [Tooltip("Level scenes should be named: Level1, Level2, Level3, etc.")]
+
+    [Header("Bonus Level Settings")]
+    [SerializeField] private string bonusScenePrefix = "Bonus";
+    [SerializeField] private List<int> bonusLevelNumbers = new List<int>();
+    [Tooltip("Level numbers that are bonus levels (must match LevelSelectionUI)")]
 
     [Header("Level Settings")]
     [SerializeField] private int totalLevels = 10;
@@ -161,11 +167,24 @@ public class LevelManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Get the scene name for a given level number (1-indexed)
+    /// </summary>
+    private string GetSceneName(int levelNumber)
+    {
+        if (bonusLevelNumbers.Contains(levelNumber))
+        {
+            int bonusIndex = bonusLevelNumbers.IndexOf(levelNumber) + 1;
+            return $"{bonusScenePrefix}{bonusIndex}";
+        }
+        return $"{levelScenePrefix}{levelNumber}";
+    }
+
+    /// <summary>
     /// Load the current level scene
     /// </summary>
     public void LoadCurrentLevel()
     {
-        string sceneName = $"{levelScenePrefix}{currentLevelNumber + 1}";
+        string sceneName = GetSceneName(currentLevelNumber + 1);
         
         if (debugMode)
         {
@@ -294,7 +313,7 @@ public class LevelManager : MonoBehaviour
     /// </summary>
     public string GetCurrentLevelName()
     {
-        return $"{levelScenePrefix}{currentLevelNumber + 1}";
+        return GetSceneName(currentLevelNumber + 1);
     }
 
     /// <summary>

@@ -23,6 +23,10 @@ public class LevelData : ScriptableObject
     [Tooltip("Which level must be completed to unlock this one? (0 = none)")]
     public int requiredPreviousLevel = 0;
 
+    [Header("Bonus Level")]
+    [Tooltip("Is this a bonus level? Bonus levels are unlocked by watching a rewarded ad")]
+    public bool isBonusLevel = false;
+
     [Header("Visual")]
     [Tooltip("Thumbnail/preview image for level selection")]
     public Sprite levelThumbnail;
