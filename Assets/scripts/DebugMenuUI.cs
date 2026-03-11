@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -102,17 +103,8 @@ public class DebugMenuUI : MonoBehaviour
             GameProgressManager.Instance.ResetAllProgress();
         }
 
-        // Refresh level selection UI buttons to show locked state
-        LevelSelectionUI levelSelectionUI = FindObjectOfType<LevelSelectionUI>();
-        if (levelSelectionUI != null)
-        {
-            Debug.Log("[DebugMenuUI] Found LevelSelectionUI, refreshing buttons...");
-            levelSelectionUI.RefreshAllButtons();
-        }
-        else
-        {
-            Debug.LogWarning("[DebugMenuUI] LevelSelectionUI NOT found! Buttons won't refresh.");
-        }
+        // Reload scene to refresh all UI (buttons, locks, colors)
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
     
     private void OnShowDebugInfo()
