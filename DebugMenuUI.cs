@@ -106,7 +106,12 @@ public class DebugMenuUI : MonoBehaviour
         LevelSelectionUI levelSelectionUI = FindObjectOfType<LevelSelectionUI>();
         if (levelSelectionUI != null)
         {
+            Debug.Log("[DebugMenuUI] Found LevelSelectionUI, refreshing buttons...");
             levelSelectionUI.RefreshAllButtons();
+        }
+        else
+        {
+            Debug.LogWarning("[DebugMenuUI] LevelSelectionUI NOT found! Buttons won't refresh.");
         }
     }
     

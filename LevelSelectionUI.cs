@@ -704,12 +704,16 @@ public class LevelSelectionUI : MonoBehaviour
     /// </summary>
     public void RefreshAllButtons()
     {
+        Debug.Log("[LevelSelectionUI] RefreshAllButtons called!");
+
         // Re-setup regular buttons
         for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
         {
             Button button = manualLevelButtons[i];
             if (button == null) continue;
-            SetupButton(button, i + 1, false);
+            int levelNumber = i + 1;
+            Debug.Log($"[LevelSelectionUI] Refreshing regular button {levelNumber}, unlocked={IsLevelUnlocked(levelNumber)}");
+            SetupButton(button, levelNumber, false);
         }
 
         // Re-setup bonus buttons
@@ -717,7 +721,9 @@ public class LevelSelectionUI : MonoBehaviour
         {
             Button button = manualBonusLevelButtons[i];
             if (button == null || i >= bonusLevelNumbers.Count) continue;
-            SetupButton(button, bonusLevelNumbers[i], true);
+            int levelNumber = bonusLevelNumbers[i];
+            Debug.Log($"[LevelSelectionUI] Refreshing bonus button {levelNumber}, unlocked={IsLevelUnlocked(levelNumber)}, PlayerPrefs BonusLevel_{levelNumber}_Unlocked={PlayerPrefs.GetInt($"BonusLevel_{levelNumber}_Unlocked", 0)}");
+            SetupButton(button, levelNumber, true);
         }
 
         Debug.Log("[LevelSelectionUI] All buttons refreshed!");
