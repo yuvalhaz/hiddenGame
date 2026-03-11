@@ -267,6 +267,11 @@ public class GameDebugTools : MonoBehaviour
         Debug.Log("🗑️ RESETTING ALL PROGRESS");
         Debug.Log("═══════════════════════════════════════");
 
+        // Nuclear option: delete ALL PlayerPrefs (including bonus level unlocks)
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+        Debug.Log("[GameDebugTools] ✅ PlayerPrefs.DeleteAll() - all keys cleared!");
+
         if (progressManager != null)
         {
             progressManager.ResetAllProgress();
@@ -284,7 +289,7 @@ public class GameDebugTools : MonoBehaviour
             adController.ResetPlayTimerForTesting();
         }
 
-        // Reload current scene
+        // Reload current scene to refresh all UI
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 
         Debug.Log("✅ All progress reset!");
