@@ -24,6 +24,10 @@ public class HintDialog : MonoBehaviour
     [SerializeField] private SettingsUI settingsUI;
     [Tooltip("Optional: SettingsUI reference to prevent opening both panels together")]
 
+    [Header("Reward Settings")]
+    [SerializeField] private int hintsPerAd = 3;
+    [Tooltip("Number of hints granted per rewarded ad watch")]
+
     [Header("Sound Effects")]
     [SerializeField] private AudioClip openDialogSound;
     [Tooltip("Sound played when hint dialog opens")]
@@ -204,9 +208,12 @@ public class HintDialog : MonoBehaviour
 
         HideImmediate();
 
-        #if UNITY_EDITOR
-        Debug.Log("[HintDialog] Hint reward granted!");
-        #endif
+        // Grant hints to the player's count
+        if (IAPManager.Instance != null)
+        {
+            IAPManager.Instance.AddHints(hintsPerAd);
+            Debug.Log($"[HintDialog] 🎁 Granted {hintsPerAd} hints after watching ad!");
+        }
 
         // Trigger hint logic (connected in Unity Inspector or via VisualHintSystem)
         onHintGranted?.Invoke();

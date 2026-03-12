@@ -260,7 +260,7 @@ public class IAPManager : MonoBehaviour, IStoreListener
         Debug.Log("[IAPManager] ✅ Ads removed!");
     }
 
-    private void AddHints(int count)
+    public void AddHints(int count)
     {
         // If unlimited - no need to add counts, but still update UI
         if (HasUnlimitedHints())
