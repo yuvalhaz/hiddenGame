@@ -34,11 +34,15 @@ public class EndingDialogController : MonoBehaviour
     private Coroutine floatCoroutine;
     private bool isLoading = false;
 
+    private Vector2 originalPosition;
+
     void Start()
     {
         if (bubbleMaster != null)
         {
             rect = bubbleMaster.GetComponent<RectTransform>();
+            originalPosition = rect.anchoredPosition;
+            rect.localScale = Vector3.zero;
             bubbleMaster.SetActive(false);
         }
 
@@ -64,8 +68,10 @@ public class EndingDialogController : MonoBehaviour
         if (bubbleMaster == null || rect == null)
             yield break;
 
-        bubbleMaster.SetActive(true);
+        // Reset transform BEFORE activating to avoid flicker
         rect.localScale = Vector3.one * 0.05f;
+        rect.anchoredPosition = originalPosition;
+        bubbleMaster.SetActive(true);
 
         PlayBubbleSound();
 
