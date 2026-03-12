@@ -6,39 +6,44 @@ using System.Collections;
 public class EndingDialogController : MonoBehaviour
 {
     [Header("UI References")]
+    [SerializeField] private GameObject bubbleMaster;
     [SerializeField] private Button nextButton;
-    [SerializeField] private Text buttonText;
 
     [Header("Animation Settings")]
-    [SerializeField] private float buttonAppearDelay = 0.3f;
-    [SerializeField] private float popInDuration = 0.4f;
-    [SerializeField] private float pulseScale = 1.15f;
-    [SerializeField] private float pulseSpeed = 2f;
+    [SerializeField] private float appearTime = 0.25f;
+    [SerializeField] private float floatAmount = 8f;
+    [SerializeField] private float floatSpeed = 2f;
+
+    [Header("Click Animation")]
+    [SerializeField] private float clickScale = 0.8f;
+    [SerializeField] private float clickTime = 0.1f;
 
     [Header("Audio Settings")]
     [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip buttonAppearSound;
-    [Range(0f, 1f)]
-    [SerializeField] private float soundVolume = 1f;
+    [SerializeField] private AudioClip bubblePopSound;
 
     [Header("Settings")]
     [SerializeField] private string levelSelectionScene = "LevelSelection";
-    [SerializeField] private bool quitGameInsteadOfLoadScene = false;
 
     [Header("Tutorial Mode")]
     [SerializeField] private bool isTutorialMode = false;
     [Tooltip("Enable this for Level0 - goes straight to LevelSelection")]
 
-    private Coroutine pulseCoroutine;
-    private bool isTransitioning = false;
+    private RectTransform rect;
+    private Vector2 startPos;
+    private Coroutine floatCoroutine;
+    private bool isLoading = false;
 
     void Start()
     {
-        if (nextButton != null)
+        if (bubbleMaster != null)
         {
-            nextButton.onClick.AddListener(OnNextClicked);
-            nextButton.gameObject.SetActive(false);
+            rect = bubbleMaster.GetComponent<RectTransform>();
+            bubbleMaster.SetActive(false);
         }
+
+        if (nextButton != null)
+            nextButton.onClick.AddListener(OnNextClicked);
     }
 
     void OnDestroy()
@@ -49,131 +54,116 @@ public class EndingDialogController : MonoBehaviour
 
     public void StartEndingDialog()
     {
-        Debug.Log("[EndingDialogController] StartEndingDialog called!");
-        StartCoroutine(ShowNextButton());
+        StartCoroutine(ShowNextBubble());
     }
 
-    private IEnumerator ShowNextButton()
+    private IEnumerator ShowNextBubble()
     {
-        yield return new WaitForSeconds(buttonAppearDelay);
+        yield return new WaitForSeconds(0.4f);
 
-        if (nextButton == null) yield break;
+        if (bubbleMaster == null || rect == null)
+            yield break;
 
-        nextButton.gameObject.SetActive(true);
-        RectTransform rt = nextButton.GetComponent<RectTransform>();
-        Vector3 originalScale = rt.localScale;
-        rt.localScale = Vector3.zero;
+        bubbleMaster.SetActive(true);
+        rect.localScale = Vector3.one * 0.05f;
 
-        PlaySound(buttonAppearSound);
+        PlayBubbleSound();
 
-        // Pop-in with elastic overshoot
-        float elapsed = 0f;
-        while (elapsed < popInDuration)
+        yield return StartCoroutine(PopAnimation());
+
+        startPos = rect.anchoredPosition;
+        if (floatCoroutine != null)
+            StopCoroutine(floatCoroutine);
+        floatCoroutine = StartCoroutine(FloatAnimation());
+    }
+
+    private IEnumerator PopAnimation()
+    {
+        float t = 0f;
+        Vector3 from = Vector3.one * 0.05f;
+        Vector3 to = Vector3.one;
+
+        while (t < appearTime)
         {
-            elapsed += Time.deltaTime;
-            float t = elapsed / popInDuration;
-            float ease = 1f - Mathf.Pow(2f, -10f * t) * Mathf.Cos(t * Mathf.PI * 2.5f);
-            rt.localScale = originalScale * Mathf.Max(0f, ease);
+            t += Time.deltaTime;
+            float p = Mathf.Clamp01(t / appearTime);
+            rect.localScale = Vector3.Lerp(from, to, p);
             yield return null;
         }
-        rt.localScale = originalScale;
-
-        // Idle pulse
-        pulseCoroutine = StartCoroutine(PulseAnimation(rt, originalScale));
+        rect.localScale = Vector3.one;
     }
 
-    private IEnumerator PulseAnimation(RectTransform rt, Vector3 baseScale)
+    private IEnumerator FloatAnimation()
     {
-        float time = 0f;
         while (true)
         {
-            time += Time.deltaTime * pulseSpeed;
-            float scale = 1f + (pulseScale - 1f) * (Mathf.Sin(time) * 0.5f + 0.5f);
-            rt.localScale = baseScale * scale;
+            float y = Mathf.Sin(Time.time * floatSpeed) * floatAmount;
+            rect.anchoredPosition = startPos + new Vector2(0f, y);
             yield return null;
         }
+    }
+
+    private void PlayBubbleSound()
+    {
+        if (bubblePopSound == null) return;
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+        if (audioSource != null)
+            audioSource.PlayOneShot(bubblePopSound);
     }
 
     private void OnNextClicked()
     {
-        if (isTransitioning) return;
-        isTransitioning = true;
-
-        Debug.Log("[EndingDialogController] Next button clicked!");
-
-        if (pulseCoroutine != null)
-        {
-            StopCoroutine(pulseCoroutine);
-            pulseCoroutine = null;
-        }
-
-        StartCoroutine(ClickAnimationThenProceed());
+        if (isLoading) return;
+        StartCoroutine(ClickAndLoadNext());
     }
 
-    private IEnumerator ClickAnimationThenProceed()
+    private IEnumerator ClickAndLoadNext()
     {
-        if (nextButton != null)
-        {
-            RectTransform rt = nextButton.GetComponent<RectTransform>();
-            Vector3 originalScale = rt.localScale;
+        isLoading = true;
 
-            // Quick squash on click
-            float duration = 0.15f;
-            float elapsed = 0f;
-            while (elapsed < duration)
+        if (floatCoroutine != null)
+        {
+            StopCoroutine(floatCoroutine);
+            floatCoroutine = null;
+        }
+
+        // Click animation (only if rect exists)
+        if (rect != null)
+        {
+            Vector3 originalScale = rect.localScale;
+            Vector3 targetScale = originalScale * clickScale;
+            float t = 0f;
+
+            while (t < clickTime)
             {
-                elapsed += Time.deltaTime;
-                float t = elapsed / duration;
-                float scale = 1f - 0.2f * Mathf.Sin(t * Mathf.PI);
-                rt.localScale = originalScale * scale;
+                t += Time.deltaTime;
+                float p = Mathf.Clamp01(t / clickTime);
+                rect.localScale = Vector3.Lerp(originalScale, targetScale, p);
                 yield return null;
             }
-            rt.localScale = originalScale;
+            rect.localScale = targetScale;
         }
 
-        yield return new WaitForSeconds(0.1f);
+        yield return new WaitForSeconds(0.05f);
 
+        // Handle tutorial mode
         if (isTutorialMode)
         {
-            Debug.Log("[EndingDialogController] Tutorial completed - going to LevelSelection");
             PlayerPrefs.SetInt("IsFirstTime", 0);
             PlayerPrefs.Save();
+            SceneManager.LoadScene(levelSelectionScene);
+            yield break;
         }
 
-        if (quitGameInsteadOfLoadScene)
+        // Use LevelManager for proper level progression
+        if (LevelManager.Instance != null)
         {
-            #if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-            #else
-            Application.Quit();
-            #endif
-        }
-        else if (LevelManager.Instance != null && !isTutorialMode)
-        {
-            Debug.Log("[EndingDialogController] Loading next level...");
             LevelManager.Instance.LoadCurrentLevel();
         }
         else
         {
-            Debug.Log("[EndingDialogController] Loading LevelSelection...");
             SceneManager.LoadScene(levelSelectionScene);
         }
-    }
-
-    private void PlaySound(AudioClip clip)
-    {
-        if (clip == null) return;
-
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-            {
-                audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.playOnAwake = false;
-            }
-        }
-
-        audioSource.PlayOneShot(clip, soundVolume);
     }
 }
