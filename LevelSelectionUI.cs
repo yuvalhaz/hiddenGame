@@ -296,7 +296,7 @@ public class LevelSelectionUI : MonoBehaviour
         Image buttonImage = button.GetComponent<Image>();
         Text buttonText = button.GetComponentInChildren<Text>();
 
-        bool isUnlocked = IsLevelUnlocked(levelNumber);
+        bool isUnlocked = IsLevelUnlocked(levelNumber, isBonus);
         bool isCompleted = IsLevelCompleted(levelNumber);
 
         // Find and show/hide the lock GameObject
@@ -425,10 +425,10 @@ public class LevelSelectionUI : MonoBehaviour
     /// Check if level is unlocked (Level 1 always unlocked, others need previous level complete)
     /// Bonus levels require watching a rewarded ad
     /// </summary>
-    private bool IsLevelUnlocked(int levelNumber)
+    private bool IsLevelUnlocked(int levelNumber, bool isBonus)
     {
-        // Bonus levels: always check via ad unlock first, regardless of level number
-        if (IsBonusLevel(levelNumber))
+        // Bonus levels: check via ad unlock
+        if (isBonus)
             return IsBonusLevelUnlocked(levelNumber);
 
         if (levelNumber == 1)
@@ -712,7 +712,7 @@ public class LevelSelectionUI : MonoBehaviour
             Button button = manualLevelButtons[i];
             if (button == null) continue;
             int levelNumber = i + 1;
-            Debug.Log($"[LevelSelectionUI] Refreshing regular button {levelNumber}, unlocked={IsLevelUnlocked(levelNumber)}");
+            Debug.Log($"[LevelSelectionUI] Refreshing regular button {levelNumber}, unlocked={IsLevelUnlocked(levelNumber, false)}");
             SetupButton(button, levelNumber, false);
         }
 
@@ -722,7 +722,7 @@ public class LevelSelectionUI : MonoBehaviour
             Button button = manualBonusLevelButtons[i];
             if (button == null || i >= bonusLevelNumbers.Count) continue;
             int levelNumber = bonusLevelNumbers[i];
-            Debug.Log($"[LevelSelectionUI] Refreshing bonus button {levelNumber}, unlocked={IsLevelUnlocked(levelNumber)}, PlayerPrefs BonusLevel_{levelNumber}_Unlocked={PlayerPrefs.GetInt($"BonusLevel_{levelNumber}_Unlocked", 0)}");
+            Debug.Log($"[LevelSelectionUI] Refreshing bonus button {levelNumber}, unlocked={IsLevelUnlocked(levelNumber, true)}, PlayerPrefs BonusLevel_{levelNumber}_Unlocked={PlayerPrefs.GetInt($"BonusLevel_{levelNumber}_Unlocked", 0)}");
             SetupButton(button, levelNumber, true);
         }
 
