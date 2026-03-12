@@ -42,6 +42,7 @@ public class ImageRevealController : MonoBehaviour
                 if (placeholderImage != null)
                 {
                     placeholderImage.color = new Color(1, 1, 1, 0);
+                    placeholderImage.enabled = false;
                 }
 
                 isRevealed = false;
