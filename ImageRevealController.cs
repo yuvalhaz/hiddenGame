@@ -27,26 +27,48 @@ public class ImageRevealController : MonoBehaviour
             GameProgressManager.Instance != null &&
             GameProgressManager.Instance.IsItemPlaced(dropSpot.spotId))
         {
-            // Item already placed - reveal instantly
-            dropSpot.IsSettled = true;
-
-            if (placeholderImage != null)
+            // Check if this spot is a transformation trigger that should stay hidden
+            if (IsConsumedByTransformation(dropSpot.spotId))
             {
-                placeholderImage.color = new Color(1, 1, 1, 0);
+                // This spot's image was consumed by a transformation - keep it hidden
+                dropSpot.IsSettled = true;
+
+                if (backgroundImage != null)
+                {
+                    backgroundImage.color = new Color(1f, 1f, 1f, 0f);
+                    backgroundImage.enabled = false;
+                }
+
+                if (placeholderImage != null)
+                {
+                    placeholderImage.color = new Color(1, 1, 1, 0);
+                }
+
+                isRevealed = false;
+                Debug.Log($"[ImageRevealController] {dropSpot.spotId} is a transformation trigger - staying hidden");
             }
-
-            if (backgroundImage != null)
+            else
             {
-                backgroundImage.color = Color.white;
-            }
+                // Item already placed - reveal instantly
+                dropSpot.IsSettled = true;
 
-            isRevealed = true;
+                if (placeholderImage != null)
+                {
+                    placeholderImage.color = new Color(1, 1, 1, 0);
+                }
 
-            // ✅ Notify SmlAnimManager to enable button clicks
-            if (SmlAnimManager.Instance != null)
-            {
-                SmlAnimManager.Instance.RefreshSpot(dropSpot);
-                Debug.Log($"[ImageRevealController] Notified SmlAnimManager for {dropSpot.spotId}");
+                if (backgroundImage != null)
+                {
+                    backgroundImage.color = Color.white;
+                }
+
+                isRevealed = true;
+
+                // Notify SmlAnimManager to enable button clicks
+                if (SmlAnimManager.Instance != null)
+                {
+                    SmlAnimManager.Instance.RefreshSpot(dropSpot);
+                }
             }
         }
         else
@@ -195,6 +217,27 @@ public class ImageRevealController : MonoBehaviour
         isRevealed = true;
     }
 
+
+    /// <summary>
+    /// Check if this spot's image was consumed by a transformation on another spot.
+    /// If so, it should stay hidden on reload.
+    /// </summary>
+    private bool IsConsumedByTransformation(string spotId)
+    {
+        DropSpot[] allSpots = FindObjectsOfType<DropSpot>(true);
+        foreach (var spot in allSpots)
+        {
+            if (spot.spotId == spotId) continue;
+
+            if (spot.AcceptsTransformation(spotId) ||
+                (GameProgressManager.Instance.IsItemPlaced(spot.spotId) &&
+                 spot.HasTransformationTrigger(spotId)))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public Image GetBackgroundImage()
     {

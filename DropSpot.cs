@@ -221,6 +221,22 @@ public class DropSpot : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Check if this spot has a transformation triggered by the given itemId (ignores IsSettled).
+    /// Used by ImageRevealController to know if a trigger spot should stay hidden on reload.
+    /// </summary>
+    public bool HasTransformationTrigger(string itemId)
+    {
+        if (transformations == null) return false;
+
+        foreach (var t in transformations)
+        {
+            if (string.Equals(t.triggerItemId, itemId, System.StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
+
     public void ApplyTransformationSprite(string itemId)
     {
         if (transformations == null) return;
