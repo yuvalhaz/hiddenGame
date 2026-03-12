@@ -323,14 +323,6 @@ public class LevelCompleteController : MonoBehaviour
             if (nextLevelData != null || LevelManager.Instance != null)
             {
                 nextLevelButton.gameObject.SetActive(true);
-                var buttonText = nextLevelButton.GetComponentInChildren<Text>();
-                if (buttonText != null)
-                {
-                    if (nextLevelData != null)
-                        buttonText.text = $"Next: {nextLevelData.levelName}";
-                    else
-                        buttonText.text = "Next Level";
-                }
             }
             else
             {
