@@ -20,10 +20,6 @@ public class GameDebugTools : MonoBehaviour
     [SerializeField] private ButtonSpotMatcher buttonSpotMatcher;
     [SerializeField] private VisualHintSystem hintSystem;
 
-    [Header("🎁 Level Selection Debug")]
-    [SerializeField] private int totalLevelsToUnlock = 10;
-    [Tooltip("How many levels to unlock/lock (should match totalLevels in LevelSelectionUI)")]
-
     [Header("⌨️ Keyboard Shortcuts")]
     [SerializeField] private bool enableKeyboardShortcuts = true;
     [SerializeField] private KeyCode resetCurrentLevelKey = KeyCode.R;
@@ -188,16 +184,6 @@ public class GameDebugTools : MonoBehaviour
             UnlockAllLevels();
         }
 
-        if (GUILayout.Button("🔓 Unlock All Screens (PlayerPrefs)"))
-        {
-            UnlockAllScreens();
-        }
-
-        if (GUILayout.Button("🔒 Lock All Screens (PlayerPrefs)"))
-        {
-            LockAllScreens();
-        }
-
         GUILayout.Space(10);
 
         // === TESTING ===
@@ -281,6 +267,11 @@ public class GameDebugTools : MonoBehaviour
         Debug.Log("🗑️ RESETTING ALL PROGRESS");
         Debug.Log("═══════════════════════════════════════");
 
+        // Nuclear option: delete ALL PlayerPrefs (including bonus level unlocks)
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+        Debug.Log("[GameDebugTools] ✅ PlayerPrefs.DeleteAll() - all keys cleared!");
+
         if (progressManager != null)
         {
             progressManager.ResetAllProgress();
@@ -298,7 +289,7 @@ public class GameDebugTools : MonoBehaviour
             adController.ResetPlayTimerForTesting();
         }
 
-        // Reload current scene
+        // Reload current scene to refresh all UI
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 
         Debug.Log("✅ All progress reset!");
@@ -361,40 +352,6 @@ public class GameDebugTools : MonoBehaviour
         }
 
         Debug.Log($"✅ Unlocked {allLevelData.Length} levels!");
-    }
-
-    // ===== SCREEN UNLOCK/LOCK =====
-
-    [ContextMenu("🔓 Unlock All Screens (PlayerPrefs)")]
-    public void UnlockAllScreens()
-    {
-        Debug.Log("🔓 Unlocking all screens via PlayerPrefs...");
-
-        for (int i = 1; i <= totalLevelsToUnlock; i++)
-        {
-            // Mark level as completed so the next one unlocks
-            PlayerPrefs.SetInt($"Level_{i}_Completed", 1);
-            // Also unlock bonus levels
-            PlayerPrefs.SetInt($"BonusLevel_{i}_Unlocked", 1);
-        }
-        PlayerPrefs.Save();
-
-        Debug.Log($"✅ All {totalLevelsToUnlock} screens unlocked! Reload the level selection scene to see changes.");
-    }
-
-    [ContextMenu("🔒 Lock All Screens (PlayerPrefs)")]
-    public void LockAllScreens()
-    {
-        Debug.Log("🔒 Locking all screens via PlayerPrefs...");
-
-        for (int i = 1; i <= totalLevelsToUnlock; i++)
-        {
-            PlayerPrefs.DeleteKey($"Level_{i}_Completed");
-            PlayerPrefs.DeleteKey($"BonusLevel_{i}_Unlocked");
-        }
-        PlayerPrefs.Save();
-
-        Debug.Log($"✅ All {totalLevelsToUnlock} screens locked! Reload the level selection scene to see changes.");
     }
 
     // ===== TESTING FUNCTIONS =====
