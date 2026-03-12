@@ -61,6 +61,33 @@ public class DropSpot : MonoBehaviour
             GameProgressManager.Instance.OnItemPlaced -= OnAnyItemPlaced; // avoid double
             GameProgressManager.Instance.OnItemPlaced += OnAnyItemPlaced;
         }
+
+        // Restore transformations on scene reload
+        if (transformations != null && transformations.Count > 0 && GameProgressManager.Instance != null)
+        {
+            StartCoroutine(RestoreTransformationsOnLoad());
+        }
+    }
+
+    private IEnumerator RestoreTransformationsOnLoad()
+    {
+        // Wait 2 frames so ImageRevealController.Start() and ApplyProgressToScene() finish first
+        yield return null;
+        yield return null;
+
+        if (!IsSettled || !GameProgressManager.Instance.IsItemPlaced(spotId))
+            yield break;
+
+        foreach (var t in transformations)
+        {
+            if (GameProgressManager.Instance.IsItemPlaced(t.triggerItemId))
+            {
+                ApplyTransformationSprite(t.triggerItemId);
+                HideTriggerSpotImage(t.triggerItemId);
+                Debug.Log($"[DropSpot] Restored transformation on {spotId}: {t.triggerItemId}");
+                break;
+            }
+        }
     }
 
     /// <summary>
@@ -76,7 +103,40 @@ public class DropSpot : MonoBehaviour
             {
                 ApplyTransformationSprite(itemId);
                 TriggerSparkles();
+
+                // Hide the trigger item's DropSpot image so it doesn't cover the transformed sprite
+                HideTriggerSpotImage(itemId);
+
                 Debug.Log($"[DropSpot] Auto-transformation on {spotId}: {itemId} placed → sprite changed");
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Find the trigger item's DropSpot and hide its revealed image
+    /// </summary>
+    private void HideTriggerSpotImage(string triggerItemId)
+    {
+        DropSpot[] allSpots = FindObjectsOfType<DropSpot>(true);
+        foreach (var spot in allSpots)
+        {
+            if (string.Equals(spot.spotId, triggerItemId, System.StringComparison.Ordinal))
+            {
+                var triggerReveal = spot.GetComponent<ImageRevealController>();
+                if (triggerReveal != null)
+                {
+                    // ResetReveal stops the reveal coroutine and sets alpha to 0
+                    triggerReveal.ResetReveal();
+
+                    // Also disable the Image component so nothing can override it
+                    var bgImage = triggerReveal.GetBackgroundImage();
+                    if (bgImage != null)
+                    {
+                        bgImage.enabled = false;
+                        Debug.Log($"[DropSpot] Hidden trigger spot image: {triggerItemId}");
+                    }
+                }
                 break;
             }
         }

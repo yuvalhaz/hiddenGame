@@ -61,6 +61,33 @@ public class DropSpot : MonoBehaviour
             GameProgressManager.Instance.OnItemPlaced -= OnAnyItemPlaced; // avoid double
             GameProgressManager.Instance.OnItemPlaced += OnAnyItemPlaced;
         }
+
+        // Restore transformations on scene reload
+        if (transformations != null && transformations.Count > 0 && GameProgressManager.Instance != null)
+        {
+            StartCoroutine(RestoreTransformationsOnLoad());
+        }
+    }
+
+    private IEnumerator RestoreTransformationsOnLoad()
+    {
+        // Wait 2 frames so ImageRevealController.Start() and ApplyProgressToScene() finish first
+        yield return null;
+        yield return null;
+
+        if (!IsSettled || !GameProgressManager.Instance.IsItemPlaced(spotId))
+            yield break;
+
+        foreach (var t in transformations)
+        {
+            if (GameProgressManager.Instance.IsItemPlaced(t.triggerItemId))
+            {
+                ApplyTransformationSprite(t.triggerItemId);
+                HideTriggerSpotImage(t.triggerItemId);
+                Debug.Log($"[DropSpot] Restored transformation on {spotId}: {t.triggerItemId}");
+                break;
+            }
+        }
     }
 
     /// <summary>
