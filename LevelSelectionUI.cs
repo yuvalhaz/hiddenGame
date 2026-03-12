@@ -473,7 +473,7 @@ public class LevelSelectionUI : MonoBehaviour
         // Play button click sound
         PlaySound(buttonClickSound);
 
-        LoadLevel(levelNumber);
+        LoadLevel(levelNumber, isBonus);
     }
 
     /// <summary>
@@ -562,13 +562,13 @@ public class LevelSelectionUI : MonoBehaviour
         SetupButton(button, levelNumber, true);
 
         // Auto-load the bonus level
-        LoadLevel(levelNumber);
+        LoadLevel(levelNumber, true);
     }
 
-    private void LoadLevel(int levelNumber)
+    private void LoadLevel(int levelNumber, bool isBonus)
     {
         string sceneName;
-        if (IsBonusLevel(levelNumber))
+        if (isBonus)
         {
             int bonusIndex = bonusLevelNumbers.IndexOf(levelNumber) + 1;
             sceneName = $"{bonusScenePrefix}{bonusIndex}";
