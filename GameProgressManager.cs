@@ -59,27 +59,39 @@ public class GameProgressManager : MonoBehaviour
         // Use the active scene name - most reliable!
         string sceneName = SceneManager.GetActiveScene().name;
         string lowerSceneName = sceneName.ToLower();
-        
+
         // If it's a level scene (level1, Level1, level_1, etc.), use scene-specific key
         if (lowerSceneName.StartsWith("level") && lowerSceneName.Length > 5)
         {
             string numberPart = lowerSceneName.Substring(5);
             // Remove underscores and other non-digit characters
             numberPart = new string(numberPart.Where(char.IsDigit).ToArray());
-            
+
             if (!string.IsNullOrEmpty(numberPart) && int.TryParse(numberPart, out int levelNum))
             {
                 // Always use "Level_X_Progress" format regardless of original case
                 return $"Level_{levelNum}_Progress";
             }
         }
-        
+
+        // If it's a bonus scene (Bonus1, bonus1, etc.), use bonus-specific key
+        if (lowerSceneName.StartsWith("bonus") && lowerSceneName.Length > 5)
+        {
+            string numberPart = lowerSceneName.Substring(5);
+            numberPart = new string(numberPart.Where(char.IsDigit).ToArray());
+
+            if (!string.IsNullOrEmpty(numberPart) && int.TryParse(numberPart, out int bonusNum))
+            {
+                return $"Bonus_{bonusNum}_Progress";
+            }
+        }
+
         // Fallback: try to use currentLevelData if assigned
         if (currentLevelData != null)
         {
             return currentLevelData.GetProgressKey();
         }
-        
+
         // Last resort: use global key
         Debug.LogWarning($"[GameProgressManager] Scene '{sceneName}' is not a level scene, using global save key!");
         return SAVE_KEY;
@@ -151,60 +163,64 @@ public class GameProgressManager : MonoBehaviour
     {
         // Wait for scene to fully initialize
         yield return new WaitForSeconds(0.5f);
-        
+
         // Try to extract level number from scene name (e.g., "Level1" or "level1" -> 1)
         string sceneName = SceneManager.GetActiveScene().name;
-        
+
         // Make it case-insensitive by converting to lowercase
         string lowerSceneName = sceneName.ToLower();
-        
+
+        string completedKey = null;
+
         if (lowerSceneName.StartsWith("level") && lowerSceneName.Length > 5)
         {
-            string numberPart = lowerSceneName.Substring(5); // Get everything after "level"
-            // Remove underscores and other non-digit characters (support both "Level0" and "Level_0")
+            string numberPart = lowerSceneName.Substring(5);
             numberPart = new string(numberPart.Where(char.IsDigit).ToArray());
-            
+
             if (!string.IsNullOrEmpty(numberPart) && int.TryParse(numberPart, out int levelNumber))
             {
-                Debug.Log($"[GameProgressManager] Checking if Level {levelNumber} is completed...");
-                
-                // Check if this level is marked as completed in PlayerPrefs
-                string completedKey = $"Level_{levelNumber}_Completed";
-                bool isCompleted = PlayerPrefs.GetInt(completedKey, 0) == 1;
-                
-                Debug.Log($"[GameProgressManager] Key: {completedKey}, Value: {PlayerPrefs.GetInt(completedKey, 0)}, IsCompleted: {isCompleted}");
-                
-                if (isCompleted)
+                completedKey = $"Level_{levelNumber}_Completed";
+            }
+        }
+        else if (lowerSceneName.StartsWith("bonus"))
+        {
+            // Bonus levels: use currentLevelData to find the correct completion key
+            if (currentLevelData != null)
+            {
+                completedKey = $"Level_{currentLevelData.levelNumber}_Completed";
+            }
+        }
+
+        if (completedKey != null)
+        {
+            bool isCompleted = PlayerPrefs.GetInt(completedKey, 0) == 1;
+
+            Debug.Log($"[GameProgressManager] Key: {completedKey}, Value: {PlayerPrefs.GetInt(completedKey, 0)}, IsCompleted: {isCompleted}");
+
+            if (isCompleted)
+            {
+                Debug.Log($"[GameProgressManager] 🎉 {sceneName} is already completed!");
+
+                EndingDialogController dialogController = FindObjectOfType<EndingDialogController>();
+
+                if (dialogController != null)
                 {
-                    Debug.Log($"[GameProgressManager] 🎉 Level {levelNumber} is already completed!");
-                    Debug.Log($"[GameProgressManager] Looking for EndingDialogController to show exit bubbles...");
-                    
-                    // Find the EndingDialogController in the scene
-                    EndingDialogController dialogController = FindObjectOfType<EndingDialogController>();
-                    
-                    if (dialogController != null)
-                    {
-                        Debug.Log($"[GameProgressManager] ✅ Found EndingDialogController! Showing bubbles...");
-                        dialogController.StartEndingDialog();
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[GameProgressManager] ⚠️ EndingDialogController not found in scene!");
-                    }
+                    Debug.Log($"[GameProgressManager] ✅ Found EndingDialogController! Showing bubbles...");
+                    dialogController.StartEndingDialog();
                 }
                 else
                 {
-                    Debug.Log($"[GameProgressManager] Level {levelNumber} not completed yet - playing normally");
+                    Debug.LogWarning($"[GameProgressManager] ⚠️ EndingDialogController not found in scene!");
                 }
             }
             else
             {
-                Debug.LogWarning($"[GameProgressManager] Could not parse level number from scene name: {sceneName}");
+                Debug.Log($"[GameProgressManager] {sceneName} not completed yet - playing normally");
             }
         }
         else
         {
-            Debug.Log($"[GameProgressManager] Scene '{sceneName}' is not a level scene, skipping completion check");
+            Debug.Log($"[GameProgressManager] Scene '{sceneName}' is not a level/bonus scene, skipping completion check");
         }
     }
 
@@ -707,6 +723,15 @@ public class GameProgressManager : MonoBehaviour
                 PlayerPrefs.DeleteKey(levelKey);
                 deletedCount++;
                 Debug.Log($"[GameProgressManager] ✅ Deleted key: {levelKey}");
+            }
+
+            // Also delete bonus level progress keys
+            string bonusKey = $"Bonus_{i}_Progress";
+            if (PlayerPrefs.HasKey(bonusKey))
+            {
+                PlayerPrefs.DeleteKey(bonusKey);
+                deletedCount++;
+                Debug.Log($"[GameProgressManager] ✅ Deleted key: {bonusKey}");
             }
         }
         Debug.Log($"[GameProgressManager] Deleted {deletedCount} level-specific keys");
