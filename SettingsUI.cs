@@ -34,21 +34,6 @@ public class SettingsUI : MonoBehaviour
 
     [SerializeField] private Button restorePurchasesButton; // iOS only
 
-    [Header("Hints Display (Optional)")]
-    [SerializeField] private Text hintsCountText;
-
-    [Header("Color Changing Objects (Optional)")]
-    [SerializeField] private Image colorChangingImage1; // First object that changes color
-    [SerializeField] private Image colorChangingImage2; // Second object that changes color (always different from first)
-    [SerializeField] private Color[] availableColors = new Color[]
-    {
-        Color.red,
-        Color.blue,
-        Color.green,
-        Color.yellow,
-        new Color(1f, 0.5f, 0f) // Orange
-    };
-
     [Header("=== NOTIFICATIONS ===")]
     [SerializeField] private Button notificationToggleButton;
     [SerializeField] private Image notificationButtonIcon;
@@ -296,9 +281,6 @@ public class SettingsUI : MonoBehaviour
         if (unlimitedHintsButton != null)
             unlimitedHintsButton.interactable = !IAPManager.Instance.HasUnlimitedHints();
 
-        // Update hints count
-        UpdateHintsCount();
-
         // Update prices
         UpdatePrices();
     }
@@ -334,16 +316,6 @@ public class SettingsUI : MonoBehaviour
 
 
 
-
-    private void UpdateHintsCount()
-    {
-        if (hintsCountText == null || IAPManager.Instance == null) return;
-
-        if (IAPManager.Instance.HasUnlimitedHints())
-            hintsCountText.text = "Unlimited";
-        else
-            hintsCountText.text = IAPManager.Instance.GetHintsCount().ToString();
-    }
 
     /// <summary>
     /// Check if settings panel is currently open
@@ -390,9 +362,6 @@ public class SettingsUI : MonoBehaviour
 
         settingsPanel.SetActive(true);
         isPanelOpen = true;
-
-        // Change color of the color-changing object
-        ChangeRandomColor();
 
         // Update shop UI when opening
         UpdateShopUI();
@@ -493,64 +462,6 @@ public class SettingsUI : MonoBehaviour
         else if (!isEnabled && notificationOffIcon != null)
         {
             notificationButtonIcon.sprite = notificationOffIcon;
-        }
-    }
-
-    /// <summary>
-    /// Change the color of the color-changing objects to random colors from the list
-    /// Makes sure both objects have different colors
-    /// Preserves the alpha (transparency) of each object
-    /// </summary>
-    private void ChangeRandomColor()
-    {
-        if (availableColors == null || availableColors.Length < 2)
-        {
-            Debug.LogWarning("[SettingsUI] Need at least 2 colors for color changing!");
-            return;
-        }
-
-        // Handle first object
-        if (colorChangingImage1 != null)
-        {
-            int randomIndex1 = Random.Range(0, availableColors.Length);
-            Color newColor1 = availableColors[randomIndex1];
-
-            // Create new color with current alpha (don't modify the object's color directly)
-            Color finalColor1 = new Color(newColor1.r, newColor1.g, newColor1.b, colorChangingImage1.color.a);
-            colorChangingImage1.color = finalColor1;
-
-            Debug.Log($"[SettingsUI] Object 1 color: RGB({finalColor1.r}, {finalColor1.g}, {finalColor1.b}) Alpha: {finalColor1.a}");
-
-            // Handle second object - must be different from first
-            if (colorChangingImage2 != null)
-            {
-                int randomIndex2;
-                do
-                {
-                    randomIndex2 = Random.Range(0, availableColors.Length);
-                }
-                while (randomIndex2 == randomIndex1); // Keep trying until we get a different color
-
-                Color newColor2 = availableColors[randomIndex2];
-
-                // Create new color with current alpha
-                Color finalColor2 = new Color(newColor2.r, newColor2.g, newColor2.b, colorChangingImage2.color.a);
-                colorChangingImage2.color = finalColor2;
-
-                Debug.Log($"[SettingsUI] Object 2 color: RGB({finalColor2.r}, {finalColor2.g}, {finalColor2.b}) Alpha: {finalColor2.a}");
-            }
-        }
-        else if (colorChangingImage2 != null)
-        {
-            // If only second object exists
-            int randomIndex = Random.Range(0, availableColors.Length);
-            Color newColor = availableColors[randomIndex];
-
-            // Create new color with current alpha
-            Color finalColor = new Color(newColor.r, newColor.g, newColor.b, colorChangingImage2.color.a);
-            colorChangingImage2.color = finalColor;
-
-            Debug.Log($"[SettingsUI] Object 2 color: RGB({finalColor.r}, {finalColor.g}, {finalColor.b}) Alpha: {finalColor.a}");
         }
     }
 
