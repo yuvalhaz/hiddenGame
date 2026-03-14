@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Manages the settings menu UI including shop/IAP
@@ -33,6 +34,9 @@ public class SettingsUI : MonoBehaviour
     [SerializeField] private GameObject unlimitedHintsContainer; // Hide after purchase
 
     [SerializeField] private Button restorePurchasesButton; // iOS only
+
+    [Header("Level Selection")]
+    [SerializeField] private Button levelSelectionButton;
 
     [Header("Animation (Optional)")]
     [SerializeField] private bool animatePanel = true;
@@ -76,6 +80,11 @@ public class SettingsUI : MonoBehaviour
         if (musicToggleButton != null)
         {
             musicToggleButton.onClick.AddListener(ToggleMusicSetting);
+        }
+
+        if (levelSelectionButton != null)
+        {
+            levelSelectionButton.onClick.AddListener(GoToLevelSelection);
         }
 
         // Setup IAP buttons
@@ -417,6 +426,11 @@ public class SettingsUI : MonoBehaviour
         {
             musicButtonIcon.sprite = musicOffIcon;
         }
+    }
+
+    public void GoToLevelSelection()
+    {
+        SceneManager.LoadScene("LevelSelection");
     }
 
     /// <summary>
