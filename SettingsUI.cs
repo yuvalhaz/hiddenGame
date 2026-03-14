@@ -34,12 +34,6 @@ public class SettingsUI : MonoBehaviour
 
     [SerializeField] private Button restorePurchasesButton; // iOS only
 
-    [Header("=== NOTIFICATIONS ===")]
-    [SerializeField] private Button notificationToggleButton;
-    [SerializeField] private Image notificationButtonIcon;
-    [SerializeField] private Sprite notificationOnIcon;
-    [SerializeField] private Sprite notificationOffIcon;
-
     [Header("Animation (Optional)")]
     [SerializeField] private bool animatePanel = true;
     [SerializeField] private float animationDuration = 0.3f;
@@ -84,19 +78,11 @@ public class SettingsUI : MonoBehaviour
             musicToggleButton.onClick.AddListener(ToggleMusicSetting);
         }
 
-        if (notificationToggleButton != null)
-        {
-            notificationToggleButton.onClick.AddListener(ToggleNotificationSetting);
-        }
-
         // Setup IAP buttons
         SetupIAPButtons();
 
         // Update music button state
         UpdateMusicButtonUI();
-
-        // Update notification button state
-        UpdateNotificationButtonUI();
 
         // Subscribe to IAP events
         SubscribeToIAPEvents();
@@ -430,38 +416,6 @@ public class SettingsUI : MonoBehaviour
         else if (!isMusicOn && musicOffIcon != null)
         {
             musicButtonIcon.sprite = musicOffIcon;
-        }
-    }
-
-    /// <summary>
-    /// Toggle push notifications on/off
-    /// </summary>
-    public void ToggleNotificationSetting()
-    {
-        if (PushNotificationManager.Instance != null)
-        {
-            PushNotificationManager.Instance.ToggleNotifications();
-            UpdateNotificationButtonUI();
-            Debug.Log($"[SettingsUI] Notifications toggled: {PushNotificationManager.Instance.AreNotificationsEnabled()}");
-        }
-    }
-
-    /// <summary>
-    /// Update the notification button icon based on current state
-    /// </summary>
-    private void UpdateNotificationButtonUI()
-    {
-        if (notificationButtonIcon == null || PushNotificationManager.Instance == null) return;
-
-        bool isEnabled = PushNotificationManager.Instance.AreNotificationsEnabled();
-
-        if (isEnabled && notificationOnIcon != null)
-        {
-            notificationButtonIcon.sprite = notificationOnIcon;
-        }
-        else if (!isEnabled && notificationOffIcon != null)
-        {
-            notificationButtonIcon.sprite = notificationOffIcon;
         }
     }
 
