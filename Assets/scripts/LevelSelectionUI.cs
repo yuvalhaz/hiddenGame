@@ -491,6 +491,8 @@ public class LevelSelectionUI : MonoBehaviour
         bool isUnlocked = IsLevelUnlocked(levelNumber);
         bool isCompleted = IsLevelCompleted(levelNumber);
 
+        Debug.Log($"[LevelSelectionUI] SetupButton: levelNumber={levelNumber}, isUnlocked={isUnlocked}, isCompleted={isCompleted}, isBonus={isBonus}, buttonName={button.gameObject.name}");
+
         // Find and show/hide the lock GameObject
         Transform lockTransform = button.transform.Find("lock parent");
         if (lockTransform != null)
@@ -498,6 +500,11 @@ public class LevelSelectionUI : MonoBehaviour
             // Bonus levels: show lock only if not unlocked via ad
             // Regular levels: show lock if not unlocked
             lockTransform.gameObject.SetActive(!isUnlocked);
+            Debug.Log($"[LevelSelectionUI] Lock '{lockTransform.gameObject.name}' for level {levelNumber}: active={!isUnlocked}");
+        }
+        else
+        {
+            Debug.LogWarning($"[LevelSelectionUI] No 'lock parent' found on button '{button.gameObject.name}' for level {levelNumber}");
         }
 
         // Hide "watch ad" instruction text on bonus buttons when unlocked
