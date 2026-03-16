@@ -373,8 +373,8 @@ public class LevelSelectionUI : MonoBehaviour
             }
         }
 
-        // Setup each regular button (element 0 is unused, element 1 = level 1, etc.)
-        for (int i = 1; i < manualLevelButtons.Count && i <= totalLevels; i++)
+        // Setup each regular button (element 0 = level 1, element 1 = level 2, etc.)
+        for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
         {
             Button button = manualLevelButtons[i];
             if (button == null)
@@ -383,7 +383,7 @@ public class LevelSelectionUI : MonoBehaviour
                 continue;
             }
 
-            int levelNumber = i;
+            int levelNumber = i + 1;
             SetupButton(button, levelNumber, false);
             levelButtons.Add(button);
         }
@@ -898,12 +898,12 @@ public class LevelSelectionUI : MonoBehaviour
     {
         Debug.Log("[LevelSelectionUI] RefreshAllButtons called!");
 
-        // Re-setup regular buttons (element 0 is unused, element 1 = level 1, etc.)
-        for (int i = 1; i < manualLevelButtons.Count && i <= totalLevels; i++)
+        // Re-setup regular buttons (element 0 = level 1, element 1 = level 2, etc.)
+        for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
         {
             Button button = manualLevelButtons[i];
             if (button == null) continue;
-            int levelNumber = i;
+            int levelNumber = i + 1;
             Debug.Log($"[LevelSelectionUI] Refreshing regular button {levelNumber}, unlocked={IsLevelUnlocked(levelNumber)}");
             SetupButton(button, levelNumber, false);
         }
