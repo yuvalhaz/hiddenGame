@@ -56,6 +56,23 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private BonusLevelDialog bonusLevelDialog;
     [Tooltip("Reference to the bonus level popup dialog (asks player to watch ad)")]
 
+    [Header("📄 Page Navigation")]
+    [SerializeField] private List<GameObject> pages = new List<GameObject>();
+    [Tooltip("Drag your page GameObjects here in order (Page1, Page2, Page3, etc.). Each page contains its own level buttons.")]
+    [SerializeField] private Button nextPageButton;
+    [Tooltip("Arrow button to go to next page")]
+    [SerializeField] private Button prevPageButton;
+    [Tooltip("Arrow button to go to previous page")]
+    [SerializeField] private List<Image> pageDots = new List<Image>();
+    [Tooltip("Page indicator dots (optional). Drag Image objects here, one per page.")]
+    [SerializeField] private Color activeDotColor = Color.white;
+    [SerializeField] private Color inactiveDotColor = new Color(1f, 1f, 1f, 0.3f);
+    [SerializeField] private float pageSlideSpeed = 8f;
+    [Tooltip("Speed of page slide animation (higher = faster)")]
+
+    private int currentPage = 0;
+    private bool isPageAnimating = false;
+
     [Header("✨ Animation Settings")]
     [SerializeField] private bool animateButtonsOnStart = true;
     [SerializeField] private float buttonAnimationDelay = 0.5f;
@@ -130,11 +147,186 @@ public class LevelSelectionUI : MonoBehaviour
             GenerateLevelButtons();
         }
 
+        // Setup page navigation
+        SetupPages();
+
         if (animateButtonsOnStart)
         {
             StartCoroutine(AnimateButtonsSequence());
         }
     }
+
+    // ==================== Page Navigation ====================
+
+    /// <summary>
+    /// Setup page system - show first page, hide others, connect arrows
+    /// </summary>
+    private void SetupPages()
+    {
+        if (pages.Count <= 1) return; // No pagination needed
+
+        // Show only first page
+        for (int i = 0; i < pages.Count; i++)
+        {
+            if (pages[i] != null)
+                pages[i].SetActive(i == 0);
+        }
+
+        currentPage = 0;
+
+        // Connect arrow buttons
+        if (nextPageButton != null)
+        {
+            nextPageButton.onClick.RemoveAllListeners();
+            nextPageButton.onClick.AddListener(NextPage);
+        }
+        if (prevPageButton != null)
+        {
+            prevPageButton.onClick.RemoveAllListeners();
+            prevPageButton.onClick.AddListener(PreviousPage);
+        }
+
+        UpdatePageUI();
+    }
+
+    /// <summary>
+    /// Go to next page
+    /// </summary>
+    public void NextPage()
+    {
+        if (currentPage >= pages.Count - 1 || isPageAnimating) return;
+        PlaySound(buttonClickSound);
+        StartCoroutine(SlidePage(currentPage, currentPage + 1));
+    }
+
+    /// <summary>
+    /// Go to previous page
+    /// </summary>
+    public void PreviousPage()
+    {
+        if (currentPage <= 0 || isPageAnimating) return;
+        PlaySound(buttonClickSound);
+        StartCoroutine(SlidePage(currentPage, currentPage - 1));
+    }
+
+    /// <summary>
+    /// Animate slide transition between pages
+    /// </summary>
+    private IEnumerator SlidePage(int fromPage, int toPage)
+    {
+        isPageAnimating = true;
+
+        GameObject fromObj = pages[fromPage];
+        GameObject toObj = pages[toPage];
+
+        if (fromObj == null || toObj == null)
+        {
+            isPageAnimating = false;
+            yield break;
+        }
+
+        // Determine slide direction
+        float direction = toPage > fromPage ? -1f : 1f;
+
+        RectTransform fromRect = fromObj.GetComponent<RectTransform>();
+        RectTransform toRect = toObj.GetComponent<RectTransform>();
+
+        if (fromRect == null || toRect == null)
+        {
+            // Fallback: instant switch
+            fromObj.SetActive(false);
+            toObj.SetActive(true);
+            currentPage = toPage;
+            UpdatePageUI();
+            isPageAnimating = false;
+            yield break;
+        }
+
+        // Get canvas width for slide distance
+        float slideDistance = 1200f; // Default
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+            if (canvasRect != null)
+                slideDistance = canvasRect.rect.width;
+        }
+
+        // Position incoming page off-screen
+        Vector2 fromStart = fromRect.anchoredPosition;
+        Vector2 toStart = new Vector2(-direction * slideDistance, fromStart.y);
+        toRect.anchoredPosition = toStart;
+        toObj.SetActive(true);
+
+        // Animate both pages
+        float elapsed = 0f;
+        float duration = 1f / pageSlideSpeed;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / duration);
+
+            fromRect.anchoredPosition = Vector2.Lerp(fromStart, new Vector2(direction * slideDistance, fromStart.y), t);
+            toRect.anchoredPosition = Vector2.Lerp(toStart, fromStart, t);
+
+            yield return null;
+        }
+
+        // Finalize
+        fromObj.SetActive(false);
+        fromRect.anchoredPosition = fromStart; // Reset position for next time
+        toRect.anchoredPosition = fromStart;
+
+        currentPage = toPage;
+        UpdatePageUI();
+
+        // Animate buttons on the new page
+        if (animateButtonsOnStart)
+        {
+            AnimateCurrentPageButtons();
+        }
+
+        isPageAnimating = false;
+    }
+
+    /// <summary>
+    /// Animate buttons on the current page after sliding in
+    /// </summary>
+    private void AnimateCurrentPageButtons()
+    {
+        if (pages.Count == 0 || pages[currentPage] == null) return;
+
+        Button[] pageButtons = pages[currentPage].GetComponentsInChildren<Button>(true);
+        float delay = 0f;
+        foreach (Button btn in pageButtons)
+        {
+            btn.transform.localScale = Vector3.zero;
+            StartCoroutine(AnimateButtonPopIn(btn.transform, delay));
+            delay += buttonAnimationDelay * 0.5f; // Faster sequence for page transitions
+        }
+    }
+
+    /// <summary>
+    /// Update arrow visibility and page dots
+    /// </summary>
+    private void UpdatePageUI()
+    {
+        // Show/hide arrows
+        if (prevPageButton != null)
+            prevPageButton.gameObject.SetActive(currentPage > 0);
+        if (nextPageButton != null)
+            nextPageButton.gameObject.SetActive(currentPage < pages.Count - 1);
+
+        // Update page dots
+        for (int i = 0; i < pageDots.Count; i++)
+        {
+            if (pageDots[i] != null)
+                pageDots[i].color = (i == currentPage) ? activeDotColor : inactiveDotColor;
+        }
+    }
+
+    // ==================== End Page Navigation ====================
 
     private void OnDestroy()
     {
