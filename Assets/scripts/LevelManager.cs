@@ -27,7 +27,7 @@ public class LevelManager : MonoBehaviour
         Debug.Log("🔵🔵🔵 [LevelManager] Awake called! 🔵🔵🔵");
         Debug.Log($"[LevelManager] GameObject name: {gameObject.name}");
         Debug.Log($"[LevelManager] Current scene: {SceneManager.GetActiveScene().name}");
-        
+
         if (Instance == null)
         {
             Instance = this;
@@ -42,6 +42,31 @@ public class LevelManager : MonoBehaviour
             Debug.LogWarning($"[LevelManager] Existing Instance: {Instance}");
             Debug.LogWarning($"[LevelManager] This GameObject: {gameObject.name}");
             Destroy(gameObject);
+        }
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    /// <summary>
+    /// Sync currentLevelNumber from PlayerPrefs whenever a new scene loads.
+    /// This fixes desync when LevelSelectionUI.LoadLevel() updates PlayerPrefs
+    /// but LevelManager.currentLevelNumber stays stale (since it's DontDestroyOnLoad).
+    /// </summary>
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        int previousLevel = currentLevelNumber;
+        LoadCurrentLevelFromPrefs();
+        if (previousLevel != currentLevelNumber)
+        {
+            Debug.Log($"[LevelManager] Scene '{scene.name}' loaded - synced currentLevelNumber: {previousLevel} -> {currentLevelNumber}");
         }
     }
 
