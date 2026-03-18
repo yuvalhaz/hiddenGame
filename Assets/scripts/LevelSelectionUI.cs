@@ -69,6 +69,10 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private Color inactiveDotColor = new Color(1f, 1f, 1f, 0.3f);
     [SerializeField] private float pageSlideSpeed = 8f;
     [Tooltip("Speed of page slide animation (higher = faster)")]
+    [SerializeField] private Image backgroundImage;
+    [Tooltip("Reference to the background Image component in the scene")]
+    [SerializeField] private List<Sprite> pageBackgrounds = new List<Sprite>();
+    [Tooltip("Background image per page. Index 0 = Page 1, Index 1 = Page 2, etc.")]
 
     private int currentPage = 0;
     private bool isPageAnimating = false;
@@ -126,8 +130,9 @@ public class LevelSelectionUI : MonoBehaviour
 
     private void Start()
     {
-        // Play background music for first page
+        // Setup first page visuals
         PlayPageMusic(0);
+        UpdatePageBackground(0);
 
         if (titleText != null)
         {
@@ -222,6 +227,7 @@ public class LevelSelectionUI : MonoBehaviour
             currentPage = toPage;
             UpdatePageUI();
             PlayPageMusic(toPage);
+            UpdatePageBackground(toPage);
             isPageAnimating = false;
             yield break;
         }
@@ -270,6 +276,7 @@ public class LevelSelectionUI : MonoBehaviour
         currentPage = toPage;
         UpdatePageUI();
         PlayPageMusic(toPage);
+        UpdatePageBackground(toPage);
 
         // Animate buttons on the new page
         if (animateButtonsOnStart)
@@ -309,6 +316,18 @@ public class LevelSelectionUI : MonoBehaviour
     /// <summary>
     /// Play the music assigned to a specific page, or fallback to default
     /// </summary>
+    /// <summary>
+    /// Update background image for the given page
+    /// </summary>
+    private void UpdatePageBackground(int pageIndex)
+    {
+        if (backgroundImage == null) return;
+        if (pageIndex >= 0 && pageIndex < pageBackgrounds.Count && pageBackgrounds[pageIndex] != null)
+        {
+            backgroundImage.sprite = pageBackgrounds[pageIndex];
+        }
+    }
+
     private void PlayPageMusic(int pageIndex)
     {
         if (musicAudioSource == null) return;
