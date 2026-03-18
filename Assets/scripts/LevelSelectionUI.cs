@@ -261,6 +261,10 @@ public class LevelSelectionUI : MonoBehaviour
         if (animateButtonsOnStart)
         {
             List<Button> toPageButtons = GetPageButtons(toPage);
+            if (toPageButtons.Count == 0 && toObj != null)
+            {
+                toPageButtons = new List<Button>(toObj.GetComponentsInChildren<Button>(true));
+            }
             foreach (Button btn in toPageButtons)
             {
                 if (btn != null)
@@ -317,11 +321,18 @@ public class LevelSelectionUI : MonoBehaviour
     /// </summary>
     private void AnimateCurrentPageButtons()
     {
+        // Try per-page button lists first
         List<Button> buttons = GetPageButtons(currentPage);
 
+        // If no manual list, try finding buttons as children of the page GameObject
+        if (buttons.Count == 0 && currentPage < pages.Count && pages[currentPage] != null)
+        {
+            buttons = new List<Button>(pages[currentPage].GetComponentsInChildren<Button>(true));
+        }
+
+        // Final fallback: no pages at all, animate everything
         if (buttons.Count == 0)
         {
-            // Fallback: no per-page buttons defined, animate all
             if (pages.Count == 0)
             {
                 StartCoroutine(AnimateButtonsSequence());
@@ -435,19 +446,6 @@ public class LevelSelectionUI : MonoBehaviour
             return;
         }
 
-        // Hide only first page buttons initially for animation
-        if (animateButtonsOnStart)
-        {
-            List<Button> firstPageBtns = GetPageButtons(0);
-            foreach (Button btn in firstPageBtns)
-            {
-                if (btn != null)
-                {
-                    btn.transform.localScale = Vector3.zero;
-                }
-            }
-        }
-
         // Setup each regular button
         for (int i = 0; i < manualLevelButtons.Count && i < totalLevels; i++)
         {
@@ -493,12 +491,6 @@ public class LevelSelectionUI : MonoBehaviour
             {
                 Debug.LogWarning($"[LevelSelectionUI] Bonus button {i} has no matching bonusLevelNumbers entry!");
                 continue;
-            }
-
-            // Hide initially for animation
-            if (animateButtonsOnStart)
-            {
-                button.transform.localScale = Vector3.zero;
             }
 
             SetupButton(button, levelNumber, true);
