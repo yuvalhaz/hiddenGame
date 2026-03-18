@@ -152,6 +152,14 @@ public class LevelCompleteController : MonoBehaviour
     {
         Debug.Log("[LevelCompleteController] Playing ending dialog...");
 
+        // ✅ Disable our own next button so it doesn't also fire when EndingDialog's NEXT is clicked
+        if (nextLevelButton != null)
+        {
+            nextLevelButton.onClick.RemoveListener(OnNextLevelButtonClicked);
+            nextLevelButton.gameObject.SetActive(false);
+            Debug.Log("[LevelCompleteController] Disabled nextLevelButton (EndingDialog handles NEXT)");
+        }
+
         // ✅ השלם את הלבל כאן - לפני הבועות!
         if (LevelManager.Instance != null)
         {
