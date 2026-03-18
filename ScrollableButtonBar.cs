@@ -395,6 +395,12 @@ public class ScrollableButtonBar : MonoBehaviour
                 buttonImage.sprite = buttonDataList[i].buttonSprite;
                 // ✅ Use native size of the sprite
                 buttonImage.SetNativeSize();
+                // ✅ Scale to match GameBar scale
+                float barScale = transform.localScale.x;
+                if (barScale > 0f && Mathf.Abs(barScale - 1f) > 0.001f)
+                {
+                    buttonRect.sizeDelta *= barScale;
+                }
             }
             else if (buttonImage != null)
             {
@@ -658,6 +664,16 @@ public class ScrollableButtonBar : MonoBehaviour
                     if (sprite != null)
                     {
                         img.SetNativeSize();
+                        // ✅ Scale to match GameBar scale
+                        float barScale = transform.localScale.x;
+                        if (barScale > 0f && Mathf.Abs(barScale - 1f) > 0.001f)
+                        {
+                            RectTransform btnRect = buttonObj.GetComponent<RectTransform>();
+                            if (btnRect != null)
+                            {
+                                btnRect.sizeDelta *= barScale;
+                            }
+                        }
                         // Size changed — recalculate positions immediately
                         RecalculateAllPositions(immediate: true);
                         // Debounce reveal: wait one frame after the last sprite is set
