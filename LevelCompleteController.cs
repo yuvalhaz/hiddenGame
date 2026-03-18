@@ -38,6 +38,10 @@ public class LevelCompleteController : MonoBehaviour
     [SerializeField] private bool isTutorialLevel = false;
     [Tooltip("Set to true for tutorial levels - will not require LevelManager")]
 
+    [Header("Bonus Level")]
+    [SerializeField] private bool isBonusLevel = false;
+    [Tooltip("Set to true for bonus levels - NEXT will go to Level Selection instead of advancing")]
+
     [Header("🔊 Audio Settings")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip levelCompleteSound;
@@ -161,7 +165,11 @@ public class LevelCompleteController : MonoBehaviour
         }
 
         // ✅ השלם את הלבל כאן - לפני הבועות!
-        if (LevelManager.Instance != null)
+        if (isBonusLevel)
+        {
+            Debug.Log("[LevelCompleteController] 🎁 Bonus level - skipping level pointer advancement");
+        }
+        else if (LevelManager.Instance != null)
         {
             // Schedule push notification reminder for next level
             if (PushNotificationManager.Instance != null)
@@ -301,6 +309,14 @@ public class LevelCompleteController : MonoBehaviour
     /// </summary>
     private void ProceedToNextLevel()
     {
+        // 🎁 Bonus levels always go back to level selection
+        if (isBonusLevel)
+        {
+            Debug.Log("[LevelCompleteController] 🎁 Bonus level complete - returning to Level Selection");
+            LoadMenu();
+            return;
+        }
+
         // ✅ Check if LevelManager exists
         if (LevelManager.Instance != null)
         {
