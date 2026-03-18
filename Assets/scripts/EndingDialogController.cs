@@ -22,6 +22,9 @@ public class EndingDialogController : MonoBehaviour
     [Header("Tutorial Mode")]
     [SerializeField] private bool isTutorialMode = false;
     [Tooltip("Enable this for Level0 - goes straight to LevelSelection")]
+    [Header("Bonus Level")]
+    [SerializeField] private bool isBonusLevel = false;
+    [Tooltip("Enable this for bonus levels - NEXT goes to Level Selection")]
     private RectTransform rect;
     private Vector2 startPos;
     private Coroutine floatCoroutine;
@@ -124,6 +127,13 @@ public class EndingDialogController : MonoBehaviour
         {
             PlayerPrefs.SetInt("IsFirstTime", 0);
             PlayerPrefs.Save();
+            SceneManager.LoadScene(levelSelectionScene);
+            yield break;
+        }
+        // Bonus levels go straight to level selection
+        if (isBonusLevel)
+        {
+            Debug.Log("[EndingDialogController] 🎁 Bonus level - returning to Level Selection");
             SceneManager.LoadScene(levelSelectionScene);
             yield break;
         }
