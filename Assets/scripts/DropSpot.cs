@@ -61,6 +61,33 @@ public class DropSpot : MonoBehaviour
             GameProgressManager.Instance.OnItemPlaced -= OnAnyItemPlaced; // avoid double
             GameProgressManager.Instance.OnItemPlaced += OnAnyItemPlaced;
         }
+
+        // Restore transformations on scene reload
+        if (transformations != null && transformations.Count > 0 && GameProgressManager.Instance != null)
+        {
+            StartCoroutine(RestoreTransformationsOnLoad());
+        }
+    }
+
+    private IEnumerator RestoreTransformationsOnLoad()
+    {
+        // Wait 2 frames so ImageRevealController.Start() and ApplyProgressToScene() finish first
+        yield return null;
+        yield return null;
+
+        if (!IsSettled || !GameProgressManager.Instance.IsItemPlaced(spotId))
+            yield break;
+
+        foreach (var t in transformations)
+        {
+            if (GameProgressManager.Instance.IsItemPlaced(t.triggerItemId))
+            {
+                ApplyTransformationSprite(t.triggerItemId);
+                HideTriggerSpotImage(t.triggerItemId);
+                Debug.Log($"[DropSpot] Restored transformation on {spotId}: {t.triggerItemId}");
+                break;
+            }
+        }
     }
 
     /// <summary>
@@ -185,6 +212,22 @@ public class DropSpot : MonoBehaviour
     public bool AcceptsTransformation(string itemId)
     {
         if (!IsSettled || transformations == null) return false;
+
+        foreach (var t in transformations)
+        {
+            if (string.Equals(t.triggerItemId, itemId, System.StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Check if this spot has a transformation triggered by the given itemId (ignores IsSettled).
+    /// Used by ImageRevealController to know if a trigger spot should stay hidden on reload.
+    /// </summary>
+    public bool HasTransformationTrigger(string itemId)
+    {
+        if (transformations == null) return false;
 
         foreach (var t in transformations)
         {

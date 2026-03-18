@@ -34,12 +34,6 @@ public class LevelCompleteController : MonoBehaviour
     [Tooltip("Optional: Play ending dialog before completion screen")]
     [SerializeField] private bool useEndingDialog = true;
 
-    [Header("Ad Integration")]
-    [SerializeField] private bool showAdOnCompletion = true;
-    [Tooltip("Show rewarded ad after level completion")]
-    [SerializeField] private bool skipAdsInEditor = true;
-    [Tooltip("Skip ads when running in Unity Editor")]
-
     [Header("Tutorial Settings")]
     [SerializeField] private bool isTutorialLevel = false;
     [Tooltip("Set to true for tutorial levels - will not require LevelManager")]
@@ -221,78 +215,10 @@ public class LevelCompleteController : MonoBehaviour
         // Show completion screen
         ShowCompletionScreen();
 
-        // Show ad if enabled, then proceed
-        if (showAdOnCompletion)
-        {
-            StartCoroutine(ShowAdThenProceed());
-        }
-        else if (autoLoadDelay > 0)
+        if (autoLoadDelay > 0)
         {
             StartCoroutine(AutoLoadAfterDelay());
         }
-    }
-
-    private IEnumerator ShowAdThenProceed()
-    {
-        // Wait a bit for UI to be visible
-        yield return new WaitForSeconds(1.5f);
-
-        // ✅ Check if we should skip ads (in Editor)
-        #if UNITY_EDITOR
-        if (skipAdsInEditor)
-        {
-            Debug.Log("[LevelCompleteController] ⏭️ Skipping ad in Editor");
-            ProceedToNextLevel();
-            yield break;
-        }
-        #endif
-
-        bool adFinished = false;
-
-        // Try to show ad
-        if (RewardedAdsManager.Instance != null && RewardedAdsManager.Instance.IsReady())
-        {
-            Debug.Log("[LevelCompleteController] 📺 Showing rewarded ad...");
-            
-            RewardedAdsManager.Instance.ShowRewarded(
-                onReward: () =>
-                {
-                    Debug.Log("[LevelCompleteController] Ad reward received!");
-                    adFinished = true;
-                },
-                onClosed: (completed) =>
-                {
-                    Debug.Log("[LevelCompleteController] Ad closed");
-                    adFinished = true;
-                },
-                onFailed: (error) =>
-                {
-                    Debug.LogWarning($"[LevelCompleteController] Ad failed: {error}");
-                    adFinished = true;
-                }
-            );
-
-            // ✅ Wait for ad with timeout
-            float timeout = 5f; // Shorter timeout for testing
-            float elapsed = 0f;
-            while (!adFinished && elapsed < timeout)
-            {
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-            
-            if (elapsed >= timeout)
-            {
-                Debug.LogWarning("[LevelCompleteController] ⏰ Ad timed out! Continuing anyway...");
-            }
-        }
-        else
-        {
-            Debug.Log("[LevelCompleteController] No ads available, proceeding...");
-        }
-        
-        // ✅ Always proceed, regardless of ad status
-        ProceedToNextLevel();
     }
 
     private void ShowCompletionScreen()
