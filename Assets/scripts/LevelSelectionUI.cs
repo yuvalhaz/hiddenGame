@@ -56,6 +56,23 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private BonusLevelDialog bonusLevelDialog;
     [Tooltip("Reference to the bonus level popup dialog (asks player to watch ad)")]
 
+    [Header("📄 Page Navigation")]
+    [SerializeField] private List<GameObject> pages = new List<GameObject>();
+    [Tooltip("Drag your page GameObjects here in order (Page1, Page2, Page3, etc.). Each page contains its own level buttons.")]
+    [SerializeField] private Button nextPageButton;
+    [Tooltip("Arrow button to go to next page")]
+    [SerializeField] private Button prevPageButton;
+    [Tooltip("Arrow button to go to previous page")]
+    [SerializeField] private List<Image> pageDots = new List<Image>();
+    [Tooltip("Page indicator dots (optional). Drag Image objects here, one per page.")]
+    [SerializeField] private Color activeDotColor = Color.white;
+    [SerializeField] private Color inactiveDotColor = new Color(1f, 1f, 1f, 0.3f);
+    [SerializeField] private float pageSlideSpeed = 8f;
+    [Tooltip("Speed of page slide animation (higher = faster)")]
+
+    private int currentPage = 0;
+    private bool isPageAnimating = false;
+
     [Header("✨ Animation Settings")]
     [SerializeField] private bool animateButtonsOnStart = true;
     [SerializeField] private float buttonAnimationDelay = 0.5f;
@@ -70,7 +87,9 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private AudioSource sfxAudioSource;
     [Tooltip("Audio source for sound effects (will be created automatically if not assigned)")]
     [SerializeField] private AudioClip backgroundMusic;
-    [Tooltip("Background music for level selection screen (looped)")]
+    [Tooltip("Default background music (used if no per-page music is set)")]
+    [SerializeField] private List<AudioClip> pageMusic = new List<AudioClip>();
+    [Tooltip("Background music per page. Index 0 = Page 1, Index 1 = Page 2, etc. Falls back to backgroundMusic if empty.")]
     [SerializeField] private AudioClip buttonPopSound;
     [Tooltip("Sound when button pops in during animation")]
     [SerializeField] private AudioClip buttonClickSound;
@@ -107,14 +126,8 @@ public class LevelSelectionUI : MonoBehaviour
 
     private void Start()
     {
-        // Play background music
-        if (musicAudioSource != null && backgroundMusic != null)
-        {
-            musicAudioSource.volume = musicVolume;
-            musicAudioSource.clip = backgroundMusic;
-            musicAudioSource.loop = true;
-            musicAudioSource.Play();
-        }
+        // Play background music for first page
+        PlayPageMusic(0);
 
         if (titleText != null)
         {
@@ -130,11 +143,219 @@ public class LevelSelectionUI : MonoBehaviour
             GenerateLevelButtons();
         }
 
+        // Setup page navigation
+        SetupPages();
+
+        // Animate only the first page's buttons
         if (animateButtonsOnStart)
         {
-            StartCoroutine(AnimateButtonsSequence());
+            AnimateCurrentPageButtons();
         }
     }
+
+    // ==================== Page Navigation ====================
+
+    private void SetupPages()
+    {
+        if (pages.Count <= 1) return;
+
+        // Show only first page
+        for (int i = 0; i < pages.Count; i++)
+        {
+            if (pages[i] != null)
+                pages[i].SetActive(i == 0);
+        }
+
+        currentPage = 0;
+
+        if (nextPageButton != null)
+        {
+            nextPageButton.onClick.RemoveAllListeners();
+            nextPageButton.onClick.AddListener(NextPage);
+        }
+
+        if (prevPageButton != null)
+        {
+            prevPageButton.onClick.RemoveAllListeners();
+            prevPageButton.onClick.AddListener(PreviousPage);
+        }
+
+        UpdatePageUI();
+    }
+
+    public void NextPage()
+    {
+        if (currentPage >= pages.Count - 1 || isPageAnimating) return;
+        PlaySound(buttonClickSound);
+        StartCoroutine(SlidePage(currentPage, currentPage + 1));
+    }
+
+    public void PreviousPage()
+    {
+        if (currentPage <= 0 || isPageAnimating) return;
+        PlaySound(buttonClickSound);
+        StartCoroutine(SlidePage(currentPage, currentPage - 1));
+    }
+
+    private IEnumerator SlidePage(int fromPage, int toPage)
+    {
+        isPageAnimating = true;
+
+        GameObject fromObj = pages[fromPage];
+        GameObject toObj = pages[toPage];
+
+        if (fromObj == null || toObj == null)
+        {
+            isPageAnimating = false;
+            yield break;
+        }
+
+        float direction = toPage > fromPage ? -1f : 1f;
+
+        RectTransform fromRect = fromObj.GetComponent<RectTransform>();
+        RectTransform toRect = toObj.GetComponent<RectTransform>();
+
+        if (fromRect == null || toRect == null)
+        {
+            fromObj.SetActive(false);
+            toObj.SetActive(true);
+            currentPage = toPage;
+            UpdatePageUI();
+            PlayPageMusic(toPage);
+            isPageAnimating = false;
+            yield break;
+        }
+
+        // Get canvas width for slide distance
+        float slideDistance = 1200f;
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+            if (canvasRect != null)
+                slideDistance = canvasRect.rect.width;
+        }
+
+        Vector2 fromStart = fromRect.anchoredPosition;
+        Vector2 toStart = new Vector2(-direction * slideDistance, fromStart.y);
+        toRect.anchoredPosition = toStart;
+        toObj.SetActive(true);
+
+        // Hide buttons on incoming page before animation
+        if (animateButtonsOnStart)
+        {
+            Button[] pageButtons = toObj.GetComponentsInChildren<Button>(true);
+            foreach (Button btn in pageButtons)
+            {
+                btn.transform.localScale = Vector3.zero;
+            }
+        }
+
+        float elapsed = 0f;
+        float duration = 1f / pageSlideSpeed;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / duration);
+            fromRect.anchoredPosition = Vector2.Lerp(fromStart, new Vector2(direction * slideDistance, fromStart.y), t);
+            toRect.anchoredPosition = Vector2.Lerp(toStart, fromStart, t);
+            yield return null;
+        }
+
+        fromObj.SetActive(false);
+        fromRect.anchoredPosition = fromStart;
+        toRect.anchoredPosition = fromStart;
+
+        currentPage = toPage;
+        UpdatePageUI();
+        PlayPageMusic(toPage);
+
+        // Animate buttons on the new page
+        if (animateButtonsOnStart)
+        {
+            AnimateCurrentPageButtons();
+        }
+
+        isPageAnimating = false;
+    }
+
+    /// <summary>
+    /// Animate only the buttons on the current page
+    /// </summary>
+    private void AnimateCurrentPageButtons()
+    {
+        if (pages.Count == 0 || currentPage >= pages.Count || pages[currentPage] == null)
+        {
+            // No pages - animate all buttons (fallback)
+            if (pages.Count == 0)
+            {
+                StartCoroutine(AnimateButtonsSequence());
+            }
+            return;
+        }
+
+        Button[] pageButtons = pages[currentPage].GetComponentsInChildren<Button>(true);
+        float delay = 0f;
+
+        foreach (Button btn in pageButtons)
+        {
+            btn.transform.localScale = Vector3.zero;
+            StartCoroutine(AnimateButtonPopIn(btn.transform, delay));
+            delay += buttonAnimationDelay * 0.5f;
+        }
+    }
+
+    /// <summary>
+    /// Play the music assigned to a specific page, or fallback to default
+    /// </summary>
+    private void PlayPageMusic(int pageIndex)
+    {
+        if (musicAudioSource == null) return;
+
+        AudioClip clip = null;
+
+        // Try per-page music first
+        if (pageIndex >= 0 && pageIndex < pageMusic.Count && pageMusic[pageIndex] != null)
+        {
+            clip = pageMusic[pageIndex];
+        }
+        else if (backgroundMusic != null)
+        {
+            clip = backgroundMusic;
+        }
+
+        if (clip == null)
+        {
+            musicAudioSource.Stop();
+            return;
+        }
+
+        // Don't restart if already playing the same clip
+        if (musicAudioSource.clip == clip && musicAudioSource.isPlaying)
+            return;
+
+        musicAudioSource.volume = musicVolume;
+        musicAudioSource.clip = clip;
+        musicAudioSource.loop = true;
+        musicAudioSource.Play();
+    }
+
+    private void UpdatePageUI()
+    {
+        if (prevPageButton != null)
+            prevPageButton.gameObject.SetActive(currentPage > 0);
+        if (nextPageButton != null)
+            nextPageButton.gameObject.SetActive(currentPage < pages.Count - 1);
+
+        for (int i = 0; i < pageDots.Count; i++)
+        {
+            if (pageDots[i] != null)
+                pageDots[i].color = (i == currentPage) ? activeDotColor : inactiveDotColor;
+        }
+    }
+
+    // ==================== End Page Navigation ====================
 
     private void OnDestroy()
     {
