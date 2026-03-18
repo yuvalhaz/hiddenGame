@@ -69,10 +69,20 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private Color inactiveDotColor = new Color(1f, 1f, 1f, 0.3f);
     [SerializeField] private float pageSlideSpeed = 8f;
     [Tooltip("Speed of page slide animation (higher = faster)")]
+
+    [Header("🖼️ Page Backgrounds")]
     [SerializeField] private Image backgroundImage;
     [Tooltip("Reference to the background Image component in the scene")]
     [SerializeField] private List<Sprite> pageBackgrounds = new List<Sprite>();
     [Tooltip("Background image per page. Index 0 = Page 1, Index 1 = Page 2, etc.")]
+
+    [Header("🔘 Buttons Per Page")]
+    [SerializeField] private List<Button> page1Buttons = new List<Button>();
+    [Tooltip("Drag buttons that belong to Page 1")]
+    [SerializeField] private List<Button> page2Buttons = new List<Button>();
+    [Tooltip("Drag buttons that belong to Page 2")]
+    [SerializeField] private List<Button> page3Buttons = new List<Button>();
+    [Tooltip("Drag buttons that belong to Page 3")]
 
     private int currentPage = 0;
     private bool isPageAnimating = false;
@@ -250,10 +260,11 @@ public class LevelSelectionUI : MonoBehaviour
         // Hide buttons on incoming page before animation
         if (animateButtonsOnStart)
         {
-            Button[] pageButtons = toObj.GetComponentsInChildren<Button>(true);
-            foreach (Button btn in pageButtons)
+            List<Button> toPageButtons = GetPageButtons(toPage);
+            foreach (Button btn in toPageButtons)
             {
-                btn.transform.localScale = Vector3.zero;
+                if (btn != null)
+                    btn.transform.localScale = Vector3.zero;
             }
         }
 
@@ -288,13 +299,29 @@ public class LevelSelectionUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Get the buttons list for a specific page index
+    /// </summary>
+    private List<Button> GetPageButtons(int pageIndex)
+    {
+        switch (pageIndex)
+        {
+            case 0: return page1Buttons;
+            case 1: return page2Buttons;
+            case 2: return page3Buttons;
+            default: return new List<Button>();
+        }
+    }
+
+    /// <summary>
     /// Animate only the buttons on the current page
     /// </summary>
     private void AnimateCurrentPageButtons()
     {
-        if (pages.Count == 0 || currentPage >= pages.Count || pages[currentPage] == null)
+        List<Button> buttons = GetPageButtons(currentPage);
+
+        if (buttons.Count == 0)
         {
-            // No pages - animate all buttons (fallback)
+            // Fallback: no per-page buttons defined, animate all
             if (pages.Count == 0)
             {
                 StartCoroutine(AnimateButtonsSequence());
@@ -302,11 +329,10 @@ public class LevelSelectionUI : MonoBehaviour
             return;
         }
 
-        Button[] pageButtons = pages[currentPage].GetComponentsInChildren<Button>(true);
         float delay = 0f;
-
-        foreach (Button btn in pageButtons)
+        foreach (Button btn in buttons)
         {
+            if (btn == null) continue;
             btn.transform.localScale = Vector3.zero;
             StartCoroutine(AnimateButtonPopIn(btn.transform, delay));
             delay += buttonAnimationDelay * 0.5f;
@@ -409,10 +435,11 @@ public class LevelSelectionUI : MonoBehaviour
             return;
         }
 
-        // Hide buttons initially for animation
+        // Hide only first page buttons initially for animation
         if (animateButtonsOnStart)
         {
-            foreach (Button btn in manualLevelButtons)
+            List<Button> firstPageBtns = GetPageButtons(0);
+            foreach (Button btn in firstPageBtns)
             {
                 if (btn != null)
                 {
