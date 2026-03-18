@@ -76,14 +76,6 @@ public class LevelSelectionUI : MonoBehaviour
     [SerializeField] private List<Sprite> pageBackgrounds = new List<Sprite>();
     [Tooltip("Background image per page. Index 0 = Page 1, Index 1 = Page 2, etc.")]
 
-    [Header("🔘 Buttons Per Page")]
-    [SerializeField] private List<Button> page1Buttons = new List<Button>();
-    [Tooltip("Drag buttons that belong to Page 1")]
-    [SerializeField] private List<Button> page2Buttons = new List<Button>();
-    [Tooltip("Drag buttons that belong to Page 2")]
-    [SerializeField] private List<Button> page3Buttons = new List<Button>();
-    [Tooltip("Drag buttons that belong to Page 3")]
-
     private int currentPage = 0;
     private bool isPageAnimating = false;
 
@@ -238,6 +230,7 @@ public class LevelSelectionUI : MonoBehaviour
             UpdatePageUI();
             PlayPageMusic(toPage);
             UpdatePageBackground(toPage);
+            if (animateButtonsOnStart) AnimateCurrentPageButtons();
             isPageAnimating = false;
             yield break;
         }
@@ -260,12 +253,7 @@ public class LevelSelectionUI : MonoBehaviour
         // Hide buttons on incoming page before animation
         if (animateButtonsOnStart)
         {
-            List<Button> toPageButtons = GetPageButtons(toPage);
-            if (toPageButtons.Count == 0 && toObj != null)
-            {
-                toPageButtons = new List<Button>(toObj.GetComponentsInChildren<Button>(true));
-            }
-            foreach (Button btn in toPageButtons)
+            foreach (Button btn in toObj.GetComponentsInChildren<Button>(true))
             {
                 if (btn != null)
                     btn.transform.localScale = Vector3.zero;
@@ -303,17 +291,15 @@ public class LevelSelectionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Get the buttons list for a specific page index
+    /// Get all buttons on a specific page
     /// </summary>
     private List<Button> GetPageButtons(int pageIndex)
     {
-        switch (pageIndex)
+        if (pageIndex >= 0 && pageIndex < pages.Count && pages[pageIndex] != null)
         {
-            case 0: return page1Buttons;
-            case 1: return page2Buttons;
-            case 2: return page3Buttons;
-            default: return new List<Button>();
+            return new List<Button>(pages[pageIndex].GetComponentsInChildren<Button>(true));
         }
+        return new List<Button>();
     }
 
     /// <summary>
@@ -321,16 +307,9 @@ public class LevelSelectionUI : MonoBehaviour
     /// </summary>
     private void AnimateCurrentPageButtons()
     {
-        // Try per-page button lists first
         List<Button> buttons = GetPageButtons(currentPage);
 
-        // If no manual list, try finding buttons as children of the page GameObject
-        if (buttons.Count == 0 && currentPage < pages.Count && pages[currentPage] != null)
-        {
-            buttons = new List<Button>(pages[currentPage].GetComponentsInChildren<Button>(true));
-        }
-
-        // Final fallback: no pages at all, animate everything
+        // Fallback: no pages at all, animate everything
         if (buttons.Count == 0)
         {
             if (pages.Count == 0)
@@ -339,6 +318,8 @@ public class LevelSelectionUI : MonoBehaviour
             }
             return;
         }
+
+        Debug.Log($"[LevelSelectionUI] Animating {buttons.Count} buttons on page {currentPage + 1}");
 
         float delay = 0f;
         foreach (Button btn in buttons)
@@ -358,10 +339,19 @@ public class LevelSelectionUI : MonoBehaviour
     /// </summary>
     private void UpdatePageBackground(int pageIndex)
     {
-        if (backgroundImage == null) return;
+        if (backgroundImage == null)
+        {
+            Debug.LogWarning("[LevelSelectionUI] backgroundImage is not assigned! Drag your background Image here.");
+            return;
+        }
         if (pageIndex >= 0 && pageIndex < pageBackgrounds.Count && pageBackgrounds[pageIndex] != null)
         {
             backgroundImage.sprite = pageBackgrounds[pageIndex];
+            Debug.Log($"[LevelSelectionUI] Background changed to page {pageIndex + 1}");
+        }
+        else
+        {
+            Debug.LogWarning($"[LevelSelectionUI] No background set for page {pageIndex + 1}. Add a Sprite to pageBackgrounds list index {pageIndex}.");
         }
     }
 
