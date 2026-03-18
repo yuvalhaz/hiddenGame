@@ -297,8 +297,11 @@ public class LevelSelectionUI : MonoBehaviour
     {
         if (pageIndex >= 0 && pageIndex < pages.Count && pages[pageIndex] != null)
         {
-            return new List<Button>(pages[pageIndex].GetComponentsInChildren<Button>(true));
+            var buttons = new List<Button>(pages[pageIndex].GetComponentsInChildren<Button>(true));
+            Debug.Log($"[LevelSelectionUI] GetPageButtons({pageIndex}): page GO='{pages[pageIndex].name}', active={pages[pageIndex].activeSelf}, found {buttons.Count} buttons");
+            return buttons;
         }
+        Debug.LogWarning($"[LevelSelectionUI] GetPageButtons({pageIndex}): pages.Count={pages.Count}, page is null={pageIndex < pages.Count && pages[pageIndex] == null}");
         return new List<Button>();
     }
 
